@@ -1,0 +1,31 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	//$potentialframe "0"
+	//$testval "0"
+	//$defaultdigit "2"
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "hours"
+			"digit" "0"
+			"resultVar" "$frame"
+		}
+
+		//"LessOrEqual"
+		//{
+		//	"lessEqualVar" "$defaultdigit"
+		//	"greaterVar" "$potentialframe"
+		//	"srcVar1" "$potentialframe"
+		//	"srcVar2" "$testval"
+		//	"resultVar" "$frame"
+		//}
+	}
+}

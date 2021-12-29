@@ -1,0 +1,246 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?a=e"></link>
+		<script src="asset://ui/hud.js?a=e"></script>
+		<script src="asset://ui/tga.js"></script>	
+		<script>
+			function dropListener(files_in)
+			{
+				var files_out = (Array.isArray(files_in)) ? files_in.join("%3A%3A") : files_in;	// %3A%3A = ::
+				window.location.href = "drop.html?files=" + files_out;// encodeURIComponent(files_out);
+			}
+
+			function dropTextListener(text)
+			{
+				window.location.href = "drop.html?text=" + text;
+			}
+
+			var tga = new TGA();
+
+			var text;
+			var files = arcadeHud.getParameterByName("files");
+
+				//console.log(JSON.stringify(files));
+			if( !!files )
+				files = files.split("::");
+			else
+			{
+				text = arcadeHud.getParameterByName("text");
+				if( !!text )
+					text = decodeURIComponent(text);
+			}
+
+			function findTwinItem(originalItem)
+			{
+	 			var item = aaapi.cmdEx("findLibraryItem", "file", originalItem.file);
+	 			return item;
+	 		}
+
+			function onSpawnClick()
+			{
+				console.log("Yar?");
+				//arcadeHud.spawnItem(this.mode, this.itemId, libSearchInput.value, typeSelect.value);
+			}
+		</script>
+		<style>
+			#results
+			{
+				text-align: center;
+				display: none;
+			}
+
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
+	</head>
+	<body>
+		<table style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+			<tr><td align="center">
+				<div id="loadingIndicator" style="padding: 16px; border-width: 2px; border-style: solid; display: inline-block; border-radius: 24px; opacity: 0.7;" class="aaThemeColorTwoShadedBorderColor aaThemeColorTwoShadedBackground"><div class="loadingIndicator aaThemeColorOneBorderColor"></div></div>
+				<div id="results"></div>
+			</td></tr>
+		</table>
+
+		<script>
+			//console.log(files.length);
+			if( !!text )
+			{
+				// Try to find a URL in it...
+				var file = text;
+				var item = findTwinItem({file: file});
+
+				var mode = "items";
+				if( file.toLowerCase().indexOf(".mdl") == file.length - 4 )
+					mode = "models";
+
+				if( mode == "models" )
+				{
+					var relativeFile = aaapi.cmdEx("getRelativeAssetPath", file);
+					if( relativeFile === file )
+					{
+						console.log("ERROR: MDL must be in a mounted content folder.\n");
+						//createModalAlert("Oops!", "The MDL file must be in a mounted content folder.", "");
+						//chosenFile = "";
+					}
+					else
+					{
+						// first, check if an item that matches this one already exists...
+						var model = aaapi.cmdEx("findLibraryModel", "file", relativeFile);
+			 			if( !model )
+			 				model = aaapi.cmdEx("createModel", "file", relativeFile);
+
+			 			if( model )
+			 			{
+			 				/*
+			 				var container = document.querySelector('#results');
+							var tile = arcadeHud.createTile(model, container, mode, "", onSpawnClick, 256, 256);
+							container.appendChild(tile);
+							*/
+
+							
+
+							aaapi.cmd("setLibraryBrowserContext", "models", model.info.id, "", "");
+			 				arcadeHud.spawnItem("models", model.info.id, "", "");
+			 			}
+			 		}
+		 		}
+		 		else
+		 		{
+					if( !!item )
+					{
+						//console.log("setting to items A");
+						aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+						window.location = "libraryBrowserEZ.html?item=" + item.info.id;
+					}
+					else
+					{
+						//console.log("setting to items B");
+						aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");
+						document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(file);
+					}
+				}
+			}
+			else if( !!files )
+			{
+				if( files.length === 1 )
+				{
+					var file = files[0];
+					var item = findTwinItem({file: file});
+
+					var mode = "items";
+					if( file.toLowerCase().indexOf(".mdl") == file.length - 4 )
+						mode = "models";
+
+					if( mode == "models" )
+					{
+						var relativeFile = aaapi.cmdEx("getRelativeAssetPath", file);
+						if( relativeFile === file )
+						{
+							console.log("ERROR: MDL must be in a mounted content folder.\n");
+							//createModalAlert("Oops!", "The MDL file must be in a mounted content folder.", "");
+							//chosenFile = "";
+						}
+						else
+						{
+							// first, check if an item that matches this one already exists...
+							var model = aaapi.cmdEx("findLibraryModel", "file", relativeFile);
+				 			if( !model )
+				 				model = aaapi.cmdEx("createModel", "file", relativeFile);
+
+				 			if( model )
+				 			{
+				 				/*
+				 				var container = document.querySelector('#results');
+								var tile = arcadeHud.createTile(model, container, mode, "", onSpawnClick, 256, 256);
+								container.appendChild(tile);
+								*/
+
+								aaapi.cmd("setLibraryBrowserContext", "models", model.info.id, "", "");
+				 				arcadeHud.spawnItem("models", model.info.id, "", "");
+				 			}
+				 		}
+			 		}
+			 		else
+			 		{
+						if( !!item )
+						{
+							//console.log("setting to items A");
+							aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+							window.location = "libraryBrowserEZ.html?item=" + item.info.id;
+						}
+						else
+						{
+							//console.log("setting to items B");
+							aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");
+							document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(file);
+						}
+					}
+				}
+				else if( files.length > 1 )
+				{
+					var loadingIndicator = document.querySelector('#loadingIndicator');
+
+					var tileAspectRatio = 206 / 184.0;
+					tileAspectRatio = 1.333;
+					var tileSizeFactor = (files.length > 4) ? (files.length - 4) : 1;
+					var tileWidth = Math.round(256 / tileSizeFactor) ;
+					var tileHeight = Math.round((256 / tileSizeFactor) * tileAspectRatio);
+					var i = -1;
+					var interval = setInterval(loadInterval, 100);
+					function loadInterval()
+					{
+					//for( var i = 0; i < files.length; i++ )
+					//{
+				 		i++;
+				 		if( i >= files.length )
+				 		{
+				 			clearInterval(interval);
+							loadingIndicator.parentNode.removeChild(loadingIndicator);
+				 			results.style.display = 'block';
+				 			return;
+				 		}
+
+						var file = files[i];
+						var item = findTwinItem({file: file});
+
+						var mode = "items";
+						if( file.toLowerCase().indexOf(".mdl") == file.length - 4 )
+							mode = "models";
+
+						if( mode == "models" )
+						{
+							var relativeFile = aaapi.cmdEx("getRelativeAssetPath", file);
+							if( relativeFile === file )
+								return;
+								//continue;
+
+							// first, check if an item that matches this one already exists...
+							var model = aaapi.cmdEx("findLibraryModel", "file", relativeFile);
+				 			if( !model )
+				 				model = aaapi.cmdEx("createModel", "file", relativeFile);
+
+				 			if( model )
+				 			{
+				 				var container = document.querySelector('#results');
+								var tile = arcadeHud.createTile(model, container, mode, "", null, tileWidth, tileHeight);
+				 			}
+				 		}
+					}
+				}
+			}
+		</script>
+	</body>
+</html>

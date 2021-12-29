@@ -1,0 +1,48 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body style="background-color: rgba(0, 0, 0, 0.5);">
+		<div style="margin-left: auto; margin-right: auto; background-color: rgba(0, 0, 0, 0.95); font-size: 100px; font-weight: 900; font-family: Arial; bottom: 0; right: -300px; position: fixed; width: 50%; text-shadow: 5px 5px 2px rgba(0, 0, 0, 0.7); -webkit-transform: rotate(-45deg); padding: 40px; color: rgba(200, 200, 200, 0.7);">
+			<center>
+				<div id="content" style="-webkit-transform: rotate(45deg) translateY(-50px);">
+					<img src="aalogo.png" style="width: 250px; opacity: 0.5;" /><br />
+					<font style="text-shadow: none; font-size: 20px; font-weight: 900;">PAUSED<br />PRESS ESCAPE TO RESUME</font>
+					<!--
+					<i style="color: #999;">PAUSED</i><br />
+					PRESS ESCAPE TO RESUME
+					-->
+				</div>
+			</center>
+		</div>
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		<script>
+/*
+ text-shadow: 5px 5px 2px #000;
+ color: rgba(255, 255, 255, 0.4);
+*/
+
+		//console.log(kodiListener);
+
+
+		//PRESS ESCAPE TO RESUME
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+			setTimeout(function()
+			{
+				aaapi.cmd("doPause");
+			}, 500);
+		</script>
+	</body>
+</html>

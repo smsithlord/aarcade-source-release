@@ -1,0 +1,48 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	$numstat "0"
+	$blankframe "10"
+
+	$fullstat "0"
+	$fullstatmax "99999"
+	$numstatmodified "0"
+
+	"Proxies"
+	{
+		"AANumberStat"
+		{
+			"type" "objects"
+			"digit" "4"
+			"resultVar" "$numstat"
+		}
+
+		"AANumberStat"
+		{
+			"type" "objects"
+			"digit" "-1"
+			"resultVar" "$fullstat"
+		}
+
+		"SelectFirstIfNonZero"
+		{
+			"srcVar1" "$numstat"
+			"srcVar2" "$blankframe"
+			"resultVar" "$numstatmodified"
+		}
+
+		"LessOrEqual"
+		{
+			"lessEqualVar" "$numstatmodified"
+			"greaterVar" "$numstat"
+			"srcVar1" "$fullstat"
+			"srcVar2" "$fullstatmax"
+			"resultVar" "$frame"
+		}
+	}
+}

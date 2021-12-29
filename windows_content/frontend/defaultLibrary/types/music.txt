@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MPsBcsFEEX93z"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"music"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

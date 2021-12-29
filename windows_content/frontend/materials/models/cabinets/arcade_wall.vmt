@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/arcade_wall"
+	"$model" "1"
+}

@@ -1,0 +1,14 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+	}
+}

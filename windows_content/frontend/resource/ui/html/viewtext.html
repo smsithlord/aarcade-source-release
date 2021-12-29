@@ -1,0 +1,232 @@
+<html>
+<head>
+	<script>
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+	</script>
+	<style>
+		html
+		{
+			height: 100%;
+			width: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		body
+		{
+			background-color: transparent;
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+		}
+
+		.msgContainer
+		{
+			position: absolute;
+			top: 0;
+			left: 0;
+			background-size: 100% 100%;
+		}
+
+		.msgSlate
+		{
+			position: relative;
+			text-align: center;
+			top: 50%;
+			left: 50%;
+			display: block;
+			-webkit-transform: translateY(-50%);
+			transform: translateY(-50%);
+		}
+
+		.msgFrame
+		{
+			top: 0;
+			left: 0;
+			position: absolute;
+			margin: 0;
+			padding: 0;
+			display: inline-block;
+		}
+
+		.msgPreformat
+		{
+			margin: 0;
+			padding: 0;
+			font-family: Arial;
+			font-weight: 600;
+			display: inline-block;
+			background-size: 100% 100%;
+		}
+	</style>
+</head>
+<body>
+	<div class="msgContainer">
+		<div class="msgSlate">
+			<div class="msgFrame">
+				<pre class="msgPreformat"></pre>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		var msgContainer = document.querySelector(".msgContainer");
+		var msgSlate = msgContainer.querySelector(".msgSlate");
+		var msgFrame = msgSlate.querySelector(".msgFrame");
+		var msgPreformat = msgFrame.querySelector(".msgPreformat");
+
+		//document.body.style.width = "512px";
+		//document.body.style.height = "512px";
+		var msgWidth = document.body.offsetWidth;
+		var msgHeight = document.body.offsetHeight;
+		function setMsgText(options)
+		{
+			if( !!!options )
+				options = {};
+
+			var defaultOptions = {
+				"color": "white",
+				"shadowcolor": "black",
+				"fgcolor": "",
+				"bgcolor": "",
+				"borderstyle": "outset",
+				"bordersize": 0,
+				"borderradius": 6,
+				"bordercolor": "gray",
+				"padding": 5,
+				"textsize": 6,
+				"text": "",
+				"landscape": 1
+			};
+
+			for( var x in defaultOptions )
+			{
+				if( !options.hasOwnProperty(x) || options[x] == null )
+					options[x] = defaultOptions[x];
+			}
+			
+			var targetWidth = (options.landscape != 0) ? 1280 : 720;
+			var targetHeight = (options.landscape != 0) ? 720 : 1280;
+			
+			var backgroundImage = "";
+			if( options.bgcolor == "nocolor.png" )
+				options.bgcolor = "";
+			else if(options.bgcolor.indexOf(".") > 0)
+				backgroundImage = options.bgcolor;
+			else if( false && options.bgcolor == "" )
+				options.bgcolor = "black";	// for thumnail rendering
+
+			var foregroundImage = "";
+			if(options.fgcolor.indexOf(".") > 0)
+				foregroundImage = options.fgcolor;
+
+			var msgWidthRatio = msgWidth / msgHeight;
+			var msgHeightRatio = msgHeight / msgWidth;
+			var canvasWidthRatio = msgWidth / targetWidth;
+			var canvasHeightRatio = msgHeight / targetHeight;
+
+			if( msgHeight > 512 )
+			{
+				if( options.landscape == 0 )
+					canvasWidthRatio -= 0.68;
+				else
+					msgWidthRatio -= 0.45;
+			}
+
+			var zoomRatio = (options.landscape != 0) ? canvasHeightRatio * msgWidthRatio : 1.0 + canvasWidthRatio * msgWidthRatio;
+
+			var textSize = Math.ceil(40.0 * canvasHeightRatio) + Math.ceil(10.0 * canvasHeightRatio * options.textsize);
+
+			var lineScale = 1.0;
+			msgPreformat.style.lineHeight = (textSize * lineScale) + "px";
+
+			var shadowAmount = Math.ceil(2.0 * canvasHeightRatio);
+
+			var borderScaleFactor = 10.0 * canvasHeightRatio;
+
+			msgContainer.style.width = msgWidth + "px";
+			msgContainer.style.height = msgHeight + "px";
+
+			msgSlate.style.width = msgWidth + "px";
+			msgSlate.style.color = options.color;
+			
+			var xAmount =  (50 / zoomRatio);
+			msgFrame.style.transform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+			msgFrame.style.webkitTransform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+
+			if( foregroundImage == "")
+				msgPreformat.style.backgroundColor = options.fgcolor;
+			msgPreformat.style.backgroundImage = 'url("' + foregroundImage + '")';
+			
+			var paddingAmount = Math.ceil(10.0 * canvasHeightRatio * options.padding);
+			msgPreformat.style.padding = paddingAmount + "px";
+
+			var borderSize = Math.ceil(10.0 * canvasHeightRatio * options.bordersize);
+			if( options.bordersize == "0" )
+				borderSize = 0;
+			msgPreformat.style.border = borderSize + "px " + options.borderstyle + " " + options.bordercolor;
+			msgPreformat.style.borderRadius = Math.ceil(10 * canvasHeightRatio * options.borderradius) + "px";
+
+			if( backgroundImage == "")
+				msgContainer.style.backgroundColor = options.bgcolor;
+			msgContainer.style.backgroundImage = 'url("' + backgroundImage + '")';
+
+			msgContainer.style.fontSize = textSize + "px";
+
+			msgPreformat.textContent = "";
+			msgPreformat.textContent = options.text;
+
+			msgSlate.style.textShadow = shadowAmount + "px " + shadowAmount + "px #000";
+		}
+
+		var text = getParameterByName("txt");
+		var color = getParameterByName("c");
+		var border = getParameterByName("b");
+		if( border != null )
+			border = parseInt(border);
+		var bordercolor = getParameterByName("bc");
+		var borderradius = getParameterByName("br");
+		var foreground = getParameterByName("fg");
+		var background = getParameterByName("bg");
+		var landscape = getParameterByName("l");
+		if( landscape != null )
+			landscape = parseInt(landscape);
+
+		var text3d = getParameterByName("m");
+		if( !!text3d )
+			landscape = 2;
+
+		var padding = getParameterByName("p");
+		if( padding != null )
+			padding = parseInt(padding);
+		var size = getParameterByName("s");
+		if( size != null )
+			size = parseInt(size);
+		var options = {
+			"text": text,
+			"bordersize": border,
+			"color": color,
+			"bordercolor": bordercolor,
+			"borderradius": borderradius,
+			"fgcolor": foreground,
+			"bgcolor": background,
+			"padding": padding,
+			"textsize": size,
+			"landscape": landscape
+		};
+		// style="background-image: url('https://i.gifer.com/J4o.gif');"
+		setMsgText(options);
+	</script>
+</body>
+</html>

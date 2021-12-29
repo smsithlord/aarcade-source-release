@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"ae56ed6a"
+		}
+		"title"		"Flurolight T"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\stormy\neon_alphabet\flurolight_t.mdl"
+			}
+		}
+	}
+}

@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"544d0c72"
+		}
+		"title"		"Stage Light Strobe (Expensive)"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\sithlord\stagelightstrobe_expensive.mdl"
+			}
+		}
+	}
+}

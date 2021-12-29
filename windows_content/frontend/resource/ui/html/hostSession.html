@@ -1,0 +1,3119 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#universeOwnersContainer
+			{
+				width: 800px;
+				overflow-x: auto;
+				white-space: nowrap;
+				margin-bottom: 12px;
+			}
+
+			.serverRow
+			{
+				cursor: pointer;	
+			}
+
+			.spawnObjectButton
+			{
+				visibility: hidden;
+				pointer-events: none;
+			}
+
+			.serverRow:hover .spawnObjectButton
+			{
+				visibility: visible;
+				pointer-events: all;
+			}
+
+			#universeOwnerNameContainer
+			{
+				text-align: center;
+				margin-bottom: 8px;
+			}
+
+			.universeOwnerContainer
+			{
+				display: inline-block;
+				cursor: pointer;
+				border-width: 0px;
+				border-style: solid;
+				border-color: transparent;
+				vertical-align: top;
+			}
+
+			.universeOwnerAvatar
+			{
+				width: 100px;
+			}
+
+			.universeOwnerContainer:hover, .selectedUniverse
+			{
+				border-width: 4px;
+			}
+
+			.universeOwnerContainer:hover .universeOwnerAvatar, .selectedUniverse .universeOwnerAvatar
+			{
+				width: 92px;
+			}
+
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			.categoryContainer
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-radius: 10px;
+			}
+
+			.categoryTitle
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.optionContainer
+			{
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				height: 25px;
+				border-radius: 10px;
+				background-color: rgba(10, 10, 10, 0.5);
+			}
+
+			.optionContainer:nth-child(even)
+			{
+				background-color: rgba(30, 30, 30, 0.3);
+			}
+
+			.optionTitle
+			{
+				float: left;
+				margin-left: 5px;
+			}
+
+			.optionsContainer
+			{
+				margin-left: 15px;
+				margin-right: 15px;
+				margin-bottom: 15px;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+				/*background-color: #ddd;*/
+	    		border-radius: 3px;
+	    		/*border: 1px solid #bbb;*/
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+	    		/*
+	    		border-top-color: #bbb;
+	    		border-left-color: #bbb;
+	    		border-bottom-color: #bbb;
+	    		border-right-color: #bbb;
+	    		*/
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+
+			.showOnlyJoinable .needsMap
+			{
+				display: none;
+			}
+
+			.serverInfoTable td
+			{
+				padding: 4px;
+				font-family: Arial;
+			}
+
+			.serverInfoTable td:nth-child(1)
+			{
+				border-radius: 6px;
+				font-weight: bold;
+				white-space: nowrap;
+			}
+
+			#rateUp, #rateDown
+			{
+				opacity: 0.5;
+			}
+
+			#rateUp:hover, #rateDown:hover
+			{
+				opacity: 1.0;
+			}
+
+			.guestbookEntryContainer
+			{
+				max-width: 500px;
+			}
+
+			.guestbookSlate
+			{
+				border-radius: 6px;
+				display: block;
+				float: left;
+				padding: 6px;
+				font-weight: 900;
+				margin-right: 6px;
+			}
+
+			.guestbookCreated
+			{
+				font-size: 10px;
+				font-weight: normal;
+				display: inline;
+				vertical-align: middle;
+			}
+
+			.guestbookDeleteIcon
+			{
+				display: inline;
+				vertical-align: middle;
+				opacity: 0.5;
+			}
+
+			.guestbookIconImage
+			{
+				width: 10px;
+				height: 10px;
+			}
+		</style>
+		<script>
+			//var g_currentUniqueVisitors;
+			var g_currentPayload;
+			var localUserId = aaapi.cmdEx("getConVarValue", "aamp_client_id");
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var givenMapFile = arcadeHud.getParameterByName("mapfile");
+			if( !!!givenMapFile )
+				givenMapFile = "";
+
+			var spawnEntityName = arcadeHud.getParameterByName("spawn");
+			if( !!!spawnEntityName )
+				spawnEntityName = "";
+
+			var serverHistory = (localStorage.getItem("serverHistory")) ? JSON.parse(localStorage.getItem("serverHistory")) : {};
+
+/*
+			var playMode = arcadeHud.getParameterByName("playmode");
+			if( !!!playMode )
+				playMode = "";
+*/
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "window.location='asset://ui/welcome.html';";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Multiplayer", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			function doCopyToClipboard()
+			{
+				var el = document.querySelector("#clipboardSlate");
+				if( !!!el )
+				{
+					el = document.createElement('textarea');
+					el.id = "clipboardSlate";
+					el.style.cssText = "position: absolute; pointer-events: none; opacity: 0;";//" visibility: hidden;";
+					//el.style.cssText = "display: none;";
+				}
+
+				el.value = document.querySelector("#inviteLinkCell").innerHTML;
+				document.body.appendChild(el);
+				el.select();
+				//document.execCommand('copy');
+				aaapi.cmd("doCopy");
+				//document.body.removeChild(el);
+
+				//aaapi.cmd("deactivateInputMode");
+			}
+
+		 	var g_userBans = localStorage.getItem("userBans");
+		 	if( !!g_userBans )
+		 		g_userBans = JSON.parse(g_userBans);
+		 	else
+		 		g_userBans = {};
+
+			// https://stackoverflow.com/questions/2998784/how-to-output-integers-with-leading-zeros-in-javascript
+			function pad(num)
+			{
+				var size = 4;
+				var goodNum = "000" + num;
+				return goodNum.substr(goodNum.length-size);
+			}
+
+			var panoInfos = [];
+			var panoIndex = pad(0);
+			var cachedPanoName = "cachedPano" + panoIndex;
+			while( localStorage[cachedPanoName] !== undefined )
+			{
+				panoInfos.push(JSON.parse(localStorage.getItem(cachedPanoName)));
+				
+				panoIndex = pad(parseInt(panoIndex) + 1);
+				cachedPanoName = "cachedPano" + panoIndex;
+			}
+
+			//var givenTabId = arcadeHud.getParameterByName("tab");
+			//var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+			//if( !!!connectedUniverse && (givenTabId == "panos" || givenTabId == "online") )
+			//	givenTabId = "";
+		</script>
+
+		<script>
+			//var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Tutorial", "width: 850px;", true, true, "", "aaapi.cmd('consoleCommand', 'stopsound'); window.location='asset://ui/welcome.html';");
+			//document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			var tabId = arcadeHud.getParameterByName("tab");
+
+			var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+			if( !!!tabId )
+			{
+				if( !!connectedSessionInfo )
+					tabId = "online";
+				else
+					tabId = "universes";
+			}
+			//console.log(JSON.stringify(connectedSessionInfo));
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "online",
+						"title": "Connected",
+						"class": "aaOnlyIfUniverseConnected"
+					},
+					/*{
+						"id": "universes",
+						"title": "Multiverse"
+					},*/
+					{
+						"id": "servers",
+						"title": "Servers"
+					},
+					{
+						"id": "host",
+						"title": "Host",
+						"class": "aaOnlyIfNotHost aaOnlyIfUniverseNotConnected aaOnlyIfMapLoaded"
+					},/*
+					{
+						"id": "panos",
+						"title": "Panoramas",
+						"class": "aaOnlyIfHost aaOnlyIfUniverseConnected"
+					},*/
+					{
+						"id": "about",
+						"title": "About"
+					}
+				],
+				"activeTabId": tabId,
+				"onChangeCallbackName": "onChangeCallback"
+			});
+			document.write(windowTabsHeaderHTML);
+
+			var g_serversInitialized = false;
+			var universeStuffElem;
+			var searchingForServersElem;
+			var lastRandoServersTableClassName = "";
+			var serversTable;
+			function onChangeCallback(tabId)
+			{
+				//if( tabId === "servers" )
+				//{
+					if( !g_serversInitialized )
+						initServersTab();
+				//}
+			}
+
+
+			var maps = [];
+			var mapz = aaapi.cmdEx("getAllMaps");
+			var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
+			for( var y in mapz )
+			{
+				if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+					maps.push(mapz[y]);
+			}
+
+			//var mpIconSmallHTML = arcadeHud.generateIconHTML("mpicon.png", 24, 24, "aaTextColorOneColor");
+
+
+			var date2 = new Date();
+			var guestbookEntriesContainer;
+			function addGuestbookEntry(entryId, author, displayName, text, created)
+			{
+				if( !!!guestbookEntriesContainer )
+					guestbookEntriesContainer = document.querySelector("#guestbookEntries");
+
+				var gbTopHR = document.createElement("hr");
+				guestbookEntriesContainer.appendChild(gbTopHR);
+
+				var gbEntryContainer = document.createElement("div");
+				gbEntryContainer.className = "guestbookEntryContainer";
+				gbEntryContainer.author = author;
+				guestbookEntriesContainer.appendChild(gbEntryContainer);
+
+				var gbSlate = document.createElement("div");
+				gbSlate.className = "aaThemeColorTwoBackgroundColor guestbookSlate";
+				gbEntryContainer.appendChild(gbSlate);
+
+				var gbDisplayName = document.createElement("div");
+				gbDisplayName.appendChild(document.createTextNode(displayName));
+				gbSlate.appendChild(gbDisplayName);
+
+				var gbCreated = document.createElement("div");
+				gbCreated.className = "guestbookCreated";
+
+				var date1 = new Date(created);
+				var timeDiff = Math.abs(date2.getTime() - date1.getTime());
+				var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
+
+				gbCreated.innerHTML = diffDays + " days ago";
+				gbSlate.appendChild(gbCreated);
+
+				if( author === localUserId )
+				{
+					var gbDeleteIcon = document.createElement("div");
+					gbDeleteIcon.className = "guestbookDeleteIcon";
+					gbDeleteIcon.addEventListener("click", function(e)
+					{
+						//console.log("Remove guestbook entry " + entryId);
+					
+						rootRef.child(g_currentPayload.lobbyInfo.universe).child("library").child("instances").child(g_currentPayload.lobbyInfo.instance).child("metrics").child("guestbook").child(this.entryId).set({});
+
+						aaapi.cmd("addToastMessage", "Removed from Guestbook");
+						aaapi.cmd("deactivateInputMode");
+					}.bind({"entryId": entryId}), false);
+					gbSlate.appendChild(gbDeleteIcon);
+
+					var gbIconImage = document.createElement("img");
+					gbIconImage.className = "guestbookIconImage";
+					gbIconImage.src = "xicon.png";
+					gbDeleteIcon.appendChild(gbIconImage);
+				}
+
+				var gbText = document.createElement("div");
+				gbText.appendChild(document.createTextNode(text));
+				var brClear = document.createElement("br");
+				brClear.setAttribute("clear", "all");
+				gbText.appendChild(brClear);
+				gbEntryContainer.appendChild(gbText);
+
+				//var gbBottomHR = document.createElement("hr");
+				//guestbookEntriesContainer.appendChild(gbTopHR);
+
+
+					/* guestbook
+							<hr />
+							<div>
+								<div class="guestbookSlate"><div>SM Sith Lord</div><div class="guestbookSlate">7 days ago</div><div class="guestbookDeleteIcon"><img src="xicon.png" /></div></div><div>Nice arcade bra! And if I happen to type a really long message, that's okay too! Well, depends on what you mean by "really" long! lol</div>
+							</div>
+							<hr />
+					*/
+			}
+
+			function findTwinItem(originalItem)
+			{
+	 			var item = aaapi.cmdEx("findLibraryItem", "file", originalItem.file);
+	 			return item;
+	 		}
+
+			var styleHax;
+			var haxStylesheet;
+
+			var thumbupIconHTML = arcadeHud.generateIconHTML("thumbupicon.png", 24, 24, "aaThemeColorOneColor");
+			var thumbdownIconHTML = arcadeHud.generateIconHTML("thumbdownicon.png", 24, 24, "aaThemeColorOneColor");
+			//var noeyeIconHTML = arcadeHud.generateIconHTML("noeye.png", 24, 24, "aaTextColorOneColor");
+			function addServerRow(isCurrentLobby, isPublic, isPassworded, lobbyId, lastModified, universeId, instanceId, title, mapFile, author, count, isLobbyOwner, isArcadeOwner, isPersistent, objectCount, totalVisits, uniqueVisitsNumber, numVotes, rating, uniqueVisitors, ownerAvatar, hasMap, hasNew, availableOnCloud)
+			{
+				if( author.indexOf('Xaph') === 0 ) {
+					//console.log('sith lord universe id: ' + universeId);
+					if( mapFile.indexOf('hood') >= 0 ) {
+						console.log(mapFile);
+						console.log(universeId);
+						console.log(instanceId);
+						console.log(lobbyId);
+					}
+				}
+
+				/*if( mapFile.indexOf('hood') >= 0 ) {
+					console.log('output: ' + universeId + ' ' + instanceId);
+					//console.log(instanceId);
+				}*/
+
+				if( ownerAvatar.indexOf("http") != 0 )
+					ownerAvatar = 'http://aarcade.tv/noavatar.jpg?universe=' + universeId;
+
+				//if( author.indexOf("Zombie_") == -1 )
+					//console.log(ownerAvatar);
+				//if( title.indexOf("RetroGameNinja") != -1 )
+				//	console.log("Found lobby: " + lobbyId);
+				//if( author.toLowerCase().indexOf("funky") >= 0 )
+				//	console.log(lobbyId + ": " + title + " " + objectCount);
+
+				//if( title.toLowerCase().indexOf("gachi") >= 0 )
+				//	console.log("Found lobby: " + lobbyId);
+
+				if( !isPersistent && count === 0 )
+				{
+					console.log("NOTICE: The lobby " + title + " (" + lobbyId + ")" + "is a glitched out non-persistent server.");
+				}
+
+				var doNotAdd = ( givenMapFile !== "" && mapFile !== givenMapFile + ".bsp" );
+
+				if( doNotAdd && !isCurrentLobby )
+					return;
+
+				//if( title.indexOf("tab4skill") >= 0 )//title == "Unnamed (meta_hallway)" )
+				//if( author.indexOf("THE EX") >= 0 )//title == "Unnamed (meta_hallway)" )
+				//	console.log(lobbyId);
+				//var lobbyId = "huh";
+				//var title = "Yaddaz";
+				//var count = 420;
+
+				if( isCurrentLobby )
+				{
+					// Current stuff
+					var currentElem = document.querySelector("#lobbyCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(lobbyId));
+
+					currentElem = document.querySelector("#universeCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(author + "'s"));
+				}
+
+
+				var row;
+				var titleCel;
+				var hasNewIconElem;
+				var iconElem;
+				var noeyeContainerElem;
+				var titleText;
+				if( !doNotAdd )
+				{
+					if( searchingForServersElem.style.display !== "none" )
+					{
+						searchingForServersElem.style.display = "none";
+						//earlyaccessElem.style.display = "block";
+					}
+
+					row = document.createElement("tr");
+					row.className = "serverRow aaTitleTextSizeFontSize aaTextColorTwoColor helpText";
+					row.setAttribute("help", "Join this multiplayer server: " + lobbyId);
+					//row.setAttribute("help", lobbyId);
+					row.setAttribute("lobbyId", lobbyId);
+					row.setAttribute("lobbyTitle", title);
+					row.setAttribute("lobbyAuthor", author);
+					row.availableOnCloud = availableOnCloud;
+					row.mapFile = mapFile;
+					row.hasNew = hasNew;
+					row.addEventListener("click", function(e)
+					{
+						//console.log("On cloud value: " + this.availableOnCloud);
+						//console.log("Map file is: " + this.mapFile);
+						//console.log("Has new is: " + this.hasNew);
+						//return;
+
+						if( this.availableOnCloud )
+							aaapi.cmdEx("refreshIfUserMap", this.mapFile);
+
+						if( spawnEntityName !== "" )
+							aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+						
+						aaapi.cmd("joinLobby", this.getAttribute("lobbyId"));
+						//aaapi.cmd("joinLobbyWeb", this.getAttribute("lobbyId"));
+					}.bind(row), false);
+					arcadeHud.assignHelp(row);
+
+					titleCel = document.createElement("td");
+					titleCel.className = "aaThemeColorTwoBackgroundColor";
+	/*
+					var iconElem = document.createElement("div");
+					iconElem.style.cssText = "display: inline; position: relative; top: -4px; padding-right: 12px;";
+					iconElem.innerHTML = iconHTML;
+					iconElem.addEventListener("click", function(e)
+					{
+						aaapi.cmd("joinLobbyWeb", this.getAttribute("lobbyId"));
+						e.preventDefault();
+						e.stopImmediatePropagation();
+					}.bind(row), false);
+	*/
+
+					row.isArcadeOwner = isArcadeOwner;
+					row.universeId = universeId;
+					row.instanceId = instanceId;
+					row.arcadeTitle = title;
+					if( isPersistent && isLobbyOwner )
+					{
+						iconElem = document.createElement("div");
+						iconElem.className = "aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor aaHelpNote";
+						iconElem.style.cssText = "display: inline; position: relative; margin-right: 12px; vertical-align: middle; padding: 4px; width: 1%; padding-top: 0; top: -3px;";
+						iconElem.innerHTML = arcadeHud.generateIconHTML("xicon.png", 24, 24, "aaTextColorOneColor");//closeIconHTML;
+						iconElem.setAttribute("help", "Shutdown this persistent server.");
+						iconElem.addEventListener("click", function(e)
+						{
+							var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+							if( connectedUniverse.instance === this.instanceId )
+							{
+								aaapi.cmd("addToastMessage", "Cannot remove the server while you are inside of it.");
+
+								// TODO: In this case, just do DISCONNECT logic followed by REMOVE logic.
+							}
+							else
+							{
+								// remove lobby (we are owner)
+								rootRef.child("lobbies").child(this.getAttribute("lobbyId")).remove();
+
+								// remove arcade (if we are owner)
+								if( this.isArcadeOwner )
+									rootRef.child(this.universeId).child("library").child("instances").child(this.instanceId).remove();
+									//g_metaverse.rootRef.child(g_quickConnectInfo.universe).child("users").child(g_quickConnectInfo.user).onDisconnect().remove();
+
+								aaapi.cmd("addToastMessage", "Shutdown Server " + this.arcadeTitle);
+								aaapi.cmd("deactivateInputMode");
+							}
+
+							e.preventDefault();
+							e.stopImmediatePropagation();
+						}.bind(row), false);
+						arcadeHud.assignHelp(iconElem);
+					}
+
+					if( hasNew )
+					{
+						hasNewIconElem = document.createElement("div");
+						hasNewIconElem.className = "aaHelpNote";
+						hasNewIconElem.style.cssText = "display: inline-block; vertical-align: middle; padding-right: 6px;";
+						hasNewIconElem.innerHTML = arcadeHud.generateIconHTML("updatedicon.png?BUST=2", 24, 24, "aaTextColorOneColor");//newIconHTML;
+						hasNewIconElem.setAttribute("help", "This server has been updated since the last time you visited it.");
+						arcadeHud.assignHelp(hasNewIconElem);
+					}
+
+					if( (isLobbyOwner || isCurrentLobby) && (!isPublic || isPassworded))
+					{
+						noeyeContainerElem = document.createElement("div");
+						noeyeContainerElem.className = "helpNote";
+						noeyeContainerElem.setAttribute("help", "Most people will not see this server on their server list.");
+						noeyeContainerElem.style.cssText = "display: inline-block; vertical-align: middle;";
+						noeyeContainerElem.innerHTML = arcadeHud.generateIconHTML("noeye.png", 24, 24, "aaTextColorOneColor");//noeyeIconHTML;
+						arcadeHud.assignHelp(noeyeContainerElem);
+					}
+
+
+					
+						var spawnIconElem = document.createElement("div");
+						spawnIconElem.className = "spawnObjectButton aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor aaHelpNote";
+						spawnIconElem.style.cssText = "display: inline; position: relative; margin-right: 12px; vertical-align: middle; padding: 4px; width: 1%; padding-top: 0; top: -3px;";
+						spawnIconElem.innerHTML = arcadeHud.generateIconHTML("objecticon.png", 24, 24, "aaTextColorOneColor");//closeIconHTML;
+						spawnIconElem.setAttribute("help", "Spawn this server as an object.  Note that you'll have to decorate it with a screen image yourself to make it look nice.");
+						spawnIconElem.addEventListener("click", function(e)
+						{
+							e.preventDefault();
+							e.stopImmediatePropagation();
+
+							var lobbyId = this.getAttribute("lobbyId");
+							var lobbyTitle = this.getAttribute("lobbyTitle");
+							var lobbyAuthor = this.getAttribute("lobbyAuthor");
+							var lobbyMapFile = this.mapFile.substring(0, this.mapFile.length-4);
+
+							//travel.html?mapfile=zw_yard_jam_a5022f8a&screenshot=&pos=&rot=&instance=&server=
+							var file = "travel.html?mapfile=" + encodeURIComponent(lobbyMapFile) + "&screenshot=&pos=&rot=&instance=&lobby=" + encodeURIComponent(lobbyId) + "&lobbytitle=" + encodeURIComponent(lobbyTitle) + "&lobbyauthor=" + encodeURIComponent(lobbyAuthor);
+
+							var item = findTwinItem({file: file});
+
+							var mode = "items";
+							if( !!item )
+							{
+								//console.log("setting to items A");
+								aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+								window.location = "libraryBrowserEZ.html?item=" + item.info.id;
+							}
+							else
+							{
+								//console.log("setting to items B");
+								aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");
+								document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(file);
+							}
+
+							return true;
+						}.bind(row), false);
+						arcadeHud.assignHelp(spawnIconElem);
+
+
+					titleText = document.createTextNode(title);
+				}
+
+				if( isCurrentLobby )
+				{
+					currentElem = document.querySelector("#instanceCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(title));
+				}
+
+				var andThenElem;
+				var goodMapName;
+				if( !doNotAdd )
+				{
+					andThenElem = document.createElement("div");
+					andThenElem.style.cssText = "display: inline-block; font-size: 10px; padding-left: 8px; vertical-align: top;";
+
+					if( !!author && author !== "" )
+					{
+						andThenElem.appendChild(document.createTextNode("Host: "));
+						andThenElem.appendChild(document.createTextNode(author));
+
+						//if( isPersistent )
+						//	andThenElem.appendChild(document.createTextNode(" (Persistent Server)"));
+					}
+
+					goodMapName = (mapFile.length > 4) ? mapFile.substring(0, mapFile.length-4) : "ERROR";
+				}
+
+				if( isCurrentLobby )
+				{
+					currentElem = document.querySelector("#mapCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(goodMapName));
+				}
+
+				var map;
+				var hasMap;
+				var mapStuffElem;
+				var metricsElem;
+				var ratingPercentage;
+				var ratingElem;
+				var playersCel;
+				if( !doNotAdd )
+				{
+					mapStuffElem = document.createElement("div");
+					mapStuffElem.style.cssText = "font-weight: bold; vertical-align: top;";
+					if( !hasMap && !availableOnCloud )
+					{
+						mapStuffElem.style.cssText += " color: #cc0000;";
+						row.classList.add("needsMap");
+					}
+					mapStuffElem.appendChild(document.createTextNode("Map: "));
+					mapStuffElem.appendChild(document.createTextNode(goodMapName));
+
+					andThenElem.appendChild(mapStuffElem);
+				}
+
+
+				ratingPercentage = "100";
+				//if( numVotes > 1 )
+				//{
+					if( numVotes > 0 )
+						ratingPercentage = Math.round((((numVotes + rating) / 2) / (numVotes * 1.0)) * 100);
+					else
+						ratingPercentage = 100;
+				//}
+
+				if( !doNotAdd )
+				{
+					ratingElem = document.createElement("div");
+					ratingElem.innerHTML = "Rating: " + ratingPercentage + "% (" + numVotes + ")";
+					andThenElem.appendChild(ratingElem);
+
+					playersCel = document.createElement("td");
+					playersCel.className = "aaTextSizeFontSize aaThemeColorTwoBackgroundColor"
+					//playersCel.innerHTML = "(<div class='playersNumber' style='display: inline;'>" + count + "</div> players)";
+
+
+	/*
+	TODO: Determine if changes have been made since we last joined.
+	Just keep record of the timestamp that we last LEFT a server.
+	If the server has been modified since then, then there is new stuff in there for this local user.
+
+	fb.ref("/.info/serverTimeOffset").on('value', function(offset) {
+	    var offsetVal = offset.val() || 0;
+	    var serverTime = Date.now() + offsetVal;
+	  });
+	*/
+
+					//var objectCount = 420;//-1;
+					metricsElem = document.createElement("div");
+					metricsElem.style.cssText = "font-weight: bold; display: inline-block; font-size: 10px; padding-left: 8px; text-align: right; min-width: 70px;";
+					if( count > 0 )
+					{
+						if( count !== 1 )
+							metricsElem.innerHTML = "<div style='text-decoration: underline; font-weight: 900;'><b><div class='playersNumber' style='display: inline; font-size: 24px;'>" + count + "</div> players</b></div>";
+						else
+							metricsElem.innerHTML = "<div style='text-decoration: underline; font-weight: 900;'><b><div class='playersNumber' style='display: inline; font-size: 24px;'>" + count + "</div> player</b></div>";
+					}
+
+					if( objectCount >= 0 )
+					{
+						if(objectCount !== 1)
+							metricsElem.innerHTML += "<div class='objectsNumber' style='display: inline;'>" + objectCount + "</div> objects<br />";
+						else
+							metricsElem.innerHTML += "<div class='objectsNumber' style='display: inline;'>" + objectCount + "</div> object<br />";
+					}
+					
+					if( totalVisits > 0 )
+					{
+						metricsElem.innerHTML += "<div class='visitsNumber' style='display: inline;'>" + totalVisits + "</div>&nbsp;(<div class='uniqueVisitsNumber' style='display: inline;'>" + uniqueVisitsNumber + "</div>) visits<br />";
+					}
+				}
+
+				if( isCurrentLobby )
+				{
+					//g_currentUniqueVisitors = uniqueVisitors;
+
+					currentElem = document.querySelector("#objectCountCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(objectCount));
+
+					currentElem = document.querySelector("#uniqueVisitorsCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(uniqueVisitsNumber));
+
+					currentElem = document.querySelector("#totalVisitsCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(totalVisits));
+
+					currentElem = document.querySelector("#ratingPercentage");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(ratingPercentage));
+
+					currentElem = document.querySelector("#numRatings");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode(numVotes));
+
+					currentElem = document.querySelector("#inviteLinkCell");
+					currentElem.innerHTML = "";
+					currentElem.appendChild(document.createTextNode("steam://run/266430//?join=" + lobbyId));
+					//currentElem.appendChild(document.createTextNode("aarcade.tv/live/" + lobbyId));
+
+					currentElem = document.querySelector("#userStatusCell");
+					currentElem.innerHTML = "";
+					if( isArcadeOwner )
+					{
+						if( g_connectedUniverse.isHost )
+							currentElem.appendChild(document.createTextNode("Live Hosting"));
+						else
+							currentElem.appendChild(document.createTextNode("Owner (logged in as guest)"));
+					}
+					else
+						currentElem.appendChild(document.createTextNode("Guest"));
+
+					currentElem = document.querySelector("#persistentCell");
+					currentElem.innerHTML = "";
+					if( isPersistent )
+						currentElem.appendChild(document.createTextNode("Yes"));
+					else
+						currentElem.appendChild(document.createTextNode("No"));
+
+					currentElem = document.querySelector("#passwordedCell");
+					currentElem.innerHTML = "";
+					if( isPassworded )
+						currentElem.appendChild(document.createTextNode("Yes"));
+					else
+						currentElem.appendChild(document.createTextNode("No"));
+
+					currentElem = document.querySelector("#publicCell");
+					currentElem.innerHTML = "";
+					if( isPublic )
+						currentElem.appendChild(document.createTextNode("Yes"));
+					else
+						currentElem.appendChild(document.createTextNode("No"));
+
+					/*
+					var guestbookEntry;
+					for( var x in g_currentPayload.guestbook )
+					{
+						guestbookEntry = g_currentPayload.guestbook[x];
+						addGuestbookEntry(x, guestbookEntry.author, guestbookEntry.displayName, guestbookEntry.text, guestbookEntry.created);
+					}
+					*/
+
+					var guestbookEntry;
+					var guestbookKeys = (!!g_currentPayload.guestbook) ? Object.keys(g_currentPayload.guestbook) : [];
+					guestbookKeys.reverse();
+					for( var i = 0; i < guestbookKeys.length; i++ )
+					{
+						guestbookEntry = g_currentPayload.guestbook[guestbookKeys[i]];
+						addGuestbookEntry(guestbookKeys[i], guestbookEntry.author, guestbookEntry.displayName, guestbookEntry.text, guestbookEntry.created);
+					}
+				}
+
+				//metricsElem.appendChild(document.createTextNode("Host: "));
+				//metricsElem.appendChild(document.createTextNode("huh"));
+/*
+				var mapStuffElem = document.createElement("div");
+				mapStuffElem.style.cssText = "font-weight: bold;";
+				if( !hasMap )
+				{
+					mapStuffElem.style.cssText += " color: #cc0000;";
+					row.classList.add("needsMap");
+				}
+				mapStuffElem.appendChild(document.createTextNode("Map: "));
+				mapStuffElem.appendChild(document.createTextNode(goodMapName));
+
+				andThenElem.appendChild(mapStuffElem);
+*/
+
+				if( !doNotAdd )
+				{
+					playersCel.appendChild(metricsElem);
+
+					row.appendChild(titleCel);
+					titleCel.appendChild(spawnIconElem);
+
+					if( isPersistent && isLobbyOwner )
+						titleCel.appendChild(iconElem);
+					if( !!hasNewIconElem )
+						titleCel.appendChild(hasNewIconElem);
+					if( !!noeyeContainerElem )
+						titleCel.appendChild(noeyeContainerElem);
+					titleCel.appendChild(titleText);
+					titleCel.appendChild(andThenElem);
+					row.appendChild(playersCel);
+
+
+					if( count > 0 )
+						serversTable.insertBefore(row, serversTable.firstChild);
+					else
+						serversTable.appendChild(row);
+				}
+
+				if( !doNotAdd && ownerAvatar != "" )
+				{
+					row.setAttribute("ownerAvatar", ownerAvatar);
+					if( universeStuffElem.style.display != "block" )
+						universeStuffElem.style.display = "block";
+
+					var lobbyEntry = {
+						isCurrentLobby: isCurrentLobby,
+						isPublic: isPublic,
+						isPassworded: isPassworded,
+						lobbyId: lobbyId,
+						lastModified: lastModified,
+						universeId: universeId,
+						instanceId: instanceId,
+						title: title,
+						mapFile: mapFile,
+						author: author,
+						count: count,
+						isLobbyOwner: isLobbyOwner,
+						isArcadeOwner: isArcadeOwner,
+						isPersistent: isPersistent,
+						objectCount: objectCount,
+						totalVisits: totalVisits,
+						uniqueVisitsNumber: uniqueVisitsNumber,
+						numVotes: numVotes,
+						rating: rating,
+						uniqueVisitors: uniqueVisitors,
+						ownerAvatar: ownerAvatar,
+						hasMap: hasMap,
+						hasNew: hasNew,
+						availableOnCloud: availableOnCloud
+					};
+					addUniverseEntry.call(null, lobbyEntry);
+				}
+			}
+
+			function loadJavaScripts(fileNames)
+			{
+				// Decalre some important variables
+				var filesLoaded = 0;
+
+				// Async
+				return {
+						"then": function(loadJavaScriptsCallback)
+						{
+							//loadJavaScriptsCallback(fileNames[filesLoaded], loadJavaScriptsCallback);
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+						}
+					};
+
+				// Helper functions (that use the important variables)
+				function loadAJavaScript(fileName, loadJavaScriptsCallback)
+				{
+					var elem = document.createElement("script");
+					elem.type = "text/javascript";
+					elem.src = fileName;
+
+					elem.addEventListener("load", function()
+					{
+						filesLoaded++;
+
+						if( filesLoaded === fileNames.length )
+							loadJavaScriptsCallback();
+						else
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+					});
+
+					// We are added to the head so loading will begin immediately & asynchronously
+					document.getElementsByTagName("head")[0].appendChild(elem);
+				}
+			};
+
+			var g_connectedUniverse = aaapi.cmdEx("getConnectedSession");
+			function lobbyAdded(child, prevChildKey)
+			{
+				//console.log("Lobby added to list.");
+				var lobbyInfo = child.val();
+				var isLobbyOwner = (lobbyInfo.owner === localUserId);
+
+				var isCurrentLobby = (!!g_connectedUniverse && g_connectedUniverse.lobby == lobbyInfo.id);
+
+				if( !lobbyInfo.isPublic && !isLobbyOwner && !isCurrentLobby)
+					return;
+
+				rootRef.child(lobbyInfo.universe).child("library").child("instances").child(lobbyInfo.instance).child("current").once("value", function(instanceSnapshot)
+				{
+					var instanceInfo = instanceSnapshot.val();
+					if( !!!instanceInfo )
+					{
+						//console.log("Error.  Instance was null.");
+						return;
+					}
+
+// TODO: Compare this to the date this user last joined the server to figure out if this server has been updated since the last time it was visited.
+//console.log((new Date(instanceInfo.info.modified)).toString());
+
+					var isPersistent = (lobbyInfo.hasOwnProperty("isPersistent")) ? (lobbyInfo.isPersistent === true) : false;
+					var isArcadeOwner = (instanceInfo.info.owner === localUserId);
+					if( !!!instanceInfo.password || instanceInfo.password === "" || isLobbyOwner || isCurrentLobby)//(isPersistent && isLobbyOwner) )
+					{
+						// fetch all users in this universe
+						rootRef.child(lobbyInfo.universe).child("users").once("value", function(usersSnapshot)
+						{
+							var users = usersSnapshot.val();
+							var userCount = 0;
+							if( !!users )
+							{
+								var usersKeys = Object.keys(users);
+								for( var i = 0; i < usersKeys.length; i++ )
+								{
+									var user = users[usersKeys[i]];
+									if( !!user.sessions )
+									{
+										for( var x in user.sessions )
+										{
+											if( user.sessions[x].instance === instanceInfo.info.id )
+											{
+												//if( lobbyInfo.id == 'metaverse' )
+												//	console.log(JSON.stringify(user));
+												userCount++;
+												break;
+											}
+										}
+									}
+									//else
+									//{
+										// Remove any defunct users w/o sessions
+										//rootRef.child(lobbyInfo.universe).child("users").child(usersKeys[i]).remove();
+									//}
+								}
+
+								//console.log(JSON.stringify(instanceInfo));
+
+								//if( instanceInfo.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds !== "" )
+									//console.log(instanceInfo.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds);
+
+								//if( instanceInfo.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds !== "" )
+									//console.log(instanceInfo.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds);
+							}
+							// grab the map
+							var mapPayload = {
+								lobbyInfo: lobbyInfo,
+								instanceInfo: instanceInfo,
+								userCount: userCount,
+								isLobbyOwner: isLobbyOwner,
+								isArcadeOwner: isArcadeOwner,
+								isPersistent: isPersistent,
+								isCurrentLobby: isCurrentLobby
+							};
+
+							rootRef.child(lobbyInfo.universe).child("library").child("maps").child(instanceInfo.map).child("current").once("value", function(mapSnapshot)
+							{
+								var mapVal = mapSnapshot.val();
+								this.mapName = mapVal.platforms[arcadeHud.platformId].file;
+								//this.mapId = mapVal.info.id;
+
+								// get the object count
+								rootRef.child(this.lobbyInfo.universe).child("library").child("instances").child(this.lobbyInfo.instance).child("metrics").once("value", function(metricsSnapshot)
+								{
+									var metrics = metricsSnapshot.val();
+									if( !!metrics )
+									{
+										if( metrics.hasOwnProperty("numObjects") )
+											this.numObjects = metrics.numObjects;
+
+										if( metrics.hasOwnProperty("visits") )
+											this.visits = metrics.visits;
+
+										if( metrics.hasOwnProperty("uniqueVisitors") )
+											this.uniqueVisitors = metrics.uniqueVisitors;
+
+										if( metrics.hasOwnProperty("numVotes") )
+											this.numVotes = metrics.numVotes;
+
+										if( metrics.hasOwnProperty("rating") )
+											this.rating = metrics.rating;
+
+										if( metrics.hasOwnProperty("guestbook") )
+											this.guestbook = metrics.guestbook;
+									}
+
+									if( !this.hasOwnProperty("numObjects") )
+										this.numObjects = -1;
+
+									if( !this.hasOwnProperty("visits") )
+										this.visits = 0;
+
+									if( !this.hasOwnProperty("uniqueVisitors") )
+										this.uniqueVisitors = {};
+
+									if( !this.hasOwnProperty("numVotes") )
+										this.numVotes = 0;
+
+									if( !this.hasOwnProperty("rating") )
+										this.rating = 0;
+
+									if( !this.hasOwnProperty("guestbook") )
+										this.guestbook = {};
+
+									if( this.isCurrentLobby )
+										g_currentPayload = this;
+
+									var rawMapId = "maps/" + this.mapName;
+									rawMapId = aaapi.cmdEx("generateHashId", rawMapId);
+									this.rawMapId = rawMapId;
+
+									rootRef.child(lobbyInfo.universe).child("info").once("value", function(universeInfoSnapshot)
+									{
+										var universeInfoVal = universeInfoSnapshot.val();
+										this.ownerAvatar = (!!universeInfoVal && !!universeInfoVal.ownerAvatar) ? universeInfoVal.ownerAvatar : "";
+
+										// determine if we have the map
+										this.hasMap = false;
+										for( var i = 0; i < maps.length; i++ )
+										{
+											if(maps[i].platforms[arcadeHud.platformId].file.toLowerCase() == this.mapName.toLowerCase())
+											{
+												this.hasMap = true;
+												break;
+											}
+										}
+
+										function readyToAddServerRow()
+										{
+											addServerRow(this.isCurrentLobby, this.lobbyInfo.isPublic, (!!this.instanceInfo.password && this.instanceInfo.password !== ""), this.lobbyInfo.id, this.instanceInfo.info.modified, this.lobbyInfo.universe, this.lobbyInfo.instance, this.instanceInfo.title, this.mapName, this.instanceInfo.author, this.userCount, this.isLobbyOwner, this.isArcadeOwner, this.isPersistent, this.numObjects, this.visits, Object.keys(this.uniqueVisitors).length, this.numVotes, this.rating, this.uniqueVisitors, this.ownerAvatar, this.hasMap, this.hasNew, this.availableOnCloud);
+
+										}
+
+
+										// determine if this lobby has changed since you last visited
+										var serverHistoryEntry = serverHistory[this.lobbyInfo.id];
+										var hasNew = (!!this.instanceInfo.info.modified && (!!!serverHistoryEntry || serverHistoryEntry.timestamp < this.instanceInfo.info.modified));
+
+										this.hasNew = hasNew;
+
+										// determine if it's available on the cloud (if we don't have it already)
+										this.availableOnCloud = false;
+										//console.log("Has map value: " + this.hasMap + " : " + aaapi.cmdEx("isRefreshableUserMap", this.mapName));
+
+										//console.log("Testing download/maps/" + this.mapName);
+										//if( aaapi.cmdEx("isRefreshableUserMap", this.mapName) )
+										//	console.log("Is refreshable: " + this.mapName);
+										if( !this.hasMap || (hasNew && aaapi.cmdEx("isRefreshableUserMap", this.mapName)) )
+										{
+											//console.log("Check cloud for asset: " + this.mapName);
+											rootRef.child("assets").child(rawMapId).child("file").once("value", function(snapshot)
+											{
+												var val = snapshot.val();
+												this.availableOnCloud = (!!val);
+												readyToAddServerRow.call(this);
+											}.bind(this));
+										}
+										else
+											readyToAddServerRow.call(this);
+									}.bind(this));
+								}.bind(this));
+							}.bind(mapPayload));
+						});
+					}
+				});
+			}
+
+			function lobbyRemoved(snapshot)
+			{
+			}
+
+			function initServersTab()
+			{
+				g_serversInitialized = true;
+
+				console.log("Initializing server tab...");
+				loadJavaScripts(["firebase.js"]).then(function()
+				{
+					console.log("Firebase loaded.");
+					//var userId = aaapi.cmdEx("getConVarValue", "aamp_client_id");
+
+					//g_localUserIP = userId;
+					//g_localUserHashedIP = generateCRC(g_localUserIP);
+
+					rootRef = new Firebase("https://metaverse.firebaseio.com/");
+					rootRef.child("lobbies").on("child_added", lobbyAdded);
+					rootRef.child("lobbies").on("child_removed", lobbyRemoved);
+
+					/*
+					rootRef.child("assets").child("maps").once("value", function(snapshot)
+					{
+						g_cloudAssetMaps = snapshot.val();
+						console.log(JSON.stringify(g_cloudAssetMaps));
+						if( !!!g_cloudAssetMaps )
+							g_cloudAssetMaps = {};
+
+						for( var x in g_cloudAssetMaps )
+						{
+							console.log("Cloud Map: " + g_cloudAssetMaps[x].file);
+						}
+					});
+					*/
+
+					// TODO: Grab the list of player maps hosted in the cloud here, so that their servers can be listed as joinable regardless of if the local user has the map or not.
+					// Also, if the local user has the BSP inside of their aarcade_user/downloads/maps tab AND the map is available on the server they are about to join, the local map should be deleted so that it can be re-downloaded.
+				});
+
+			}
+
+
+			/*function onChangeCallback()
+			{
+				var aaTabs = document.querySelectorAll(".aaTab");
+				var aaActiveTab = document.querySelector(".aaTabActive");
+
+				var wasAdjusted = false;
+				for( var i = 0; i < aaTabs.length; i++ )
+				{
+					if( aaTabs[i] === aaActiveTab && i === aaTabs.length-1 )
+					{
+						document.querySelector("#nextButton").value = "OK";
+						wasAdjusted = true;
+					}
+				}
+
+				if( !wasAdjusted )
+					document.querySelector("#nextButton").value = "Next";
+
+				if( document.querySelector("#speakBox").checked )
+					speak();
+
+				//var lines = "Anarchy Arcade is a 3D version of your regular desktop wallpaper!";
+				//responsiveVoice.speak(lines);
+				//aaapi.cmd("speak", lines);
+			}*/
+
+			function voteDown()
+			{
+				if( !!!g_currentPayload )
+					return;
+
+				if(g_currentPayload.uniqueVisitors.hasOwnProperty(localUserId))
+				{
+					if( g_currentPayload.uniqueVisitors[localUserId] !== -1 )
+					{
+						var isNewVote = (g_currentPayload.uniqueVisitors[localUserId] === 0);
+
+						var votePayload = {
+							"numVotes": g_currentPayload.numVotes,
+							"rating": g_currentPayload.rating
+						};
+
+						if( isNewVote )
+							votePayload.numVotes++;
+						else
+							votePayload.rating--;
+
+						votePayload.rating--;
+
+						votePayload["uniqueVisitors/" + localUserId] = -1;
+
+						rootRef.child(g_currentPayload.lobbyInfo.universe).child("library").child("instances").child(g_currentPayload.lobbyInfo.instance).child("metrics").update(votePayload);
+						aaapi.cmd("addToastMessage", "Your vote has been saved.");
+						aaapi.cmd("deactivateInputMode");
+					}
+					else
+					{
+						aaapi.cmd("addToastMessage", "You have already voted!");
+						aaapi.cmd("deactivateInputMode");
+					}
+				}
+			}
+
+			function voteUp()
+			{
+				if( !!!g_currentPayload )
+					return;
+
+				if( g_currentPayload.uniqueVisitors.hasOwnProperty(localUserId) )
+				{
+					if( g_currentPayload.uniqueVisitors[localUserId] !== 1 )
+					{
+						var isNewVote = (g_currentPayload.uniqueVisitors[localUserId] === 0);
+
+						var votePayload = {
+							"numVotes": g_currentPayload.numVotes,
+							"rating": g_currentPayload.rating
+						};
+
+						if( isNewVote )
+							votePayload.numVotes++;
+						else
+							votePayload.rating++;
+
+						votePayload.rating++;
+
+						votePayload["uniqueVisitors/" + localUserId] = 1;
+
+						rootRef.child(g_currentPayload.lobbyInfo.universe).child("library").child("instances").child(g_currentPayload.lobbyInfo.instance).child("metrics").update(votePayload);
+						aaapi.cmd("addToastMessage", "Your vote has been saved.");
+						aaapi.cmd("deactivateInputMode");
+					}
+					else
+					{
+						aaapi.cmd("addToastMessage", "You have already voted!");
+						aaapi.cmd("deactivateInputMode");
+					}
+				}
+			}
+		</script>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 650px; max-width: 1600px;" tabid="online">
+
+			<center>
+				<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Disconnect" onclick="askDisconnectSession();" help="Disconnect from the online session & return to local singleplayer mode." style="margin: 10px; width: 94%;" />
+
+				<div class="aaOnlyIfHost">
+					<input id="shutdownServerButton" type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Shutdown Server" onclick="askShutdownSession();" help="Disconnect & shutsdown your server & return to local singleplayer mode." style="margin: 10px; width: 94%; margin-top: 0; display: none;" />
+				</div>
+
+				<table class="serverInfoTable aaTextSizeFontSize aaTextColorTwoColor">
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Status:</td>
+						<td id="userStatusCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Lobby:</td>
+						<td id="lobbyCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<!--<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Metaverse:</td>
+						<td id="metaverseCell">metaverse.firebase.com</td>
+					</tr>-->
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Universe:</td>
+						<td id="universeCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Map:</td>
+						<td id="mapCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Instance:</td>
+						<td id="instanceCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Persistent:</td>
+						<td id="persistentCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Passworded:</td>
+						<td id="passwordedCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Public:</td>
+						<td id="publicCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Object Count:</td>
+						<td id="objectCountCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Unique Visitors:</td>
+						<td id="uniqueVisitorsCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Total Visits:</td>
+						<td id="totalVisitsCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor">Rating:</td>
+						<td><div id="ratingPercentage" style="display: inline;"><img src="loading.gif" style="width: 24px; height: 24px;" /></div>% <div id="rateUp" style="display: inline;" onclick="voteUp();"></div><font style="size: 24px; font-weight: 900;">&nbsp;/</font><div id="rateDown" style="display: inline;" onclick="voteDown();"></div>&nbsp;(<div id="numRatings" style="display: inline;"><img src="loading.gif" style="width: 24px; height: 24px;" /></div>)</td>
+					</tr>
+					<tr>
+						<td align="right" class="aaThemeColorTwoBackgroundColor"><input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="copy" onclick="doCopyToClipboard();" help="Use CTRL+V to paste it after you've copied it." style="margin: 0px; padding-left: 0; padding-right: 0;" /> Invite:</td>
+						<td id="inviteLinkCell"><img src="loading.gif" style="width: 24px; height: 24px;" /></td>
+					</tr>
+				</table>
+
+				<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Show Guestbook" onclick="openGuestBook(this);" help="Guestbooks are superior to all modern forms of social networking." style="margin: 10px; width: 94%;" />
+
+				<div id="guestbookStuff" style="text-align: left; border-width: 4px; border-style: solid; margin-bottom: 10px; padding: 6px; border-radius: 12px; max-height: 400px; overflow-y: auto; min-width: 470px; display: none;" class="aaScrollBars aaThemeColorOneShadedBorderColor">
+						<table>
+							<tr>
+								<td align="right" style="white-space: nowrap;">
+									<div class="aaTextColorTwoColor" style="font-weight: 900;">Sign Guestbook:</div>
+								</td>
+								<td style="white-space: nowrap;">
+									<form id="signGuestbookForm" style="margin: 0; padding: 0;">
+										<input type="text" style="font-weight: 900; width: 100%; display: inline-block;" placeholder="message text" /><input type="submit" class="aaButton aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="post" help="Leave a brief message for the creator of this arcade." style="display: inline-block; margin: 0px; padding-left: 0; padding-right: 0;" />
+									</form>
+								</td>
+							</tr>
+						</table>
+						<div id="guestbookEntries" style="display: block;">
+							<!--
+							<hr />
+							<div style="max-width: 500px;">
+								<div style="border-radius: 6px; display: block; float: left; padding: 6px; font-weight: 900; margin-right: 6px;" class="aaThemeColorTwoBackgroundColor"><div>SM Sith Lord</div><div style="font-size: 10px; font-weight: normal; display: inline; vertical-align: middle;">7 days ago</div><div class="gbDeleteIcon" style="display: inline; vertical-align: middle; opacity: 0.5;"><img src="xicon.png" style="width: 10px; height: 10px;" /></div></div><div>Nice arcade bra! And if I happen to type a really long message, that's okay too! Well, depends on what you mean by "really" long! lol</div>
+							</div>
+							<hr />
+							<div style="max-width: 500px;">
+								<div style="border-radius: 6px; display: block; float: left; padding: 6px; font-weight: 900; margin-right: 6px;" class="aaThemeColorTwoBackgroundColor"><div>SM Sith Lord</div><div style="font-size: 10px; font-weight: normal; display: inline; vertical-align: middle;">7 days ago</div><div class="gbDeleteIcon" style="display: inline; vertical-align: middle; opacity: 0.5;"><img src="xicon.png" style="width: 10px; height: 10px;" /></div></div><div>Nice arcade bra! And if I happen to type a really long message, that's okay too! Well, depends on what you mean by "really" long! lol</div>
+							</div>
+							<hr />
+							<div style="max-width: 500px;">
+								<div style="border-radius: 6px; display: block; float: left; padding: 6px; font-weight: 900; margin-right: 6px;" class="aaThemeColorTwoBackgroundColor"><div>SM Sith Lord</div><div style="font-size: 10px; font-weight: normal; display: inline; vertical-align: middle;">7 days ago</div><div class="gbDeleteIcon" style="display: inline; vertical-align: middle; opacity: 0.5;"><img src="xicon.png" style="width: 10px; height: 10px;" /></div></div><div>Nice arcade bra! And if I happen to type a really long message, that's okay too! Well, depends on what you mean by "really" long! lol</div>
+							</div>
+							<hr />
+							<div style="max-width: 500px;">
+								<div style="border-radius: 6px; display: block; float: left; padding: 6px; font-weight: 900; margin-right: 6px;" class="aaThemeColorTwoBackgroundColor"><div>SM Sith Lord</div><div style="font-size: 10px; font-weight: normal; display: inline; vertical-align: middle;">7 days ago</div><div class="gbDeleteIcon" style="display: inline; vertical-align: middle; opacity: 0.5;"><img src="xicon.png" style="width: 10px; height: 10px;" /></div></div><div>Nice arcade bra! And if I happen to type a really long message, that's okay too! Well, depends on what you mean by "really" long! lol</div>
+							</div>
+						-->
+						</div>
+				</div>
+
+				<div class="aaOnlyIfHost">
+					<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="New 360&deg; Screenshot" onclick="newPano();" help="360&deg; screenshots are useful for your guests who are using the web client.  FIRST stand where you want to take your screenshot from, THEN click this button." style="margin: 10px; margin-top: 0; width: 94%;" />
+						<div id="panosContainer" class="aaScrollBars" style="margin-top: 10px; display: none; max-height: 400px; overflow-x: hidden; overflow-y: auto;"></div>
+				</div>
+
+			</center>
+			<!--
+			<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" onclick="newPano();" style="width: 80%;" help="FIRST stand where you want to take your 360&deg; screenshot from, THEN click this button.">New 360&deg; Screenshot</div><br />
+-->
+
+			<script>
+				var signGuestbookFormElem = document.querySelector("#signGuestbookForm");
+				signGuestbookFormElem.addEventListener("submit", function(e)
+				{
+					var textElem = this.querySelector("input[type='text']");
+					var text = textElem.value;
+					if( text === "" )
+						return;
+
+			 		var localUser = aaapi.cmdEx("getUser", localUserId);
+			 		if( !!!localUser )
+			 			return;
+
+			 		var guestbookPayload = {
+			 			"author": localUserId,
+			 			"displayName": localUser.displayName,
+			 			"text": text,
+			 			"created": Firebase.ServerValue.TIMESTAMP
+			 		};
+
+
+					var guestbookEntryRef = rootRef.child(g_currentPayload.lobbyInfo.universe).child("library").child("instances").child(g_currentPayload.lobbyInfo.instance).child("metrics").child("guestbook").push();
+					guestbookEntryRef.set(guestbookPayload);
+
+					e.preventDefault();
+
+					aaapi.cmd("addToastMessage", "Saved to Guestbook");
+					aaapi.cmd("deactivateInputMode");
+
+					return false;
+				}.bind(signGuestbookFormElem), false);
+
+				var elem = document.querySelector("#rateUp");
+				elem.innerHTML = thumbupIconHTML;
+
+				document.querySelector("#rateDown").innerHTML = thumbdownIconHTML;
+
+				function openGuestBook(button)
+				{
+					var guestbookStuff = document.querySelector("#guestbookStuff");//guestbookEntries
+					if( guestbookStuff.style.display === "none" )
+					{
+						guestbookStuff.style.display = "block";
+						button.value = "Hide Guestbook";
+					}
+					else
+					{
+						guestbookStuff.style.display = "none";
+						button.value = "Show Guestbook";
+					}
+				}
+			</script>
+
+			<!--
+			<div class="aaTitleText aaTextColorTwoColor aaOnlyIfHost" style="font-family: Arial;">YOU ARE THE HOST</div>
+			<div class="aaTitleText aaTextColorTwoColor aaOnlyIfNotHost" style="font-family: Arial;">YOU ARE A GUEST</div>
+			-->
+
+			<!--<div class="aaTitleText aaTextColorTwoColor">PLAYERS</div>-->
+
+			<!--<div style="padding: 10px; font-family: Arial;" class="aaTextColorTwoColor aaTextSizeFontSize">-->
+				
+
+
+
+<!--
+			<style>
+				.playerCard
+				{
+					display: inline-block;
+					margin: 6px;
+					vertical-align: top;
+				}
+
+				.playerContainer
+				{
+					padding: 10px;
+					border-width: 2px;
+					border-style: solid;
+					width: 150px;
+				}
+
+				.playerAvatarContainer
+				{
+					border-width: 2px;
+					border-style: solid;
+				}
+
+				.playerAvatarImage
+				{
+					width: 100%;
+				}
+
+				.playerDisplayNameContainer
+				{
+					border-width: 2px;
+					border-style: solid;
+					padding: 10px;
+					margin-top: 10px;
+				}
+
+				.playerDisplayName
+				{
+					font-family: Arial;
+					font-weight: bold;
+					overflow: hidden;
+				}
+
+				.followedPlayerCard .playerContainer, .followedPlayerCard:hover .playerContainer
+				{
+					background: transparent;
+				}
+
+				.unfollowButton
+				{
+					display: none;
+				}
+
+				.followButton
+				{
+					display: block;
+				}
+
+				.playerActionButton
+				{
+					padding: 6px;
+				}
+
+				.followedPlayerCard .unfollowButton
+				{
+					display: block;
+				}
+
+				.followedPlayerCard .followButton
+				{
+					display: none;
+				}
+
+				.playerActionButtonsContainer
+				{
+					visibility: hidden;
+					pointer-events: none;
+				}
+
+				.playerCard:hover .playerActionButtonsContainer
+				{
+					visibility: visible;
+					pointer-events: all;
+				}
+
+				.bannedPlayersContainer
+				{
+					max-height: 150px;
+					overflow: auto;
+				}
+
+				.bannedPlayerContainer
+				{
+					display: block;
+					margin: 10px;
+					padding: 10px;
+					border-width: 2px;
+					border-style: solid;
+					border-radius: 8px;
+					font-family: Arial;
+				}
+
+				.bannedPlayerDisplayNameContainer
+				{
+					display: block;
+					padding: 4px;
+					border-width: 2px;
+					border-style: solid;
+					border-radius: 4px;
+				}
+
+				.bannedPlayerDisplayName
+				{
+					visibility: hidden;
+				}
+
+				.bannedPlayerContainer:hover .bannedPlayerDisplayName
+				{
+					visibility: visible;
+				}
+
+				.bannedPlayerDate
+				{
+					display: block;
+					padding: 4px;
+				}
+
+				.unbanButton
+				{
+					display: inline-block;
+					padding: 4px;
+				}
+
+				.noBannedPlayers
+				{
+					text-align: center;
+					font-family: Arial;
+					padding: 20px;
+				}
+
+				.spMode
+				{
+					font-family: Arial;
+					font-size: 20px;
+					font-weight: 900;
+					text-align: center;
+					padding: 20px;
+				}
+			</style>
+
+			<center>
+				<div class="playerCards aaOnlyIfUniverseConnected" style="white-space: nowrap;"></div>
+			</center>
+
+			<div style="margin-top: 20px;" class="aaTitleText aaTextColorTwoColor" style="font-family: Arial;">BANNED PLAYERS</div>
+			<div class="noBannedPlayers">You have not banned any players.</div>
+			<div class="bannedPlayersContainer aaScrollBars"></div>
+-->
+			<script>
+			/*
+				// populate player cards
+				var playerCardsElem = document.querySelector(".playerCards");
+
+			 	var allUsers = aaapi.cmdEx("getAllUsers");
+
+			 	for( var i = 0; i < allUsers.length; i++ )
+			 	{
+			 		var playerCardElem = document.createElement("div");
+
+			 		if( allUsers[i].followed == "0" )
+			 			playerCardElem.className = "playerCard";
+			 		else
+			 			playerCardElem.className = "playerCard followedPlayerCard";
+			 		playerCardElem.setAttribute("userId", allUsers[i].userId);
+
+			 		var playerContainerElem = document.createElement("div");
+			 		playerContainerElem.className = "playerContainer aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+			 		if( allUsers[i].local != "1" )
+			 		{
+			 			playerContainerElem.addEventListener("click", function(e)
+			 			{
+			 				followPlayer(this);
+			 			}.bind(playerContainerElem), true);
+			 		}
+
+			 		var playerAvatarContainerElem = document.createElement("div");
+			 		playerAvatarContainerElem.className = "playerAvatarContainer aaThemeColorOneInverseShadedBorderColor";
+
+			 		var playerAvatarImageElem = document.createElement("img");
+			 		playerAvatarImageElem.className = "playerAvatarImage";
+			 		var goodAvatarUrl = allUsers[i].avatarUrl;
+			 		if( goodAvatarUrl === "" )
+			 			goodAvatarUrl = "noavatar.jpg";
+			 		playerAvatarImageElem.src = goodAvatarUrl;
+
+			 		var playerDisplayNameContainerElem = document.createElement("div");
+			 		playerDisplayNameContainerElem.className = "playerDisplayNameContainer aaThemeColorTwoShadedBackground aaThemeColorOneInverseShadedBorderColor";
+
+			 		var playerDisplayNameElem = document.createElement("div");
+			 		playerDisplayNameElem.className = "playerDisplayName";
+			 		var goodName = allUsers[i].displayName;
+			 		if( goodName === "" )
+			 			goodName = "Human Player";
+			 		var safeNameElem = document.createTextNode(goodName);
+
+			 		var playerItemImageContainerElem;
+			 		var playerItemImageElem;
+			 		var playerItem = undefined;
+			 		var playerItemId;
+			 		var playerObjectId = allUsers[i].objectId;
+			 		var playerObject;
+			 		if( playerObjectId !== "" )
+			 		{
+
+			 			playerObject = aaapi.cmdEx("getObject", playerObjectId);
+
+			 			playerItemId = playerObject.item;
+			 			playerItem = aaapi.cmdEx("getLibraryItem", playerItemId);
+
+			 			if( !!playerItem )
+			 			{
+					 		playerItemImageElem = document.createElement("img");
+					 		//playerItemImageElem.src = item.screen;
+					 		playerItemImageElem.style.cssText = "width: 100%; margin: auto;";
+			 			}
+			 		}
+
+			 		var playerActionButtonsContainerElem = document.createElement("div");
+			 		playerActionButtonsContainerElem.className = "playerActionButtonsContainer";
+
+			 		var playerFollowButtonElem = document.createElement("div");
+			 		playerFollowButtonElem.className = "playerActionButton followButton aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+			 		if( allUsers[i].local != "1" )
+			 		{
+			 			playerFollowButtonElem.addEventListener("click", function(e)
+			 			{
+			 				followPlayer(this);
+			 			}.bind(playerFollowButtonElem), true);
+			 		}
+			 		else
+			 			playerFollowButtonElem.style.display = "none";
+			 		playerFollowButtonElem.innerHTML = "FOLLOW";
+
+			 		var playerUnfollowButtonElem = document.createElement("div");
+			 		playerUnfollowButtonElem.className = "playerActionButton unfollowButton aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+			 		if( allUsers[i].local != "1" )
+			 		{
+			 			playerUnfollowButtonElem.addEventListener("click", function(e)
+			 			{
+			 				followPlayer(this);
+			 			}.bind(playerUnfollowButtonElem), true);
+				 	}
+			 		else
+			 			playerUnfollowButtonElem.style.display = "none";
+			 		playerUnfollowButtonElem.innerHTML = "UNFOLLOW";
+
+			 		var playerRestrictButtonElem = document.createElement("div");
+			 		playerRestrictButtonElem.className = "playerActionButton aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+			 		if( allUsers[i].local != "1" )
+			 		{
+			 			playerRestrictButtonElem.addEventListener("click", function(e)
+			 			{
+			 				restrictPlayer(this);
+			 			}.bind(playerRestrictButtonElem), true);
+			 		}
+			 		//else
+			 			playerRestrictButtonElem.style.display = "none";
+			 		playerRestrictButtonElem.innerHTML = "RESTRICT";
+
+			 		var playerBanButtonElem = document.createElement("div");
+			 		playerBanButtonElem.className = "playerActionButton aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaOnlyIfHost";
+			 		if( allUsers[i].local != "1" )
+			 		{
+			 			playerBanButtonElem.addEventListener("click", function(e)
+			 			{
+			 				banPlayer(this);
+			 				setTimeout(function()
+			 				{
+			 					document.location.reload();
+			 				}, 500);
+			 			}.bind(playerBanButtonElem), true);
+			 		}
+			 		else
+			 			playerBanButtonElem.style.display = "none";
+			 		playerBanButtonElem.innerHTML = "BAN";
+
+			 		// compose
+			 		playerCardElem.appendChild(playerContainerElem);
+			 		playerContainerElem.appendChild(playerAvatarContainerElem);
+			 		playerAvatarContainerElem.appendChild(playerAvatarImageElem);
+			 		playerContainerElem.appendChild(playerDisplayNameContainerElem);
+			 		playerDisplayNameContainerElem.appendChild(playerDisplayNameElem);
+			 		playerDisplayNameElem.appendChild(safeNameElem);
+			 		if( !!playerItem )
+			 		{
+			 			playerItemImageContainerElem = document.createElement("div");
+			 			playerItemImageContainerElem.style.cssText = "width: 174px;";
+
+			 			playerItemImageContainerElem.appendChild(playerItemImageElem);
+			 			playerCardElem.appendChild(playerItemImageContainerElem);
+
+						arcadeHud.loadItemBestImage(playerItemImageElem, playerItem, function()
+						{
+						}.bind(playerItemImageElem));
+			 		}
+			 		playerCardElem.appendChild(playerActionButtonsContainerElem);
+			 		playerActionButtonsContainerElem.appendChild(playerFollowButtonElem);
+			 		playerActionButtonsContainerElem.appendChild(playerUnfollowButtonElem);
+			 		playerActionButtonsContainerElem.appendChild(playerRestrictButtonElem);
+			 		playerActionButtonsContainerElem.appendChild(playerBanButtonElem);
+
+			 		playerCardsElem.appendChild(playerCardElem);
+			 	}
+
+			 	function followPlayer(elem)
+			 	{
+			 		var parentElem = elem;
+			 		var userId;
+			 		while( !!parentElem && !!!userId )
+			 		{
+			 			userId = parentElem.getAttribute("userId");
+			 			parentElem = parentElem.parentNode;
+			 		}
+
+			 		if( !!userId )
+			 			aaapi.cmd("followPlayer", userId);
+			 	}
+
+			 	function banPlayer(elem)
+			 	{
+			 		var parentElem = elem;
+			 		var userId;
+			 		while( !!parentElem && !!!userId )
+			 		{
+			 			userId = parentElem.getAttribute("userId");
+			 			parentElem = parentElem.parentNode;
+			 		}
+
+			 		if( !!userId )
+			 			aaapi.cmd("banPlayer", userId);
+			 	}
+
+			 	// populate banned palyer list
+
+			 	var banInfo;
+				var bannedPlayersContainerElem = document.querySelector(".bannedPlayersContainer");
+				var noBannedPlayersElem = document.querySelector(".noBannedPlayers");
+			 	if( Object.keys(g_userBans).length > 0 )
+			 		noBannedPlayersElem.style.display = "none";
+
+			 	for( var x in g_userBans )
+			 	{
+			 		banInfo = g_userBans[x];
+
+				 	var bannedPlayerContainerElem = document.createElement("div");
+				 	bannedPlayerContainerElem.className = "bannedPlayerContainer aaThemeColorTwoShadedBackground aaThemeColorTwoShadedBorderColor";
+
+				 	var bannedPlayerDisplayNameContainerElem = document.createElement("div");
+				 	bannedPlayerDisplayNameContainerElem.className = "bannedPlayerDisplayNameContainer aaThemeColorTwoLowBackgroundColor aaThemeColorTwoInverseShadedBorderColor";
+
+				 	var bannedPlayerDisplayNameElem = document.createElement("div");
+				 	bannedPlayerDisplayNameElem.className = "bannedPlayerDisplayName";
+
+				 	var safeBannedPlayerName = document.createTextNode(banInfo.displayName);
+
+				 	var bannedPlayerDateElem = document.createElement("div");
+				 	bannedPlayerDateElem.className = "bannedPlayerDate";
+				 	bannedPlayerDateElem.innerHTML = new Date(parseInt(banInfo.date)).toLocaleDateString();
+
+				 	var unbanButtonElem = document.createElement("div");
+				 	unbanButtonElem.className = "unbanButton aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				 	unbanButtonElem.innerHTML = "Unban";
+				 	unbanButtonElem.userId = banInfo.id;
+				 	unbanButtonElem.addEventListener("click", function(e)
+				 	{
+				 		delete g_userBans[this.userId];
+				 		localStorage.setItem("userBans", JSON.stringify(g_userBans));
+				 		aaapi.cmd("unbanPlayer", this.userId);
+				 		document.location.reload();
+				 	}.bind(unbanButtonElem));
+
+				 	// compose
+				 	bannedPlayerContainerElem.appendChild(bannedPlayerDisplayNameContainerElem);
+				 	bannedPlayerDisplayNameContainerElem.appendChild(bannedPlayerDisplayNameElem);
+				 	bannedPlayerDisplayNameElem.appendChild(safeBannedPlayerName);
+				 	bannedPlayerContainerElem.appendChild(bannedPlayerDateElem);
+				 	bannedPlayerContainerElem.appendChild(unbanButtonElem);
+
+				 	bannedPlayersContainerElem.appendChild(bannedPlayerContainerElem);
+				}
+				*/
+			</script>
+			<!--</div>-->
+			<!--
+			<div class="aaTitleText aaTextColorTwoColor" style="font-family: Arial;">INVITE LINK</div>
+			<input id="sessionLinkInput" type="text" class="autoSelectAll aaTitleTextSizeFontSize" style="width: 100%;" value="" onmouseup="return false;" readonly />
+
+			<center>
+				<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Copy to Clipboard" onclick="doCopyToClipboard();" help="Use CTRL+V to paste it after you've copied it." style="margin: 10px; width: 94%;" /><br />
+			</center>
+
+			<div style="padding: 10px; margin-bottom: 10px; font-family: Arial; width: 350px;" class="aaTextColorTwoColor aaTextSizeFontSize">
+				Friends join using AArcade: Source, or in 2D mode using Google Chrome!
+			</div>
+		-->
+		</div>
+<!--
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 400px;" tabid="panos">
+			<center>
+
+				<div style="padding: 10px; font-family: Arial;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					360&deg; screenshots allow Google Chrome guests to see what it's like to walk around your arcade in 3D.<br /><br />
+					<div id="noPanos">
+						<br />
+						<b>Your Google Chrome guests will only have 2D top-down mode if you don't take any 360&deg; screenshots this session.</b>
+					</div>
+				</div>
+			</center>
+		</div>
+	-->
+
+			
+		<style>
+			.panoImage
+			{
+				max-width: 70px;
+			}
+		</style>
+
+		<script>
+			function newPano()
+			{
+				//if(!givenTabId)// || givenTabId === "tasks")
+				//	aaapi.cmd("consoleCommand", "ignore_next_tab_up 1");
+
+				window.location = 'asset://ui/panoScreenshot.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			if( panoInfos.length > 0 )
+			{
+				//document.querySelector("#noPanos").style.display = "none";
+				var panosContainerElem = document.querySelector("#panosContainer");
+
+				var panoInfo, panoContainerElem, panoImageFrontElem, panoImageRightElem, panoImageBackElem, panoImageLeftElem;
+				for( var i = 0; i < panoInfos.length; i++ )
+				{
+					panoInfo = panoInfos[i];
+
+					panoContainerElem = document.createElement("div");
+					panoContainerElem.className = "aaThemeColorOneInverseShadedBorderColor";
+					panoContainerElem.style.cssText = "border-style: solid; border-width: 2px; display: block; white-space: nowrap; width: 280px;";
+
+					panoImageFrontElem = document.createElement("img");
+					panoImageFrontElem.className = "panoImage";
+					panoImageFrontElem.src = panoInfo.binary.front;
+
+					panoImageRightElem = document.createElement("img");
+					panoImageRightElem.className = "panoImage";
+					panoImageRightElem.src = panoInfo.binary.right;
+
+					panoImageBackElem = document.createElement("img");
+					panoImageBackElem.className = "panoImage";
+					panoImageBackElem.src = panoInfo.binary.back;
+
+					panoImageLeftElem = document.createElement("img");
+					panoImageLeftElem.className = "panoImage";
+					panoImageLeftElem.src = panoInfo.binary.left;
+
+					// compose
+					panoContainerElem.appendChild(panoImageFrontElem);
+					panoContainerElem.appendChild(panoImageRightElem);
+					panoContainerElem.appendChild(panoImageBackElem);
+					panoContainerElem.appendChild(panoImageLeftElem);
+					panosContainerElem.appendChild(panoContainerElem);
+				}
+
+				panosContainerElem.style.display = "block";
+			}
+		</script>
+
+
+		<style>
+			#searchingForServers
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#earlyaccess
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#serversTable
+			{
+				width: 100%;
+				max-width: 700px;
+			}
+
+			#serversTable td
+			{
+				font-family: Arial;
+				padding: 8px;
+			}
+
+			#serversTable tr td:nth-child(1)
+			{
+				border-top-left-radius: 8px;
+				border-bottom-left-radius: 8px;
+				padding-right: 12px;
+				min-width: 420px;
+				max-width: 600px;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+
+			#serversTable tr:hover td:nth-child(1)
+			{
+				text-decoration: underline;
+			}
+
+			#serversTable tr td:nth-child(2)
+			{
+				border-top-right-radius: 8px;
+				border-bottom-right-radius: 8px;
+				margin-right: 12px;
+				white-space: nowrap;
+				width: 1px;
+			}
+
+			#serversTable tr:nth-child(even) td
+			{
+				background-color: transparent;
+			}
+		</style>
+
+		<style>
+			.loadingIndicator
+			{
+				width: 12px;
+				height: 12px;
+				border-width: 4px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+
+			.animatedEllipsis
+			{
+				display: inline;
+			}
+
+			.animatedEllipsis div
+			{
+				display: inline;
+				visibility: hidden;
+			}
+		</style>
+		
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 800px;" tabid="servers">
+
+			<div id="universeStuff" style="display: none;">
+				<div id="universeOwnerNameContainer" class="aaTitleTextSizeFontSize aaTextColorTwoColor helpText" help="The name of the universe owner.">Select a Universe</div>
+				<div id="universeOwnersContainer" class="aaScrollBars"></div>
+				<!--div id="universeContainer"></div-->
+			</div>
+
+			<div class="aaTitleText aaTextColorTwoColor" style="float: left;">PUBLIC SERVERS <div id="mapFilterText" style="display: none;"></div></div><div id="onlyShowFilterBox" style="float: right;">Only Show Joinable Maps<input id="onlyJoinableBox" type="checkbox" style="margin-left: 8px;" /></div>
+			<div id="searchingForServers">
+				<br clear="all" /><br />
+				<center>
+					<table>
+						<tr><td>
+							<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+						</td><td>
+							<div class="aaTextSizeFontSize aaTextColorTwoColor">Searching for servers<div class="animatedEllipsis"><div>.</div><div>.</div><div>.</div></div></div>
+						</td></tr>
+					</table>
+				</center>
+			</div>
+
+			<table id="serversTable" cellspacing="0" cellpadding="0">
+			</table>
+
+			<div id="privateInviteBox" style="display: none; width: 100%;">
+				<br />
+				<div class="aaTitleText aaTextColorTwoColor">PRIVATE INVITE</div>
+				<form style="margin: 0;" id="privateInviteForm">
+					<input id="inviteLinkInput" type="text" class="aaTextSizeFontSize" style="width: 100%; font-family: Arial; padding: 2px;" placeholder="Paste invite link here" />
+				</form>
+				<input type="button" class="aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Join Now" onclick="tryPrivateInvite();" help="Join a multiplayer session that you were given an invite link to." style="padding: 12px; padding-bottom: 6px; padding-top: 6px;" />
+				<center>
+					<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; font-weight: 900; display: none;" id="invalidInvite">
+						- INVALID INVITE LINK -
+					</div>
+				</center>
+			</div>
+			<div id="hrthing">
+				<br />
+				<hr class="aaThemeColorOneBorderColor" />
+				<div style="position: relative; top: -18px; font-family: arial; font-size: 12px; font-weight: bold; letter-spacing: 0.2em; text-align: center; opacity: 0.5; margin-bottom: 20px;" onclick="showMore(this);"><div style="position: absolute; text-align: center; width: 100%; cursor: pointer;">CLICK HERE TO USE INVITE LINK</div></div>
+			</div>
+		</div>
+
+		<!--div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 800px;" tabid="universes">
+			obsolete?
+		</div-->
+		
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 600px;" tabid="about">
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Rules</div>
+			Do not host any arcades that have nudity, gore, or other overly offensive content.<br />
+			<br />
+			If you are unsure if your content is offensive, host it as a private lobby instead. That way random kids won't join it by accident.<br />
+			<br />
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Beta</div>
+			Welcome to the beta of multiplayer in AArcade: Source! There will be many improvements to be added & bugs to be fixed.  Thank you for your patience!<br />
+			<br />
+			If you join a server and nothing spawns in, try rejoining it.<br />
+			<br />
+			You may experience increase instability in multiplayer mode, especially while the host is actively building stuff in their arcade.<br />
+			<br />
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Hosting</div>
+			You can host any of your singleplayer arcades as a multiplayer session.  Just load up your arcade, and then go to Main Menu &gt; Multiplayer &gt; Host.<br />
+			<br />
+			Normally, servers that you host will be shutdown as soon as you disconnect from them.  However, advanced users may choose to host <b>persistent servers</b>, which remain available in the cloud even after the host disconnects.<br />
+			<br />
+			The title of your items, the image URLs used for their cabinet art, the position of them in the 3D world, this is all metadata that is synced when you host a multiplayer session. Any local files that your media items point to are <u>NOT</u> included.<br />
+			<br />
+			While your media files themselves are not synced to guests, the custom 3D art assets you use in your arcade <u>ARE</u> synced to guests through the cloud on an as-needed basis.<br />
+			<br />
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Syncing</div>
+			You must "follow" the player you wish to stay in sync with by clicking on them. Whenever they select an item, it will be selected for you too, and will playback at the same time for both of you. They must also "follow" you back if they want to stay in sync with stuff you click on as well.<br />
+			<br />
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Games & Movies</div>
+			There are no peer-to-peer file transfer or screen sharing features for the media in AArcade. If your friend has one of his local games placed in his arcade, you'll need your own copy of the game to actually launch the shortcut. Otherwise, you'll just be able to watch the preview video for the game.<br />
+			<br />
+			Similarly, if your friend has one of his local movies spawned on the wall, you'll need your own copy of the movie if you want to watch it together. Your files do not need to be named the same. When the item is selected, playback begins for which ever version you have. Skipping around in the video is not synced.<br />
+			<br />
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTextColorTwoColor">Cross-Platform</div>
+			In addition to AArcade: Source users, you can also send your invite link to anybody with Google Chrome to join right in their web browser. They'll be in top-down mode, but will be able to interact with everybody in the server just like a regular AArcade: Source user. The web client is still in very early beta.<br />
+			<br />
+		</div>
+
+		<script>
+			document.querySelector("#privateInviteForm").addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				tryPrivateInvite();
+			}, false);
+
+			var onlyJoinableBoxElem = document.querySelector("#onlyJoinableBox");
+
+			var oldOnlyJoinableValue = localStorage.getItem("showOnlyJoinableServers");
+			if( givenMapFile !== "" )
+			{
+				oldOnlyJoinableValue = false;
+				document.querySelector("#onlyShowFilterBox").style.display = "none";
+
+				document.querySelector(".aaTab[tabid='host']").style.display = "none";
+			}
+			else if( !!oldOnlyJoinableValue )
+				oldOnlyJoinableValue = (oldOnlyJoinableValue == "1");
+			else
+		 		oldOnlyJoinableValue = true;
+
+		 	if( givenMapFile === "" )
+		 	{
+		 		var contentElem = document.querySelector(".aaTabContent[tabid='servers']");
+				contentElem.style.width = "800px";
+				contentElem.style.height = "650px";
+			}
+
+			onlyJoinableBoxElem.addEventListener("change", function(e)
+			{
+				var val = (e.target.checked) ? "1" : "0";
+				localStorage.setItem("showOnlyJoinableServers", val);
+
+				if( e.target.checked )
+					serversTable.classList.add("showOnlyJoinable");
+				else
+					serversTable.classList.remove("showOnlyJoinable");
+				//document.location.reload();
+			});
+
+			function tryPrivateInvite()
+			{
+				var inviteLink = document.querySelector("#inviteLinkInput").value;
+				//var found = inviteLink.indexOf("http://aarcade.tv/live/");
+				var found = inviteLink.indexOf("steam://run/266430//?join=");
+				if( found === 0 )
+				{
+					var lobbyName = inviteLink.substring(found+26);
+					document.querySelector("#invalidInvite").style.display = "none";
+					aaapi.cmd("joinLobby", lobbyName);
+					return;
+				}
+
+				document.querySelector("#invalidInvite").style.display = "block";
+			}
+
+			universeStuffElem = document.querySelector("#universeStuff");
+			searchingForServersElem = document.querySelector("#searchingForServers");
+			serversTable = document.querySelector("#serversTable");
+
+
+		 	if( oldOnlyJoinableValue )
+		 	{
+				onlyJoinableBoxElem.checked = true;
+				if( onlyJoinableBoxElem.checked )
+					serversTable.classList.add("showOnlyJoinable");
+				else
+					serversTable.classList.remove("showOnlyJoinable");
+			}
+
+			//var popoutIconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
+			//var closeIconHTML = arcadeHud.generateIconHTML("xicon.png", 24, 24, "aaTextColorOneColor");
+			//var newIconHTML = arcadeHud.generateIconHTML("updatedicon.png?BUST=2", 24, 24, "aaTextColorOneColor");
+			setInterval(function()
+			{
+				var animatedEllipsisElems = document.querySelectorAll(".animatedEllipsis");
+				var animatedEllipsisElem, animatedEllipsisDivs;
+				for( var i = 0; i < animatedEllipsisElems.length; i++ )
+				{
+					animatedEllipsisElem = animatedEllipsisElems[i];
+					if( !!!animatedEllipsisElem.state )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisElem.state++;
+
+					if( animatedEllipsisElem.state > 3 )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisDivs = animatedEllipsisElem.querySelectorAll("div");
+					for( var j = 0; j < animatedEllipsisDivs.length; j++ )
+					{
+						if( j < animatedEllipsisElem.state )
+							animatedEllipsisDivs[j].style.visibility = "visible";
+						else
+							animatedEllipsisDivs[j].style.visibility = "hidden";
+					}
+				}
+			}, 500);
+		</script>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 650px; max-width: 500px; overflow-x: hidden;" tabid="host">
+			<center>
+				<script>
+					document.write(arcadeHud.generateIconHTML("aarcadetv.png", 401, 171, "aaThemeColorOneColor"));
+				</script>
+				<br /><br />
+			</center>
+			Host your arcade & invite friends!<br />
+			<br />
+			Hang out, chat, watch videos, and browse your arcade together!<br /><br />
+		<!--</div>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 400px;">-->
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="The title of your arcade is what people will see when browsing for servers.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Arcade Title:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="text" class="aaTextSizeFontSize" value="" placeholder="" id="title" />
+					</td>
+				</tr>
+				<tr class="helpNote" help="The server ID you choose is used in your invite URL. Leave blank if you don't care.  Keep it as short as you can.  Letters & numbers only, and must start with a letter.  If you are re-host one of your persistent servers, then you can leave this on AUTOMATIC.  Manually using the same server ID as one of your existing servers will overwrite your old server with that ID.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Server ID:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="text" class="aaTextSizeFontSize" value="" placeholder="(automatic)" id="lobby" />
+					</td>
+				</tr>
+				<tr class="helpNote" help="Leave blank for no password.  A password will help keep random people out.  However, multiplayer sessions are **never completely private** because they are **not encrypted**.  Don't do top secret stuff in them.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Server Password:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="password" class="aaTextSizeFontSize" value="" placeholder="(no password)" id="password" />
+					</td>
+				</tr>
+				<tr class="helpNote" help="Public servers are listed on the master server, while private & passworded servers are hidden. Note that servers are **not encrypted**, even if they are hidden.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Public Server:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<div class="aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">No</div>
+						<div id="isPrivate" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+							<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+						</div>
+					</td>
+				</tr>
+				<tr class="helpNote" help="Persistent servers will remain LIVE even after you disconnect from them. If you want your server to disappear as soon as you leave it, set this to NO. You can delete your old persistent servers from the SERVERS tab.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Persistent Server:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<div class="aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">No</div>
+						<div id="isPersistent" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+							<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+						</div>
+					</td>
+				</tr>
+				<tr class="helpNote" help="Sync custom models, through the cloud, to guests who join your arcade, if they need them.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Sync Custom Models:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<div class="aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">No</div>
+						<div id="syncCustomModels" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+							<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+						</div>
+					</td>
+				</tr>
+			</table>
+
+			<!--<div style="float: right; padding-top: 10px;">-->
+				<input type="button" class="aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Host Now" onclick="askDoHostNow();" help="Host your current arcade in online multiplayer." style="padding: 12px; padding-bottom: 6px; padding-top: 6px;" /><!-- <input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Cancel" onclick="window.location = 'asset://ui/welcome.html';" help="Cancel & return to singleplayer." style="padding: 12px; padding-bottom: 6px; padding-top: 6px;" />--><br />
+			<!--</div>-->
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			//var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			//document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var titleElem = document.querySelector("#title");
+			var lobbyElem = document.querySelector("#lobby");
+			var passwordElem = document.querySelector("#password");
+			var isPublicElem = document.querySelector("#isPrivate");
+			var isPersistentElem = document.querySelector("#isPersistent");
+			var syncCustomModelsElem = document.querySelector("#syncCustomModels");
+
+			//var lobbyValue = aaapi.cmdEx("getConVarValue", "aamp_lobby_id");
+			var passwordValue = aaapi.cmdEx("getConVarValue", "aamp_lobby_password");
+
+			var worldInfo = aaapi.cmdEx("getWorldInfo");
+			titleElem.value = (!!worldInfo && !!worldInfo.instance) ? worldInfo.instance.title : "";
+			//lobbyElem.value = lobbyValue;
+			passwordElem.value = passwordValue;
+
+			isPublicElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "No", "1": "Yes"},
+				"value": aaapi.cmdEx("getConVarValue", "aamp_public"),
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.cmdEx("getConVarValue", "aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					this.value = val;
+					//aaapi.cmd("consoleCommand", "aamp_public " + this.value);
+				}
+			};
+
+			isPersistentElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "No", "1": "Yes"},
+				"value": aaapi.cmdEx("getConVarValue", "aamp_persistent"),
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.cmdEx("getConVarValue", "aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					this.value = val;
+					//aaapi.cmd("consoleCommand", "aamp_public " + this.value);
+				}
+			};
+
+			syncCustomModelsElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "No", "1": "Yes"},
+				"value": aaapi.cmdEx("getConVarValue", "cloud_assets_upload"),
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.cmdEx("getConVarValue", "aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					console.log(val);
+					this.value = val;
+					//aaapi.cmd("consoleCommand", "aamp_public " + this.value);
+				}
+			};
+
+			function doToggleButton(toggleButton, isInitial)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+			isPublicElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+			}.bind(isPublicElem), true);
+
+			if( isPublicElem.inputOption.value.toString() === "1" )
+				doToggleButton(isPublicElem, true);
+
+			isPersistentElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+			}.bind(isPersistentElem), true);
+
+			if( isPersistentElem.inputOption.value.toString() === "1" )
+				doToggleButton(isPersistentElem, true);
+
+			syncCustomModelsElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+			}.bind(syncCustomModelsElem), true);
+
+			if( syncCustomModelsElem.inputOption.value.toString() === "1" )
+				doToggleButton(syncCustomModelsElem, true);
+
+			function noHost()
+			{
+				// do nothing.
+			}
+
+			function askDoHostNow()
+			{
+				createModalPrompt("Rules", "Do not host any arcades that have nudity, gore, or other overly offensive content.<br /><br />If you are unsure if your content is offensive, host it as a private lobby instead. That way random kids won't join it by accident.", "Agree", "doHostNow();", "Cancel", "noHost();");
+			}
+
+			function doHostNow()
+			{
+				/*var idz = [""];
+				if( idz.indexOf(localUserId) >= 0 )
+				{
+					console.log("Server connection error.");
+					return;
+				}*/
+
+				//console.log("START HOST DEBUG OUTPUT");
+
+				// first, check for *any* lobby, owned by this user, that already is hosting this arcade.
+				//var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+
+				var wolrdInfo = aaapi.cmdEx("getWorldInfo");
+				//console.log(JSON.stringify(worldInfo));
+				var currentInstanceId = wolrdInfo.instance.id;
+
+				// if a lobby with currentInstanceId, owned by this user, already exists, then we will automatically UPDATE the server instead.  It is unlikely any user will need to host 2 different versions of the same arcade instance at the same time.
+				rootRef.child("lobbies").once("value", function(snapshot)
+				{
+					//console.log("Yar");
+					var lobbyValue = lobbyElem.value;
+					var titleValue = titleElem.value;
+
+					console.log("Lobbies snapshot received.");
+					var debugFoundExisting = false;
+					var val = snapshot.val();
+					for( var x in val )
+					{
+						if( val[x].instance === currentInstanceId && val[x].owner === localUserId )
+						{
+							console.log("Found existing persistent server, created by you, running this instance, so replacing it with your current host version.");
+							lobbyValue = x;
+							debugFoundExisting = true;
+							break;
+						}
+					}
+					console.log("Existing: " + debugFoundExisting);
+
+					// first, check if our session name is valid
+					var letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					var alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					if( !aaapi.cmdEx("alphabetSafe", lobbyValue[0], letters) || !aaapi.cmdEx("alphabetSafe", lobbyValue, alphabet) )
+					{
+						console.log("YOOOO! Your title is whack, yo. (Only 0-9 and a-z please.)");
+						return;
+					}
+
+					// then continue
+					var success = aaapi.cmdEx("updateInstance", worldInfo.instance.id, ["title", titleValue]);
+					if( success )
+					{
+						// first save our changes
+						var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
+						cmd += " aamp_persistent " + isPersistentElem.inputOption.value + ";";
+						cmd += " cloud_assets_upload " + syncCustomModelsElem.inputOption.value + ";";
+						cmd += " aamp_lobby_id \"" + lobbyValue + "\";";
+						cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
+						aaapi.cmd("consoleCommand", cmd);
+
+						if( spawnEntityName !== "" )
+							aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+
+						// then start hosting
+						window.location = 'asset://ui/hostSessionProgress.html';
+					}
+					else
+						console.log("Failed to update instance for hosting.");
+				});
+			}
+		</script>
+
+		<script>
+			var autoSelectAllElems = document.querySelectorAll(".autoSelectAll");
+			for( var i = 0; i < autoSelectAllElems.length; i++ )
+				autoSelectAllElems[i].addEventListener("focus", function(e)
+				{
+					this.select();
+					e.preventDefault();
+				}.bind(autoSelectAllElems[i]), true);
+
+			//var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+			//var liveSessionLink = "http://aarcade.tv/live/" + connectedSessionInfo.lobby;// + connectedSessionInfo.universe + "&instance=" + connectedSessionInfo.instance;
+/*
+			var sessionLinkInputElem = document.querySelector("#sessionLinkInput");
+			sessionLinkInputElem.value = liveSessionLink;
+			setTimeout(function()
+			{
+				this.select();
+			}.bind(sessionLinkInputElem), 1);*/
+		</script>
+
+
+		<script>
+			
+			function disconnectSession()
+			{
+				var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+				if( !!connectedSessionInfo && !connectedSessionInfo.isHost )
+				{
+					setTimeout(function()
+					{
+						aaapi.cmd("disconnectSession");
+						aaapi.cmd("restartNetwork");
+						aaapi.cmd("deactivateInputMode");
+						aaapi.cmd("disconnect");
+					}, 100);
+				}
+				else
+				{
+					aaapi.cmd("disconnectSession");
+					aaapi.cmd("restartNetwork");
+					//setTimeout(function()
+					//{
+					//	window.location.reload();
+					//}, 100);
+					aaapi.cmd("deactivateInputMode");
+				}
+			}
+
+			function yesDisconnectSession()
+			{
+				disconnectSession();
+			}
+
+			function noDisconnectSession()
+			{
+				console.log("nope");
+			}
+
+			function askDisconnectSession()
+			{
+				createModalPrompt("Are You Sure?", "This will end your online session & return you to singleplayer mode.", "Disconnect", "yesDisconnectSession();", "Cancel", "noDisconnectSession();");
+			}
+
+			function yesShutdownSession()
+			{
+				aaapi.cmd("disconnectSession");
+				aaapi.cmd("restartNetwork");
+
+				// remove lobby (we are owner)
+				rootRef.child("lobbies").child(connectedUniverse.lobby).remove();
+
+				// remove arcade (if we are owner)
+				if( this.isArcadeOwner )
+					rootRef.child(connectedUniverse.universe).child("library").child("instances").child(connectedUniverse.instance).remove();
+					//g_metaverse.rootRef.child(g_quickConnectInfo.universe).child("users").child(g_quickConnectInfo.user).onDisconnect().remove();
+
+				aaapi.cmd("addToastMessage", "Shutdown Server");
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			function noShutdownSession()
+			{
+				console.log("nope");
+			}
+
+			function askShutdownSession()
+			{
+				createModalPrompt("Are You Sure?", "This will end your online session, return you to singleplayer mode, shutdown your server, and kick everybody currently in it back to the Main Menu as your server shuts down.", "Disconnect & Shutdown", "yesShutdownSession();", "Cancel", "noShutdownSession();");
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesTitle, yesAction, noTitle, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var styleText = (text !== "") ? "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;" : "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 300px;";
+
+				// header
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, styleText, true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				if( text !== "" )
+				{
+					// body
+					modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+					//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+					/*
+					modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+					modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+					modalHTML += text;
+					//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+					modalHTML += "</div>";
+
+					//modalHTML += "</td></tr></table>";
+					modalHTML += "</div>";
+				}
+
+				if( text !== "" )	// simple hax to get 2 different behaviors out of this prompt
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Disconnect" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+				else
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Quit" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].value = yesTitle;
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].value = noTitle;
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+			if( connectedUniverse.isPersistent )
+				document.querySelector("#shutdownServerButton").style.display = "block";
+
+			if( givenMapFile !== "" )
+			{
+				var mapFilterElem = document.querySelector("#mapFilterText");
+				mapFilterElem.style.display = "inline";
+				mapFilterElem.appendChild(document.createTextNode("(" + givenMapFile + ")"));
+				document.querySelector("#hrthing").style.display = "none";
+				//document.querySelector("#privateInviteBox").style.display = "none";
+			}
+
+			function showMore(elem)
+			{
+				elem.style.display = "none";
+				document.querySelector("#privateInviteBox").style.display = "table";
+			}
+
+			var universes = {};
+			var universeOwnersContainer = document.querySelector("#universeOwnersContainer");
+			var universeOwnerNameContainer = document.querySelector("#universeOwnerNameContainer");
+			//var universesContainer = document.querySelector("#universesContainer");
+			var universeContainer = document.querySelector("#universeContainer");
+			function addUniverseEntry(lobbyEntry)//(isCurrentLobby, isPublic, isPassworded, lobbyId, lastModified, universeId, instanceId, title, mapFile, author, count, isLobbyOwner, isArcadeOwner, isPersistent, objectCount, totalVisits, uniqueVisitsNumber, numVotes, rating, uniqueVisitors, ownerAvatar, hasMap, hasNew, availableOnCloud)
+			{
+				// add a universe entry for this owner, if one doesn't already exist.
+				var universe = universes[lobbyEntry.ownerAvatar];
+				if( !!!universe )
+				{
+					universe = {
+						ownerName: lobbyEntry.author,
+						ownerAvatar: lobbyEntry.ownerAvatar,
+						totalCount: 0,
+						totalObjectCount: 0,
+						totalVisits: 0,
+						totalUniqueVisitsNumber: 0,
+						lobbies: {}
+					};
+
+					universes[lobbyEntry.ownerAvatar] = universe;
+
+					var universeOwnerContainer = document.createElement('div');
+					universeOwnersContainer.appendChild(universeOwnerContainer);
+					universeOwnerContainer.universe = universe;
+					universeOwnerContainer.className = "universeOwnerContainer aaThemeColorOneHoverBorderColor";
+					universeOwnerContainer.addEventListener("mouseover", function(e)
+					{
+						universeOwnerNameContainer.innerHTML = "";
+						universeOwnerNameContainer.appendChild(document.createTextNode(this.universe.ownerName + "'s Universe"));
+					}.bind(universeOwnerContainer));
+					universeOwnerContainer.addEventListener("mouseout", function(e)
+					{
+						var selectedUniverseElem = document.querySelector(".selectedUniverse");
+						if( !!selectedUniverseElem )
+						{
+							//universeOwnerNameContainer.innerHTML = selectedUniverseElem.universe.ownerName;
+							universeOwnerNameContainer.innerHTML = "";
+							universeOwnerNameContainer.appendChild(document.createTextNode(this.universe.ownerName + "'s Universe"));
+						}
+						else
+							universeOwnerNameContainer.innerHTML = "Select a Universe";
+					}.bind(universeOwnerContainer));
+					universeOwnerContainer.addEventListener("click", function(e)
+					{
+						var selectedUniverseElem = document.querySelector(".selectedUniverse");
+						if( selectedUniverseElem == this )
+						{
+							this.classList.remove("selectedUniverse");
+
+							if( lastRandoServersTableClassName != "" )
+							{
+								serversTable.classList.remove(lastRandoServersTableClassName);
+								lastRandoServersTableClassName = "";
+							}
+							return;
+						}
+
+						if( !!selectedUniverseElem )
+						{
+							selectedUniverseElem.classList.remove("selectedUniverse");
+
+							if( lastRandoServersTableClassName != "" )
+							{
+								serversTable.classList.remove(lastRandoServersTableClassName);
+								lastRandoServersTableClassName = "";
+							}
+						}
+
+						this.classList.add("selectedUniverse");
+
+						// now do work to display servers that are within this universe.
+						/*universeContainer.innerHTML = "";
+						for( var x in this.universe.lobbies )
+						{
+							universeContainer.innerHTML += this.universe.lobbies[x].title + "<br />";
+						}*/
+
+						// prep the style sheet
+						if( !!!styleHax )
+						{
+							styleHax = document.createElement("style");
+							styleHax.appendChild(document.createTextNode(""));
+							document.head.appendChild(styleHax);
+							haxStylesheet = styleHax.sheet;
+						}
+
+						var randoClassName = "rando" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
+						haxStylesheet.insertRule("." + randoClassName + " .serverRow:not([ownerAvatar=\"" + this.universe.ownerAvatar + "\"]) { display: none; }");
+
+						serversTable.classList.add(randoClassName);
+						lastRandoServersTableClassName = randoClassName;
+
+					}.bind(universeOwnerContainer));
+
+					var ownerAvatarElem = document.createElement('img');
+					universeOwnerContainer.appendChild(ownerAvatarElem);
+					ownerAvatarElem.className = "universeOwnerAvatar";
+					ownerAvatarElem.src = lobbyEntry.ownerAvatar;
+				}
+
+				// add this lobby to their universe
+				universe.lobbies[lobbyEntry.lobbyId] = lobbyEntry;
+
+				// adjust universe stats
+				universe.totalCount += lobbyEntry.count;
+				universe.totalObjectCount += lobbyEntry.objectCount;
+				universe.totalVisits += lobbyEntry.totalVisits;
+				universe.totalUniqueVisitsNumber += lobbyEntry.uniqueVisitsNumber;
+				//console.log(JSON.stringify(universe));
+
+
+				//console.log("Add a universe entry for " + lobbyEntry.mapFile);
+			}
+		</script>
+	</body>
+</html>

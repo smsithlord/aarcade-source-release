@@ -1,0 +1,253 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js?buster=9b"></script>
+		<script src="asset://ui/tga.js"></script>
+
+		<script>
+			var g_lobbyId = aaapi.cmdEx("getCurrentLobby");
+			var screenshotId = arcadeHud.getParameterByName("screenshot");
+			var screenshot = aaapi.cmdEx("getScreenshot", screenshotId).screenshot;
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Multiplayer Guest", "width: 400px;", true, true, "", "");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<!--
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				<div id="mapImage"></div>
+				<div class="instanceTitle aaTitleTextSizeFontSize"></div>
+				<div class="aaTitleTextSizeFontSize">Welcome to multiplayer beta!</div>
+			</div>
+			-->
+			<div class="hudLoadingMessagesContainer"></div>
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" help="You will leave your current session." onclick="aaapi.cmd('doneWaitingForInitialSync'); aaapi.cmd('deactivateInputMode');" style="padding: 12px; width: 100%;" />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+
+			var objectCreatedListener = {};
+			objectCreatedListener.objectCreated = function()
+			{
+				arcadeHud.addHudLoadingMessage("progress", "", "Syncing Objects", "spawn_objects", "", "", "+");
+			};
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			if( !!screenshot )
+			{
+				var tga = new TGA();
+
+				var elems;
+				var instanceId = screenshot.instance.id;
+				var instance = aaapi.cmdEx("getInstance", instanceId).instance;
+				if( !!instance )
+				{
+					elems = document.querySelectorAll(".instanceTitle");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].innerHTML = instance.title;
+
+					/*
+					var map = aaapi.cmdEx("getMap", instance.id).map;
+					if( !!map )
+					{
+						elems = document.querySelectorAll(".mapTitle");
+						for( var i = 0; i < elems.length; i++ )
+							elems[i].innerHTML = map.title;
+					}
+					*/
+				}
+
+				var mapImageContainer = document.createElement("div");
+				mapImageContainer.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; display: none;";
+
+				tga.open( "screenshots/" + screenshot.id + ".tga", function(){
+					var elem = tga.getCanvas();
+					elem.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; width: 100%;";
+				   this.appendChild(elem);
+				   this.style.display = "block";
+				}.bind(mapImageContainer));
+
+				var elem = document.querySelector("#mapImage");
+				elem.appendChild(mapImageContainer);
+			}
+
+			//aaapi.cmd("spawnNearestObject", parseFloat(arcadeHud.getParameterByName("max")));
+			//console.log("Here we go...");
+			//connectSession
+		</script>
+
+		<script>
+			function onLobbyReady(lobby)
+			{
+				// TODO: If the lobby has a password, confirm it.
+
+				var maps = [];
+				var mapz = aaapi.cmdEx("getAllMaps");
+				var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
+				for( var y in mapz )
+				{
+					if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+						maps.push(mapz[y]);
+				}
+
+				var map = null;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if(maps[i].platforms[arcadeHud.platformId].file.toLowerCase() == lobby.mapFile.toLowerCase())
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!!map )
+				{
+					console.log("ERROR: Map not found!");
+					return;
+				}
+
+				// now we're ready to rock 'n roll
+				/*
+					mapId
+					instanceId
+					position
+					rotation
+					screenshotId
+				*/
+
+				aaapi.cmd("connectSession", lobby.universeId, lobby.instanceId, lobby.id);
+			}
+
+			function requestRestData(url, callback)
+			{
+				var infoRequest = new XMLHttpRequest();
+				infoRequest.onreadystatechange = function()
+				{
+					if (infoRequest.readyState == 4 && infoRequest.status == 200)
+						callback(infoRequest.responseText);
+				};
+
+				infoRequest.open("GET", url, true);
+				infoRequest.send(null);
+			}
+
+			var defaultServerAddress = "https://metaverse.firebaseio.com/";
+			function getLobbyConnectInfo(in_serverAddress, lobbyId)
+			{
+				var serverAddress = (!!in_serverAddress && in_serverAddress !== "") ? in_serverAddress : defaultServerAddress;
+				var lobbyAddress = serverAddress + "lobbies/" + lobbyId + ".json";
+
+				var lobby = {
+					"id": lobbyId,
+					"ownerName": "",
+					"ownerAvatar": "",
+					"universeId": "",
+					"instanceTitle": "",
+					"instanceId": "",
+					"numPlayers": -1,
+					"numObjects": -1,
+					"mapTitle": "",
+					"mapFile": "",
+					"mapDownload": "",
+					"workshop": "",
+					"mounts": ""
+				};
+
+				requestRestData(lobbyAddress, function(lobbyResponseText)
+				{
+					var lobbyResponseData = (!!lobbyResponseText) ? JSON.parse(lobbyResponseText) : {};
+
+					lobby.instanceId = lobbyResponseData.instance;
+					lobby.universeId = lobbyResponseData.universe;
+
+					var ownerAddress = serverAddress + lobbyResponseData.universe + "/users/" + lobbyResponseData.owner + "/sessions.json";
+					requestRestData(ownerAddress, function(ownerResponseText)
+					{
+						var ownerResponseData = (!!ownerResponseText) ? JSON.parse(ownerResponseText) : {};
+
+						var ownerInfo = null;
+						if( !!ownerResponseData )
+						{
+							var ownerResponseDataKeys = Object.keys(ownerResponseData);
+							if( ownerResponseDataKeys.length === 1 )
+								ownerInfo = ownerResponseData[ownerResponseDataKeys[0]];
+						}
+
+						if( !ownerInfo )
+						{
+							//console.log("ERROR: Could not retrieve owner info. Aborting.");
+							//return;
+
+							// TEST STIM
+							ownerInfo = JSON.parse('{"avatar":{"modified":0,"url":"http://aarcade.tv/anarchybot/avatars/default15.jpg"},"created":0,"displayName":"Unknown User","instance":"-pnMryt2r71uWq7jiG-l","item":{"id":"","modified":0},"mouse":{"modified":0,"x":0,"y":0},"object":{"id":"","modified":0},"say":{"modified":0,"text":""},"transform":{"body":{"angles":"0 0 0","modified":0,"origin":"0 0 0"},"head":{"angles":"0 0 0","modified":0,"origin":"0 0 0"}},"web":{"modified":0,"url":""}}');
+						}
+						lobby.ownerName = ownerInfo.displayName;
+						lobby.ownerAvatar = ownerInfo.avatar.url;
+
+
+						var instanceUsersAddress = serverAddress + lobbyResponseData.universe + "/library/instances/" + lobbyResponseData.instance + "/users.json?shallow=true";
+
+						requestRestData(instanceUsersAddress, function(instanceUsersResponseText)
+						{
+							var instanceUsersResponseData = (!!instanceUsersResponseText) ? JSON.parse(instanceUsersResponseText) : {};
+
+							var playerKeys;
+							if( !!instanceUsersResponseData )
+								playerKeys = Object.keys(instanceUsersResponseData);
+							else
+								playerKeys = Object.keys({});//JSON.parse('{"-pnMrG5MHpbbl0A9XKyd":true,"13f185c7":true}'));	// test stim
+
+							lobby.numPlayers = playerKeys.length;
+
+							var instanceInfoAddress = serverAddress + lobbyResponseData.universe + "/library/instances/" + lobbyResponseData.instance + "/current.json";
+
+							requestRestData(instanceInfoAddress, function(instanceInfoResponseText)
+							{
+								var instanceInfoResponseData = (!!instanceInfoResponseText) ? JSON.parse(instanceInfoResponseText) : {};
+
+								lobby.instanceTitle = instanceInfoResponseData.title;
+								lobby.workshop = instanceInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds;
+								lobby.mounts = instanceInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds;
+
+								var mapInfoAddress = serverAddress + lobbyResponseData.universe + "/library/maps/" + instanceInfoResponseData.map + "/current.json";
+								requestRestData(mapInfoAddress, function(mapInfoResponseText)
+								{
+									var mapInfoResponseData = (!!mapInfoResponseText) ? JSON.parse(mapInfoResponseText) : {};
+
+									lobby.mapTitle = mapInfoResponseData.title;
+									lobby.mapFile = mapInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+									lobby.mapDownload = mapInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].download;
+
+									onLobbyReady(lobby);
+								});
+							});
+						});
+					});
+				});
+			}
+
+			// get info about this lobby
+			getLobbyConnectInfo(null, g_lobbyId);
+		</script>
+	</body>
+</html>

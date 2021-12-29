@@ -1,0 +1,56 @@
+//LightmappedGeneric
+//"LightmappedTwoTexture"
+//UnlitGeneric
+//Unlittwotexture
+Unlittwotexture
+{
+	"$baseTexture" "sm_arcade/audioedgebox"
+	"$color" "[1.0 1.0 1.0]"
+
+	"$texture2" "sm_arcade/audioedgeboxcover"
+//"$translucent2" 1
+	//"$detail" "sm_arcade/audioedgeboxcover"//sm_arcade/audiocanvas_detail
+    //"$detailscale" 1
+    //"$detailblendfactor" 1
+    //"$detailblendmode" 2
+    //"$detailtint" "[1.0 1.0 1.0]"
+
+	"$angle" 0.0
+	"$translate" "[0 0]"
+	"$center" "[0.5 0.5]"
+	"$scale" 1.0
+	//"$entityorigin" "[0 0 0]"
+
+    //"$scaleresult" "1.0"
+   // "$fullfactor" "1.0"
+
+	"Proxies"
+	{
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "1"
+			"audioPeakVar" "$color"
+			"audioPeakMin" "0.3"
+			"audioPeakMax" "1.0"
+			"audioPeakAmp" "1.0"
+		}
+
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "0"
+			"audioPeakVar" "$scale"
+			"audioPeakMin" "1.0"
+			"audioPeakMax" "1.2"
+			"audioPeakAmp" "1.0"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"scaleVar" "$scale"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$texture2transform"
+		}
+	}
+}

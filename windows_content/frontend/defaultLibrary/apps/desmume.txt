@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MubG0Sgw2ZJoI"
+		}
+		"title"		"DeSmuME"
+		"file"		"X:\Emulators\DeSmuME\DeSmuME_0.9.11_x64.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-MURUoxnjvk3Ci"
+		"download"		"http://desmume.org/"
+		"reference"		"http://desmume.org/"
+		"filepaths"
+		{
+			"-om88gxJU4dfALS9OFkm"
+			{
+				"id"		"-om88gxJU4dfALS9OFkm"
+				"path"		"X:\Emulators\DS\Roms\"
+			}
+		}
+	}
+}

@@ -1,0 +1,10 @@
+vertexlitgeneric
+{
+$basetexture models/cabinets/flatscreen_tv_dif
+$bumpmap models/cabinets/flatscreen_tv_nor
+
+$phong 1
+$phongboost 1
+$phongfresnelranges "[.25 .25 2]"
+$phongexponent 50
+}

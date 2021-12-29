@@ -1,0 +1,25 @@
+"model"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+			"id"		"fdc30ddd"
+		}
+		"title"		"Future Speaker"
+		"keywords"		"Music Devices"
+		"dynamic"		"1"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\future_speaker.mdl"
+			}
+		}
+	}
+}

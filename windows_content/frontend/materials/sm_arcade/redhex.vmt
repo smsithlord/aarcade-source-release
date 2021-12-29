@@ -1,0 +1,13 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/audiohex"
+	"$bumpmap" "sm_arcade/audiohex_norm"
+	"$envmap" "env_cubemap"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+
+	"$detail" "sm_arcade/audiohex_illum"
+    "$detailscale" 1
+    "$detailblendfactor" 0.3
+    "$detailblendmode" 1
+    "$detailtint" "[1.0 0 0]"
+}

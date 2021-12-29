@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"c39ca5d8"
+		}
+		"title"		"Projector"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\sithlord\projector.mdl"
+			}
+		}
+	}
+}

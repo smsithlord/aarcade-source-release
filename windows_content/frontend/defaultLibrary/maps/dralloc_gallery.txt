@@ -1,0 +1,22 @@
+"map"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"id"		"c2858a3e"
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+		}
+		"title"		"Dralloc Gallery"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"file"		"dralloc_gallery.bsp"
+			}
+		}
+	}
+}

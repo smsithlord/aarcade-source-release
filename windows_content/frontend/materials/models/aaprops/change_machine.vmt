@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\aaprops/change_machine"
+	"$bumpmap" "models\aaprops/change_machine_norm"
+	"$model" "1"
+}

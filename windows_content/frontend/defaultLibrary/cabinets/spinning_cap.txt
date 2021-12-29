@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"133c983a"
+		}
+		"title"		"spinning_cap"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\banners\spinning_cap.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

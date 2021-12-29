@@ -1,0 +1,137 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?a=e"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var text = arcadeHud.getParameterByName("json");
+
+			var potentialItem;
+			if( text.indexOf("{") == 0 )
+			{
+				// we are given a JSON item to spawn...
+				var itemObject;
+				try
+				{
+					itemObject = JSON.parse(text);
+				}
+				catch(err)
+				{
+
+				}
+
+				if( !!!itemObject )
+				{
+					// fail
+					aaapi.cmd("addToastMessage", "Invalid JSON Item");
+					aaapi.cmd("deactivateInputMode");
+				}
+				else
+				{
+					var fileLocation = itemObject.file;
+
+					if( !!!fileLocation || fileLocation == "" )
+					{
+						// fail
+						aaapi.cmd("addToastMessage", "Invalid JSON Item");
+						aaapi.cmd("deactivateInputMode");
+					}
+					else
+					{
+						// first check if an item already exists for this file location
+						var item = aaapi.cmdEx("findLibraryItem", "file", fileLocation);
+			 			if( item )
+			 			{
+							aaapi.cmd("addToastMessage", "Existing Item Found");
+
+							// if this is a 3d text item, set the next cabinet model
+							if( item.file.indexOf("http://text.txt/") == 0 && !!arcadeHud.getParameterByName('m', item.file) )
+							{
+								var clearModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/clear.mdl');
+								if( !!clearModel )
+								{
+									aaapi.cmd("consoleCommand", "recent_model_id \"" + clearModel.info.id + "\"");
+
+									// we must block the thread now until our console commands are all processed...
+									var blocking = aaapi.cmdEx('getConVarValue', 'recent_model_id');
+								}
+							}
+							else if( item.file.indexOf("travel.html?") == 0 )
+							{
+								var portalModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/portal.mdl');
+								if( !!portalModel )
+								{
+									aaapi.cmd("consoleCommand", "recent_model_id \"" + portalModel.info.id + "\"");
+
+									// we must block the thread now until our console commands are all processed...
+									var blocking = aaapi.cmdEx('getConVarValue', 'recent_model_id');
+								}
+							}
+
+				 			aaapi.cmd("spawnItem", item.info.id);
+			 			}
+				 		else
+				 		{
+							aaapi.cmd("addToastMessage", "Imported JSON Item");
+
+				 			item = aaapi.cmdEx("createItem", "file", fileLocation);	
+
+				 			// item is created but NOT saved yet, time for last-minute changes!!
+							if( item )
+							{
+					 			// save it then spawn it
+					 			var params = [];
+
+								var itemKeys = Object.keys(item);
+								for( var i = 0; i < itemKeys.length; i++ )
+								{
+									var x = itemKeys[i];
+
+									if( x === "info" )
+										continue;
+
+									params.push(x);
+									if( itemObject.hasOwnProperty(x) )
+										item[x] = itemObject[x];
+
+									params.push(item[x]);
+								}
+
+								if( aaapi.cmdEx("saveItem", item.info.id, params) )
+								{
+									// if this is a 3d text item, set the next cabinet model
+									if( item.file.indexOf("http://text.txt/") == 0 && !!arcadeHud.getParameterByName('m', item.file) )
+									{
+										var clearModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/clear.mdl');
+										if( !!clearModel )
+										{
+											aaapi.cmd("consoleCommand", "recent_model_id \"" + clearModel.info.id + "\"");
+
+											// we must block the thread now until our console commands are all processed...
+											var blocking = aaapi.cmdEx('getConVarValue', 'recent_model_id');
+										}
+									}
+									else if( item.file.indexOf("travel.html?") == 0 )
+									{
+										var portalModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/portal.mdl');
+										if( !!portalModel )
+										{
+											aaapi.cmd("consoleCommand", "recent_model_id \"" + portalModel.info.id + "\"");
+
+											// we must block the thread now until our console commands are all processed...
+											var blocking = aaapi.cmdEx('getConVarValue', 'recent_model_id');
+										}
+									}
+
+									aaapi.cmd("spawnItem", item.info.id);
+								}
+							}	
+						}
+					}
+				}
+			}
+		</script>
+	</head>
+	<body>
+	</body>
+</html>

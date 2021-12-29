@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"8558b212"
+		}
+		"title"		"Ninja Nancy"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\patrons\ninjanancy.mdl"
+			}
+		}
+	}
+}

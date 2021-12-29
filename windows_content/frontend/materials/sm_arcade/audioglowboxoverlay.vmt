@@ -1,0 +1,5 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "sm_arcade/audioglowboxoverlay"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+}

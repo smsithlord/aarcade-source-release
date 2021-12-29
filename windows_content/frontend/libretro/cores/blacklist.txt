@@ -1,0 +1,215 @@
+"blacklist"
+{
+	"dll"
+	{
+		"file"	"avcodec-56.dll"
+	}
+	"dll"
+	{
+		"file"	"avformat-56.dll"
+	}
+	"dll"
+	{
+		"file"	"avutil-54.dll"
+	}
+	"dll"
+	{
+		"file"	"cg.dll"
+	}
+	"dll"
+	{
+		"file"	"cgD3D9.dll"
+	}
+	"dll"
+	{
+		"file"	"cgGL.dll"
+	}
+	"dll"
+	{
+		"file"	"libbluray-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libbz2-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libcelt0-2.dll"
+	}
+	"dll"
+	{
+		"file"	"libffi-6.dll"
+	}
+	"dll"
+	{
+		"file"	"libfreetype-6.dll"
+	}
+	"dll"
+	{
+		"file"	"libgcc_s_dw2-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libglib-2.0-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libgmp-10.dll"
+	}
+	"dll"
+	{
+		"file"	"libgnutls-28.dll"
+	}
+	"dll"
+	{
+		"file"	"libgsm.dll"
+	}
+	"dll"
+	{
+		"file"	"libharfbuzz-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libhogweed-2-5.dll"
+	}
+	"dll"
+	{
+		"file"	"libiconv-2.dll"
+	}
+	"dll"
+	{
+		"file"	"libintl-8.dll"
+	}
+	"dll"
+	{
+		"file"	"liblzma-5.dll"
+	}
+	"dll"
+	{
+		"file"	"libmodplug-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libmp3lame-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libnettle-4-7.dll"
+	}
+	"dll"
+	{
+		"file"	"libogg-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libopencore-amrnb-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libopencore-amrwb-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libopenjpeg-5.dll"
+	}
+	"dll"
+	{
+		"file"	"libopus-0.dll"
+	}
+	"dll"
+	{
+		"file"	"liborc-0.4-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libp11-kit-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libpng16-16.dll"
+	}
+	"dll"
+	{
+		"file"	"libpython3.4m.dll"
+	}
+	"dll"
+	{
+		"file"	"librtmp-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libschroedinger-1.0-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libspeex-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libstdc++-6.dll"
+	}
+	"dll"
+	{
+		"file"	"libtasn1-6.dll"
+	}
+	"dll"
+	{
+		"file"	"libtheoradec-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libtheoraenc-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libvorbis-0.dll"
+	}
+	"dll"
+	{
+		"file"	"libvorbisenc-2.dll"
+	}
+	"dll"
+	{
+		"file"	"libvpx-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libwavpack-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libwinpthread-1.dll"
+	}
+	"dll"
+	{
+		"file"	"libx264-142.dll"
+	}
+	"dll"
+	{
+		"file"	"libx265.dll"
+	}
+	"dll"
+	{
+		"file"	"libxml2-2.dll"
+	}
+	"dll"
+	{
+		"file"	"SDL2.dll"
+	}
+	"dll"
+	{
+		"file"	"swresample-1.dll"
+	}
+	"dll"
+	{
+		"file"	"swscale-3.dll"
+	}
+	"dll"
+	{
+		"file"	"xvidcore.dll"
+	}
+	"dll"
+	{
+		"file"	"zlib1.dll"
+	}
+}

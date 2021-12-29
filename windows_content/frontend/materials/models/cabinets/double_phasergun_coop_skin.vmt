@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/double_phasergun_coop_skin"
+	"$model" "1"
+}

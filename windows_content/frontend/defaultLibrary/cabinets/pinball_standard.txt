@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"18d2ba52"
+		}
+		"title"		"pinball_standard"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\pinball_standard.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

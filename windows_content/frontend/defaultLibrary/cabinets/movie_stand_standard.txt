@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"d87abb32"
+		}
+		"title"		"movie_stand_standard"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\movie_stand_standard.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

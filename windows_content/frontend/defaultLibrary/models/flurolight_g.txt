@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"f6934bf1"
+		}
+		"title"		"Flurolight G"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\stormy\neon_alphabet\flurolight_g.mdl"
+			}
+		}
+	}
+}

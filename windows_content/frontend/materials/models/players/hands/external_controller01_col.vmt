@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\hands/external_controller01_col"
+	"$model" "1"
+}

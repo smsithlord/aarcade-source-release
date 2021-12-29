@@ -1,0 +1,46 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	//$postfix "0"
+	$potentialframe "0"
+	$blankframe "10"
+	//$defaultdigit "1"
+	//$testval "0"
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "hours"
+			"digit" "1"
+			"resultVar" "$potentialframe"
+		}
+
+		"SelectFirstIfNonZero"
+		{
+			"srcVar1" "$potentialframe"
+			"srcVar2" "$blankframe"
+			"resultVar" "$frame"
+		}
+
+		//"AASystemTime"
+		//{
+		//	"type" "postfix"
+		//	"resultVar" "$postfix"
+		//}
+
+		//"LessOrEqual"
+		//{
+		//	"lessEqualVar" "$defaultdigit"
+		//	"greaterVar" "$blankframe"
+		//	"srcVar1" "$potentialframe"
+		//	"srcVar2" "$testval"
+		//	"resultVar" "$frame"
+		//}
+	}
+}

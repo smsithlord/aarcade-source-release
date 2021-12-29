@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-NIzOC5eU5Wx5h"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"pinball"
+		"priority"		"1"
+		"fileformat"		"/(.fpt|.vpt)$/i"
+	}
+}

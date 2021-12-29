@@ -1,0 +1,188 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+		</script>
+		<script src="asset://ui/hud.js"></script>
+
+		<style>
+			.avatarTile {
+				background-color:  rgba(0, 0, 0, 0.5);
+			}
+
+			.avatarTile:hover {
+				background-color:  rgba(255, 255, 255, 0.5);
+				/*background: -webkit-radial-gradient(circle, rgba(62,62,62,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 100%) !important;*/
+			}
+
+			#entriesContainer {
+				background-color:  rgba(100, 100, 100, 0.7);
+				white-space:  nowrap;
+				overflow-x:  auto;
+			}
+
+			.aaDownArrow
+			{
+				width: 0; 
+				height: 0; 
+				border-left: 12px solid transparent;
+				border-right: 12px solid transparent;
+
+				border-top-style: solid;
+				border-top-width: 12px;/* solid #555;*/
+			}
+		</style>
+	</head>
+	<body>
+<div class="aaHelpContainer" style="display: none !important;"></div>
+		<div id="entriesContainer" class="aaScrollBars" style="text-align: center;"></div>
+		<div style="white-space: nowrap; float: right;">
+			<select id="listSelect" style="-webkit-appearance: none; appearance: none; font-weight: normal; letter-spacing: 0.2em; padding: 2px; border-radius: 8px; border-style: inset; border-width: 1px; outline: none; color: #ccc; font-size: 27px; padding-right: 30px;" class="aaThemeColorTwoBorderColor aaTitleText aaTitleTextSizeFontSize aaThemeColorTwoBackgroundColor helpNote" help="Set your active favorites list. This is also the list that favorite/unfavorite buttons will use."></select>
+			<div style="position: relative; display: inline-block; vertical-align: top; left: -38px; margin-top: 16px;">
+				<div class="aaDownArrow aaThemeColorTwoHighBorderColor" style="position: absolute;"></div>
+			</div>
+		</div>
+
+		<script>
+			function doNothing()
+			{
+				// nothing
+			}
+
+			function sortModelsToBack(a, b)
+			{
+				if( !!a.item && !!!b.item )
+					return -1;
+				else if( !!b.item && !!!a.item )
+					return 1;
+				// else don't alter order.
+			}
+
+			function sortModelsToFront(a, b)
+			{
+				if( a.item === a.model && (!!!b.item || b.item !== b.model) )
+					return -1;
+				else if( b.item === b.model && (!!!a.item || a.item !== a.model) )
+					return 1;
+				// else don't alter order.
+			}
+
+// from https://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array
+/**
+ * Shuffles array in place.
+ * @param {Array} a items An array containing the items.
+ */
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length - 1; i > 0; i--) {
+        j = Math.floor(Math.random() * (i + 1));
+        x = a[i];
+        a[i] = a[j];
+        a[j] = x;
+    }
+    return a;
+}
+
+			//var favoritesListId = arcadeHud.activeFavoritesList;
+			//console.log(favoritesListId);
+			var favoritesListId = localStorage.getItem('avatarMenuListId');//'-r0nMQp6wfZxo_PkVap6';
+			if( !favoritesListId ) {
+				favoritesListId = arcadeHud.activeFavoritesList;
+			}
+
+			// populate the favorites list
+			var listSelect = document.querySelector('#listSelect');
+			// add in all the lists to the box
+			var option, list;
+			for( var listId in arcadeHud.favoritesLists )
+			{
+				list = arcadeHud.favoritesLists[listId];
+				option = document.createElement("option");
+				option.value = listId;
+				option.text = list.title;
+
+				if( listId === favoritesListId )
+					option.selected = true;
+
+				listSelect.appendChild(option);
+			}
+
+			var list;
+			listSelect.addEventListener('change', function(e) {
+				console.log('re-create the row of tiles');
+				favoritesListId = listSelect.value;
+				list = arcadeHud.favoritesLists[favoritesListId].entries;
+				shuffle(list);
+				list.sort(sortModelsToFront);
+				populateTiles(list);
+
+				console.log('save to the "avatarMenuListId" thing');
+				localStorage.setItem('avatarMenuListId', favoritesListId);
+			});
+
+			// create the thumbnails
+			list = arcadeHud.favoritesLists[favoritesListId].entries;
+			shuffle(list);
+			list.sort(sortModelsToFront);
+			populateTiles(list);
+
+			var originalPlayerModel = aaapi.cmdEx('getConVarValue', 'playermodel');
+			var entriesContainer = document.querySelector('#entriesContainer');
+
+			function previewAvatar(modelFile) {
+				var goodModelFile = modelFile.replace(/\\/g, "/");
+				//aaapi.cmd('consoleCommand', "morphmodel \"" + goodModelFile + "\";");
+				aaapi.cmd('consoleCommand', "setplayermodel \"" + goodModelFile + "\"; thirdperson; playermodel \"" + goodModelFile + "\"; cl_playermodel \"" + goodModelFile + "\"; host_writeconfig; ent_remove weapon_physcannon;");
+				setTimeout(function() {
+					aaapi.cmd('consoleCommand', "give weapon_physcannon;");
+				}, 100);
+			}
+
+			function onTileMouseOver(e) {
+				var tile = e.currentTarget;
+				var modelId = tile.itemId;
+				var model = tile.item;
+				var modelFile = model.platforms[arcadeHud.platformId].file;
+				previewAvatar(modelFile);
+			}
+
+			function onTileMouseOut(e) {
+				previewAvatar(originalPlayerModel);
+			}
+
+			function onTileClick(e) {
+				aaapi.cmd('deactivateInputMode');
+			}
+
+			function populateTiles(list) {
+				entriesContainer.innerHTML = '';
+
+				var model, modelId, tile;
+				var max = list.length;
+				max = 9;
+				var tilesUsed = 0;
+				for( var i = 0; i < list.length && tilesUsed < max; i++ ) {
+					modelId = (list[i].model) ? list[i].model : null;
+					if( modelId ) {
+						model = aaapi.cmdEx('getLibraryModel', modelId);
+						tile = arcadeHud.createTile(model, entriesContainer, "modelpreview", "", doNothing, 200, 200);
+						tile.classList.add('avatarTile');
+						//tile.style.backgroundColor = 'transparent';
+						tile.style.borderRadius = '50%';
+						tile.addEventListener('mouseover', onTileMouseOver);
+						tile.addEventListener('mouseout', onTileMouseOut);
+						tile.addEventListener('click', onTileClick);
+						//entriesContainer.appendChild(tile);
+						tilesUsed++;
+					}
+				}
+
+				if( tilesUsed === 0 ) {
+					entriesContainer.innerHTML = '<div style="font-family: Arial; text-align: center; padding: 64px; font-weight: bold; letter-spacing: 0.2em; font-size: 16px;">There are no models on the selected favorites list.<br />Please choose a different favorites list that has player models on it.</h1>';
+				}
+			}
+		</script>
+	</body>
+</html>

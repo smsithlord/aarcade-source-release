@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/theater_facade_skin"
+	"$model" "1"
+}

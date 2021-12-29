@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-L6iUsEGOn2jn3"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"genesis"
+		"priority"		"1"
+		"fileformat"		"/(.zip|.smc|.bin|.sms)$/i"
+	}
+}

@@ -1,0 +1,558 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var stats = aaapi.cmdEx("getStats");
+			var achievements = aaapi.cmdEx("getAchievements");
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//if( !uiBack )
+			//	uiBack = "window.location='asset://ui/import.html';";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Stats & Achievements", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					/*{
+						"id": "profile",
+						"title": "Profile"
+					},*/
+					{
+						"id": "achievements",
+						"title": "Achievements"
+					},
+					{
+						"id": "stats",
+						"title": "Stats"
+					},
+					{
+						"id": "global",
+						"title": "Global (Yesterday)"
+					}
+				],
+				"activeTabId": tabId
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<!--div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaScrollBars" style="max-height: 600px; overflow-y: auto; overflow-x: hidden; padding: 0; padding-left: 4px; padding-right: 4px;" tabid="profile">
+			<div style="width: 480px; height: 270px; border-style: outset; border-width: 2px; border-color: gray;">
+				[USER STEAM AVATAR HERE]<br />
+				[USER DISPLAY NAME HERE]<br />
+				[USER LEVEL HERE]<br />
+				["CUSTOM" BACKGROUND IMAGE HERE]<br />
+				["CUSTOM" BADGES HERE]<br />
+				[CUSTOM ITEM HERE]
+			</div>
+			[MULTIPLAYER AVATAR PREVIEW HERE]<br />
+			[MULTIPLAYER AVATAR CUSTOMIZATION HERE]
+		</div-->
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaScrollBars" style="max-height: 600px; overflow-y: auto; overflow-x: hidden; padding: 0; padding-left: 4px; padding-right: 4px;" tabid="achievements">
+			<div id="achievementsContainer"></div>
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Reset All Stats & Achievements" onclick="askResetStats(true);" help="WARNING: This cannot be undone.  All of your stats & achievements will be reset to zero." />
+		</div>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaScrollBars" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;" tabid="stats">
+			<table cellspacing="0" cellpadding="0" width="100%" class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;" id="statsTable"></table>
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Reset All Stats Only" onclick="askResetStats(false);" help="WARNING: This cannot be undone.  Your stats will be reset to zero. (Your achievements will NOT be reset.)" />
+		</div>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaScrollBars" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;" tabid="global">
+			<div class="aaTextColorTwoColor" style="font-family: Arial; text-align: center;">Global stats over the last 5 days.</div>
+			<table cellspacing="0" cellpadding="0" width="100%" class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;" id="globalTable"></table>
+			<div class="aaTextColorTwoColor" style="font-family: Arial; text-align: center;">NOTE: Total players is based on users who downloaded<br />
+			AArcade AND have recorded playtime in it.<br />
+			This stat was last updated 7/1/2020.</div>
+		</div>
+
+		<!--div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoLowBorderColor aaScrollBars" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;" tabid="library">
+			<table cellspacing="0" cellpadding="0" width="100%" class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Items</td><td align="left">7,000</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Props</td><td align="left">2,041</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Types</td><td align="left">17</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Apps</td><td align="left">7</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Maps</td><td align="left">1,002</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Screenshots</td><td align="left">80</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Overlays</td><td align="left">21</td>
+				</tr>
+				<tr>
+					<td align="right" style="padding: 10px;" class="aaTitleText aaThemeColorOneColor">Stickers</td><td align="left">13</td>
+				</tr>
+			</table>
+		</div-->
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+
+			// from https://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+			function numberWithCommas(x)
+			{
+				return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+			}
+
+			var stat, tr, tdTitle, tdValue;
+			var statsTable = document.querySelector("#statsTable");
+			var globalTable = document.querySelector("#globalTable");
+
+			// current players
+			tr = document.createElement("tr");
+			tdTitle = document.createElement("td");
+			tdTitle.align = "right";
+			tdTitle.style.cssText = "padding: 10px;";
+			tdTitle.className = "aaTitleText aaThemeColorOneColor statTitle";
+			tdTitle.innerHTML = "Current Players";
+
+			tdValue = document.createElement("td");
+			tdValue.align = "left";
+			tdValue.className = "statValue";
+			tdValue.style.cssText = "padding-right: 64px;";
+			tdValue.innerHTML = numberWithCommas(aaapi.cmdEx("getSteamPlayerCount"));
+
+			tr.appendChild(tdTitle);
+			tr.appendChild(tdValue);
+			globalTable.appendChild(tr);
+
+			// total players
+			tr = document.createElement("tr");
+			tdTitle = document.createElement("td");
+			tdTitle.align = "right";
+			tdTitle.style.cssText = "padding: 10px;";
+			tdTitle.className = "aaTitleText aaThemeColorOneColor statTitle";
+			tdTitle.innerHTML = "Total Players*";
+
+			tdValue = document.createElement("td");
+			tdValue.align = "left";
+			tdValue.className = "statValue";
+			tdValue.style.cssText = "padding-right: 64px;";
+			tdValue.innerHTML = numberWithCommas(371669);
+
+			tr.appendChild(tdTitle);
+			tr.appendChild(tdValue);
+			globalTable.appendChild(tr);
+
+			for( var statName in stats )
+			{
+				stat = stats[statName];
+				tr = document.createElement("tr");
+
+				tdTitle = document.createElement("td");
+				tdTitle.align = "right";
+				tdTitle.style.cssText = "padding: 10px;";
+				tdTitle.className = "aaTitleText aaThemeColorOneColor statTitle";
+				tdTitle.innerHTML = stat.displayName;
+
+				tdValue = document.createElement("td");
+				tdValue.align = "left";
+				tdValue.className = "statValue";
+				tdValue.style.cssText = "padding-right: 64px;";
+				tdValue.innerHTML = numberWithCommas(stat.value);
+
+				tr.appendChild(tdTitle);
+				tr.appendChild(tdValue);
+				statsTable.appendChild(tr);
+
+				// if this is an aggregated stat, add it to the global table
+				if( stat.aggregated )
+				{
+					tr = document.createElement("tr");
+
+					tdTitle = document.createElement("td");
+					tdTitle.align = "right";
+					tdTitle.style.cssText = "padding: 10px;";
+					tdTitle.className = "aaTitleText aaThemeColorOneColor statTitle";
+					tdTitle.innerHTML = stat.displayName;
+
+					tdValue = document.createElement("td");
+					tdValue.align = "left";
+					tdValue.className = "statValue";
+					tdValue.style.cssText = "padding-right: 64px;";
+
+					var statSample = aaapi.cmdEx('getGlobalStatHistory', statName, 2);
+					//console.log(statSample.length);
+
+					var statValue = 0;
+					if( statSample.length > 0 )
+						statValue = statSample[1];
+					//for( var i = 0; i < statSample.length; i++ )
+					//	statValue += statSample[i];
+
+					tdValue.innerHTML = numberWithCommas(statValue);//numberWithCommas(aaapi.cmdEx('getGlobalStat', statName));
+
+					tr.appendChild(tdTitle);
+					tr.appendChild(tdValue);
+					globalTable.appendChild(tr);
+				}
+			}
+
+/*
+			var steamPlayerCount = aaapi.cmdEx("getSteamPlayerCount");
+			console.log("Player Count: " + steamPlayerCount);
+
+			var numDays = 3;
+
+			var globalStats = {
+				aa_total_time: aaapi.cmdEx('getGlobalStat', 'aa_total_time'),
+				aa_tubes_watched: aaapi.cmdEx('getGlobalStat', 'aa_tubes_watched'),
+				aa_screenshots_taken: aaapi.cmdEx('getGlobalStat', 'aa_screenshots_taken'),
+				aa_shortcuts_launched: aaapi.cmdEx('getGlobalStat', 'aa_shortcuts_launched'),
+				aa_stickers_applied: aaapi.cmdEx('getGlobalStat', 'aa_stickers_applied')
+			};
+			console.log(JSON.stringify(globalStats));
+
+			var globalStatHistory = {
+				aa_total_time: aaapi.cmdEx('getGlobalStatHistory', 'aa_total_time', numDays),
+				aa_tubes_watched: aaapi.cmdEx('getGlobalStatHistory', 'aa_tubes_watched', numDays),
+				aa_screenshots_taken: aaapi.cmdEx('getGlobalStatHistory', 'aa_screenshots_taken', numDays),
+				aa_shortcuts_launched: aaapi.cmdEx('getGlobalStatHistory', 'aa_shortcuts_launched', numDays),
+				aa_stickers_applied: aaapi.cmdEx('getGlobalStatHistory', 'aa_stickers_applied', numDays)
+			};
+			console.log(JSON.stringify(globalStatHistory));
+*/
+
+			var totalWidth = 416;
+			var achievement, table, tr, tdImage, image, tdInfo, infoContainer, infoSlate, infoTitle, infoDescription, tdProgress, widthA, widthB;
+			var achievementsContainer = document.querySelector("#achievementsContainer");//document.querySelector(".aaTabContent[tabid='achievements']");
+
+			var sortedAchievements = [];
+			for( var achievementName in achievements )
+				sortedAchievements.push(achievements[achievementName]);
+
+			function sortAchievements(a, b)
+			{
+				if( stats[a.stat].value > 0 && stats[b.stat].value <= 0 )
+					return -1;
+				else if( stats[a.stat].value <= 0 && stats[b.stat].value > 0 )
+					return 1;
+
+				var remainingA = a.statMax - stats[a.stat].value;
+				var remainingB = b.statMax - stats[b.stat].value;
+			
+				if( remainingA > remainingB )
+					return 1;
+				else if( remainingA < remainingB )
+					return -1;
+				else
+					return 0;
+			}
+
+			sortedAchievements.sort(sortAchievements);
+
+			for( var i = 0; i < sortedAchievements.length; i++ )
+			{
+				achievement = sortedAchievements[i];
+
+				if( achievement.achieved )
+				{
+					widthA = 0;
+					widthB = totalWidth;
+				}
+				else
+				{
+					widthA = Math.ceil(((stats[achievement.stat].value - achievement.statMin) / (achievement.statMax - achievement.statMin)) * (totalWidth*1.0));
+					widthB = totalWidth - widthA;
+				}
+
+				table = document.createElement("table");
+				table.cellspacing = "0";
+				table.cellpadding = "0";
+
+				if( achievement.achieved )
+					table.className = "aaTextColorOneColor aaThemeColorOneShadedBorderColor  aaThemeColorOneShadedBackground";
+				else
+					table.className = "aaTextColorTwoColor aaThemeColorTwoShadedBorderColor  aaThemeColorTwoShadedBackground";
+
+				table.style.cssText = "margin-top: 4px; margin-bottom: 4px; border-style: solid; border-width: 2px;";
+
+				tr = document.createElement("tr");
+				tdImage = document.createElement("td");
+				image = document.createElement("img");
+				if( !achievement.achieved )
+					image.src = "awards/" + achievement.name + "_off.jpg";
+				else
+					image.src = "awards/" + achievement.name + ".jpg";
+				image.style.cssText = "width: 100px; border-style: solid; border-width: 2px; margin: 2px;";
+
+				if( achievement.achieved )
+					image.className = "aaThemeColorOneInverseShadedBorderColor";
+				else
+					image.className = "aaThemeColorTwoInverseShadedBorderColor";
+
+				tdInfo = document.createElement("td");
+
+				if( achievement.achieved )
+					tdInfo.className = "aaThemeColorOneHighBackgroundColor";
+				else
+					tdInfo.className = "aaThemeColorTwoHighBackgroundColor";
+
+				tdInfo.style.width = widthA + "px";
+
+				infoContainer = document.createElement("div");
+				infoContainer.style.cssText = "position: relative;";
+
+				infoSlate = document.createElement("div");
+				infoSlate.style.cssText = "position: absolute; -webkit-transform: translateY(-50%);";
+
+				infoTitle = document.createElement("div");
+				infoTitle.className = "awardTitle aaTitleText aaTitleTextSizeFontSize";
+				infoTitle.style.cssText = "line-height: 70%;";
+				infoTitle.innerHTML = achievement.displayName;
+
+				infoDescription = document.createElement("div");
+
+
+				if( achievement.achieved )
+					infoDescription.className = "awardDescription aaTitleText aaTextSizeFontSize aaTextColorOneLowColor";
+				else
+					infoDescription.className = "awardDescription aaTitleText aaTextSizeFontSize aaTextColorTwoLowColor";
+				infoDescription.style.cssText = "line-height: 110%; width: 400px; white-space: normal;";
+				infoDescription.innerHTML = achievement.description;
+
+				tdProgress = document.createElement("td");
+
+				if( achievement.achieved )
+					tdProgress.className = "aaThemeColorOneShadedBackground";
+				else
+					tdProgress.className = "aaThemeColorTwoShadedBackground";
+
+				tdProgress.style.width = widthB + "px";
+
+				achievementsContainer.appendChild(table);
+				table.appendChild(tr);
+				tr.appendChild(tdImage);
+				tdImage.appendChild(image);
+				tr.appendChild(tdInfo);
+				tdInfo.appendChild(infoContainer);
+				infoContainer.appendChild(infoSlate);
+				infoSlate.appendChild(infoTitle);
+				infoSlate.appendChild(infoDescription);
+				tr.appendChild(tdProgress);
+			}
+		</script>
+			<!--table cellspacing="0" cellpadding="0" class="aaTextColorOneColor aaThemeColorOneShadedBorderColor  aaThemeColorOneShadedBackground" style="margin-top: 4px; margin-bottom: 4px; border-style: solid; border-width: 2px;">
+				<tr><td>
+					<img src="awards/shutterbug.jpg" style="width: 100px; border-style: solid; border-width: 2px; margin: 2px;" class="aaThemeColorOneInverseShadedBorderColor" />
+				</td><td class="aaThemeColorOneHighBackgroundColor" style="width: 0;">
+					<div style="position: relative;">
+						<div style="position: absolute; -webkit-transform: translateY(-50%);">
+							<div class="awardTitle aaTitleText aaTitleTextSizeFontSize" style="line-height: 70%;">Shutter Bug</div>
+							<div class="awardDescription aaTitleText aaTextSizeFontSize aaTextColorOneLowColor" style="line-height: 110%; width: 400px; white-space: normal;">Take 100 screenshots.</div>
+						</div>
+					</div>
+				</td><td class="aaThemeColorOneShadedBackground" style="width: 414px;">
+				</td></tr>
+			</table-->
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<script>
+			function yesResetStats(achievementsToo)
+			{
+				//if( aaapi.cmdEx("createDbBackup") )
+				//	aaapi.cmd("detectAllModels");
+				aaapi.cmd("resetStats", achievementsToo);
+				window.location.reload();
+			}
+
+			function noResetStats()
+			{
+				//console.log("nope");
+			}
+
+			function askResetStats(achievementsToo)
+			{
+				if( achievementsToo )
+				{
+					createModalPrompt("Reset Stats & Achievements", "<font class='aaTitleTextSizeFontSize'>Are you sure?  This cannot be undone.  All of your stats & achievements will be reset to zero.</font>", "yesResetStats(true);", "noResetStats();");
+				}
+				else
+				{
+					createModalPrompt("Reset Stats", "<font class='aaTitleTextSizeFontSize'>Are you sure?  This cannot be undone.  All of your stats will be reset to zero. (Your achievements will NOT be reset.)</font>", "yesResetStats(false);", "noResetStats();");
+				}
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+				modalHTML += "</div>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Reset" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+			}
+		</script>
+	</body>
+</html>

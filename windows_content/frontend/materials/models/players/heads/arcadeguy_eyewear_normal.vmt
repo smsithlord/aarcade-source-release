@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\heads/arcadeguy_eyewear_normal"
+	"$bumpmap" "models\players\heads/ArcadeGuy_Eyewear_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

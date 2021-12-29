@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/llexeyewear"
+	"$bumpmap" "models\patrons/llexeyewear_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

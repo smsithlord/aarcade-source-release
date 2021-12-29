@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"c3d740aa"
+		}
+		"title"		"racer_multiscreen"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\racer_multiscreen.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

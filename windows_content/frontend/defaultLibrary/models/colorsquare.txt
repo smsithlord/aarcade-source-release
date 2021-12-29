@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"0a0d9e03"
+		}
+		"title"		"Color Square"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\sithlord\colorsquare.mdl"
+				"workshopid"		"397196824"
+			}
+		}
+	}
+}

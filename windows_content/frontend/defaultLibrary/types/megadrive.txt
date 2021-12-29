@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-LReJY2S1p3P7H"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"megadrive"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

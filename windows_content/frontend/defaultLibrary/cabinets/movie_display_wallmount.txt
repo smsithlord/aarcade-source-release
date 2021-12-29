@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"b5336add"
+		}
+		"title"		"movie_display_wallmount"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\movie_display_wallmount.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/part_glass"
+	"$model" "1"
+	"$no_draw" "1"
+}

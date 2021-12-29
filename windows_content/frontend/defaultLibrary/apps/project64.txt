@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-LAoC-vkRtZqXD"
+		}
+		"title"		"Project64"
+		"file"		"X:\Program Files (x64)\Project64 2.2\Project64.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-KtCXxiB-yIQVg"
+		"download"		"http://www.pj64-emu.com/"
+		"reference"		"http://www.pj64-emu.com/"
+		"filepaths"
+		{
+			"-om88gxKfXVc4ihKu7AU"
+			{
+				"id"		"-om88gxKfXVc4ihKu7AU"
+				"path"		"X:\Emulators\N64\Roms\"
+			}
+		}
+	}
+}

@@ -1,0 +1,17 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/time_day"
+	$frame "7"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "day"
+			"resultVar" "$frame"
+		}
+	}
+}

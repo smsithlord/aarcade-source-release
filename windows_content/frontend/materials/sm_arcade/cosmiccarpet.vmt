@@ -1,0 +1,6 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/cosmiccarpet"
+	"$bumpmap" "sm_arcade/cosmiccarpet_norm"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+}

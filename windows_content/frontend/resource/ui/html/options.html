@@ -1,0 +1,3850 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?a=q"></link>
+		<script src="asset://ui/hud.js?a=i"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			.inputOptionToggle
+			{
+				cursor: pointer;
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			.categoryContainer
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-radius: 10px;
+			}
+
+			.categoryTitle
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.optionContainer
+			{
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				height: 25px;
+				border-radius: 10px;
+				background-color: rgba(10, 10, 10, 0.5);
+			}
+
+			.optionContainer:nth-child(even)
+			{
+				background-color: rgba(30, 30, 30, 0.3);
+			}
+
+			.optionTitle
+			{
+				float: left;
+				margin-left: 5px;
+			}
+
+			.optionsContainer
+			{
+				margin-left: 15px;
+				margin-right: 15px;
+				margin-bottom: 15px;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+	    		border-radius: 3px;
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+
+			#uiTable td:nth-child(2)
+			{
+				width: 400px;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var tga = new TGA();
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Settings", "", false, true, "window.location='asset://ui/welcome.html';", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var g_twitchConfig = aaapi.cmdEx("getTwitchConfig");
+
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "objects",
+						"title": "Objects"
+					},
+					{
+						"id": "sound",
+						"title": "Sound"
+					},
+					{
+						"id": "camera",
+						"title": "Camera"
+					},
+					{
+						"id": "vehicle",
+						"title": "Vehicle"
+					},
+					{
+						"id": "ui",
+						"title": "UI"
+					},
+					{
+						"id": "youtube",
+						"title": "YouTube"
+					},
+					{
+						"id": "engine",
+						"title": "Engine"
+					},
+					{
+						"id": "twitch",
+						"title": "Twitch"
+					},
+					{
+						"id": "embedded",
+						"title": "Embedded"
+					},
+					{
+						"id": "addons",
+						"title": "Addons"
+					},
+					{
+						"id": "import",
+						"title": "Import"
+					}
+				],
+				"activeTabId": tabId,
+				"onChangeCallbackName": "onChangeCallback"
+			});
+			document.write(windowTabsHeaderHTML);
+
+			var vehiclePresets = localStorage.getItem("vehiclePresets");
+			if( !!vehiclePresets )
+				vehiclePresets = JSON.parse(vehiclePresets);
+			else
+				vehiclePresets = {
+					/*default:
+					{
+						camx: 0,
+						camy: 0,
+						camz: 0,
+						x: 0,
+						y: 0,
+						z: 0,
+						pitch: 0,
+						yaw: 0,
+						roll: 0
+					},
+					dc210de5:
+					{
+						camx: 0,
+						camy: 0,
+						camz: -9,
+						x: 0,
+						y: 0,
+						z: -8,
+						pitch: 0,
+						yaw: 180,
+						roll: 0
+					},
+					c875c14f:
+					{
+						camx: 0,
+						camy: 0,
+						camz: 0,
+						x: 0,
+						y: 0,
+						z: -8,
+						pitch: 0,
+						yaw: 0,
+						roll: 0
+					}*/
+				};
+
+			var vehicleReady = false;
+			function onChangeCallback(tabId)
+			{
+				// clear the old active tab title
+				if( tabId == "vehicle" && !vehicleReady )
+				{
+					vehicleReady = true;
+
+					var foundActive = false;
+
+					var compareFile = aaapi.cmdEx('getConVarValue', 'air_boat_model');
+					var vehiclesContainer = document.querySelector('#vehiclesContainer');
+					var preset, modelId, modelEntry, tile;
+					for( var x in vehiclePresets )
+					{
+						preset = vehiclePresets[x];
+
+						if( x == 'default' )
+							continue;
+
+						modelEntry = aaapi.cmdEx("getLibraryModel", x);
+
+						var tile = arcadeHud.createTile(modelEntry, vehiclesContainer, "modelpreview", "", onVehicleSpawnClick, 128, 64);
+
+						if( tile.item.platforms[arcadeHud.platformId].file == compareFile )
+						{
+							tile.classList.add('activeVehicleTile');
+							tile.classList.add('aaThemeColorOneBorderColor');
+							foundActive = true;
+						}
+					}
+				}
+			}
+
+			function onVehicleSpawnClick(tile)
+			{
+				var activeTile = document.querySelector('.activeVehicleTile');
+				if( activeTile == tile )
+					return;
+
+				if( !!activeTile )
+				{
+					activeTile.classList.remove('activeVehicleTile');
+					activeTile.classList.remove('aaThemeColorOneBorderColor');
+				}
+
+				var modelId = tile.item.info.id;
+				var preset = vehiclePresets[modelId];
+				if( !!!preset )
+					preset = {
+						camx: 0,
+						camy: 0,
+						camz: 0,
+						x: 0,
+						y: 0,
+						z: 0,
+						pitch: 0,
+						yaw: 0,
+						roll: 0
+					};
+
+				vehiclePresets[modelId] = preset;
+				localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+
+				var presetKeys = Object.keys(preset);
+
+				// update related sliders too!
+				var elems = document.querySelectorAll("input[type='range']");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					for( var j = 0; j < presetKeys.length; j++ )
+					{
+						if( elems[i].inputOption === categories.vehicle['vehicle' + presetKeys[j]] )
+						{
+							elems[i].inputOption.value = preset[presetKeys[j]];
+							elems[i].value = preset[presetKeys[j]];
+							onSlide.call(elems[i]);
+
+							elems[i].style.backgroundColor = "";
+							elems[i].style.webkitTransition = "initial";
+							elems[i].classList.add("aaThemeColorOneBackgroundColor");
+							elems[i].offsetTop;
+							elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+							elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+							elems[i].style.backgroundColor = "#ddd";
+							continue;
+						}
+					}
+				}
+
+				// now that all of the onSlide's have been called, it's safe to mark us as active.
+				tile.classList.add('activeVehicleTile');
+				tile.classList.add('aaThemeColorOneBorderColor');
+				saveVehiclePresetState();
+
+				aaapi.cmd('consoleCommand', "air_boat_model \"" + tile.item.platforms[arcadeHud.platformId].file + "\"");
+			}
+
+			function saveVehiclePresetState()
+			{
+				var tile = document.querySelector('.activeVehicleTile');
+				if( !!tile )
+				{
+					vehiclePresets[tile.item.info.id] = {
+						camx: categories.vehicle.vehiclecamx.value,
+						camy: categories.vehicle.vehiclecamy.value,
+						camz: categories.vehicle.vehiclecamz.value,
+						x: categories.vehicle.vehiclex.value,
+						y: categories.vehicle.vehicley.value,
+						z: categories.vehicle.vehiclez.value,
+						pitch: categories.vehicle.vehiclepitch.value,
+						yaw: categories.vehicle.vehicleyaw.value,
+						roll: categories.vehicle.vehicleroll.value
+					};
+
+					localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+				}
+			}
+
+			function removeSpawnedVehicles()
+			{
+				aaapi.cmd('consoleCommand', 'ent_remove_all prop_vehicle_airboat');//'ent_fire prop_vehicle_airboat ignite');
+				//aaapi.cmd('deactivateInputMode');
+			}
+
+			function spawnAirBoat()
+			{
+				aaapi.cmd('consoleCommand', "ch_createairboat;");
+				aaapi.cmd('deactivateInputMode');
+			}
+
+			function gotoPage(page, tab)
+			{
+				window.location='asset://ui/' + page + '?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=" + tab + "';");
+			}
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="objects">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="sound">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="camera">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="vehicle">
+			<center>
+				<div id="vehiclesContainer" style="white-space: nowrap; max-width: 1000px; overflow-x: auto; overflow-y: hidden;" class="aaScrollBars"></div>
+			</center>
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+			<br />
+			<table width="100%">
+				<tr>
+					<td width="50%">
+						<div class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" onclick="spawnAirBoat();" help="Spawn the selected vehicle into the world." style="display: block; width: auto;">
+							<script>
+								document.write(arcadeHud.generateIconHTML("vehicleicon.png", 32, 32, "aaTextColorTwoHighColor"));
+							</script>
+							Spawn Vehicle
+						</div>
+					</td>
+					<td width="50%">
+						<div class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" onclick="removeSpawnedVehicles();" help="Settings like model offset and model angles only impact NEW vehicles you spawn. It is often useful to remove all the old ones from your current world. Also, camera offsets are global, so it's best to only have 1 type of vehicle in the world at a time." style="display: block; width: auto;">
+							<script>
+								document.write(arcadeHud.generateIconHTML("vehiclesremoveallicon.png", 32, 32, "aaTextColorTwoHighColor"));
+							</script>
+							Remove Spawned Vehicles From World
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" style="max-height: 600px; overflow-y: auto;" tabid="ui">
+			<table id="uiTable" class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+			<br />
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Manage Hidden Library Entries" onclick="window.location='asset://ui/viewhidden.html';" help="Hide something by accident? You can go here to unhide stuff." />
+			<!--
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Unhide All Library Entries" onclick="unhideAll();" help="Unhide <b>ALL ITEMS & PROPS</b> that you've hidden in your Library." />
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Unhide All Maps" onclick="unhideAllMaps();" help="Unhide <b>ALL MAPS</b> that you've hidden in your Library." />
+		-->
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="youtube">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<script>
+		/*
+			function unhideAll()
+			{
+				localStorage.removeItem("hiddenItems");
+			}
+
+			function unhideAllMaps()
+			{
+				localStorage.removeItem("hiddenMaps");
+			}
+			*/
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="engine">
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Source Engine Options" onclick="aaapi.cmd('consoleCommand', 'showconsole'); setTimeout(function(){aaapi.cmd('showEngineOptionsMenu');}, 500);" help="Change keybinds, texture quality, or other Source engine options. Use AArcade's launcher to change resolutions." /><br />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Open Command Console" onclick="aaapi.cmd('consoleCommand', 'toggleconsole');" help="Open the Source engine command console." /><br />
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="addons">
+
+			<!-- Workshop -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Workshop"  onclick="gotoPage('workshop.html', 'addons');" help="Explore the Steam workshop or manage your current subscriptions." /><br />
+			
+			<!-- Mounted Games -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Mounted Games" onclick="window.location='asset://ui/mounts.html';" help="Manage which of your games' assets get mounted when you launch AArcade." />
+
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="embedded">
+
+			<!-- Libretro Framework -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Libretro" onclick="gotoPage('libretroConfig.html', 'embedded');" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens." /><br />
+
+			<!-- Steamworks Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steamworks" onclick="gotoPage('steamworksBrowserConfig.html', 'embedded');" help="The Steamworks web browser is what displays web content on the in-game screens." /><br />
+
+			<!-- Awesomium Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Awesomium" onclick="gotoPage('awesomiumConfig.html', 'embedded');" help="Awesomium is what displays the AArcade HUD & UI." />
+
+			<!-- Twitch Bot
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Twitch Bot" onclick="gotoPage('twitchBotConfig.html', 'embedded');" help="Are you a Twitch or other live streamer? AArcade can output events to a <i>.js</i> file for use in your custom bots! (ADVANCED)" /><br /> -->
+
+			<!-- Kodi -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Kodi" onclick="gotoPage('kodiConfig.html', 'embedded');" help="Do you use Kodi media player? AArcade can be configured to play videos over the network via Kodi instead of locally launching video files." />
+
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="twitch">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="import">
+
+			<!-- All My Steam Games -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steam Games" onclick="gotoPage('importSteamGames.html', 'import');" help="Import your Steam games from your public Steam Community profile." /><br />
+
+			<!-- All Models In My Folders -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Models" onclick="askImportModels();" help="Detect all available MDL files and add them to your library." /><br />
+
+			<!-- All Maps In My Folders -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Maps" onclick="askImportMaps();" help="Detect all available BSP files and add them to your library." /><br />
+
+			<!-- All My Legacy Content -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Legacy Content" onclick="gotoPage('importLegacyContent.html', 'import');" help="Were you an Early Access user?  Import your old stuff here." />
+
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var entryForm = document.querySelector("#entryForm");
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				if( !!focusedElem && !!focusedElem.inputOption )
+				{
+					var option = focusedElem.inputOption;
+					focusedElem.style.webkitTransition = "initial";
+					focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+					focusedElem.offsetTop;
+					focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+					focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+					onInputOptionTextFormSubmit(option, focusedElem.value);
+					focusedElem.blur();
+				}
+			}.bind(entryForm), true);
+
+			var categories = {
+				"general":
+				{
+					/*"throttleembeddedrender":
+					{
+						"title": "Throttle Embedded Rendering",
+						"type": "toggle",
+						"help": "Throttles the rendering of embedded media to 1-per-game-frame render, unless disabled.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "throttle_embedded_render");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "throttle_embedded_render " + this.value);
+						}
+					},*/
+					"autosave":
+					{
+						"title": "Auto Save",
+						"type": "toggle",
+						"help": "If enabled, Automatically saves all changes to your arcade & library. If disabled, you'll be asked if you want to save upon unloading a map.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "auto_save");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "auto_save " + this.value);
+						}
+					},
+					"autobuildsoundcache":
+					{
+						"title": "Auto Rebuild Sound Cache",
+						"type": "toggle",
+						"help": "Disable this to decrease startup time, but at the risk of custom sounds not playing in addon maps.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "autobuildsoundcache");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "autobuildsoundcache " + this.value);
+						}
+					},
+					"weapons":
+					{
+						"title": "Allow Weapons",
+						"type": "toggle",
+						"help": "If you want to shoot stuff, you'll need to enable weapons. This will also turn on the game HUD & POV models.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "allow_weapons");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							if( this.value === "1" )//aaapi.cmd("consoleCommand", "allow_weapons " + this.value);
+								aaapi.cmd("consoleCommand", "enable_weapons");
+							else
+								aaapi.cmd("consoleCommand", "disable_weapons");
+
+						}
+					},
+					"detectmapsatstartup":
+					{
+						"title": "Detect Maps When AArcade Starts",
+						"type": "toggle",
+						"help": "If enabled, AArcade will automatically look for new maps in your folders every time it starts.  Disable this if you want to skip this step to make AArcade startup faster.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "detect_maps_at_startup");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "detect_maps_at_startup " + this.value);
+						}
+					},
+					/*"pausemode":
+					{
+						"title": "Hard Pause Mode",
+						"type": "toggle",
+						"help": "(EXPERIMENTAL) Enabling this will cause AArcade to more aggresively release assets when it pauses.  The trade-off is that AArcade will take a moment to un-pause from this mode. This mode is automatically used when launching other Source engine games from AArcade.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "pause_mode");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "pause_mode " + this.value);
+						}
+					},*/
+					/*"deferredtexturecleanup":
+					{
+						"title": "Deferred Texture Cleanup",
+						"type": "toggle",
+						"help": "(EXPERIMENTAL) Having this enabled allows textures to remain in memory 3 seconds after you don't need them anymore, which makes AArcade more stable for some people.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "use_deferred_texture_cleanup");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "use_deferred_texture_cleanup " + this.value);
+						}
+					},*/
+					"hdr":
+					{
+						"title": "Show HDR Lighting",
+						"type": "toggle",
+						"help": "HDR simulates your pupils adjusting to lighting conditions.  Turning it off can fix how some maps look.",
+						"valueTitles": {"0": "Disabled", "2": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "mat_hdr_level");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var cmd = "mat_hdr_level " + this.value + ";";
+
+							if( val == "2" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 0.5;";
+							else if( val == "0" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 1;";
+
+							aaapi.cmd("consoleCommand", cmd);
+						}
+					},
+					"reflections":
+					{
+						"title": "Show Surface Reflections",
+						"type": "toggle",
+						"help": "Reflections look nice, but sometimes they cause over-bright props or hard-to-see screens.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "mat_fastspecular");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "mat_fastspecular " + this.value);
+						}
+					},
+					"rawmouse":
+					{
+						"title": "Use Raw Mouse Input",
+						"type": "toggle",
+						"help": "If your view seems to spin out of control, try turning ON raw mouse input.  Otherwise, you'll probably want to leave it off.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "m_rawinput");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "m_rawinput " + this.value);
+						}
+					},
+					"physicsprops":
+					{
+						"title": "World Physics Props",
+						"type": "toggle",
+						"help": "If disabled, all physics props that are part of the world will be motion disabled upon spawn.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "physics_props");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "physics_props " + this.value);
+						}
+					},
+					"console":
+					{
+						"title": "Developer Console Output",
+						"type": "toggle",
+						"help": "WARNING - Turning this on can cause a performance impact, plus spam you with irrelevant notifications.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "developer");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "developer " + this.value);
+						}
+					},
+					"autoload":
+					{
+						"title": "AArcade Startup Behavior",
+						"type": "toggle",
+						"help": "AArcade can automatically load into the most recent map that you visited after it starts up.",
+						"valueTitles": {"0": "Show Main Menu", "1": "Load Most Recent Map"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "auto_load_map");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "auto_load_map " + this.value);
+						}
+					},
+					"startup":
+					{
+						"title": "Run AArcade When Windows Starts",
+						"type": "toggle",
+						"help": "This will automatically start AArcade when your computer starts up.<br /><br />Adds a single value to your registry at:<br /><font size='3'>HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/Run/AArcade</font>",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("checkStartWithWindows");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("setStartWithWindows", this.value);
+						}
+					}
+				},
+				"objects":
+				{
+					"quickspawn":
+					{
+						"title": "Quick Spawn Items",
+						"type": "toggle",
+						"help": "If enabled, the Create Item menu will be skipped & the default auto-completed properties will be used on the new item. (You can always Edit Item afterwards to modify them.)",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("quickSpawn");
+							if( !!!val )
+								val = "1";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("quickSpawn", this.value);
+						}
+					},
+					"waitforinitialimages":
+					{
+						"title": "Wait For Initial Images To Load",
+						"type": "toggle",
+						"help": "If enabled, the Loading Instance menu will stay up until all initial images are loaded when changing maps.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "wait_for_initial_images");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "wait_for_initial_images " + this.value);
+						}
+					},
+					"prioritizelegacyworkshopimages":
+					{
+						"title": "Prioritize Legacy Workshop Images",
+						"type": "slider",
+						"sliderMin": -1,
+						"sliderMax": 1,
+						"sliderStep": 1,
+						"help": "Leave at 0 (Auto) for best results.  Set to 1 if you are trying to load into a legacy workshop save that takes forever to load its images.  Set to -1 if you don't care about legacy workshop save's images loading well.  Changes take effect upon the next map load.",
+						"valueTitles": {"-1": "Disabled", "0": "Auto", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "prioritize_legacy_workshop_images");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "prioritize_legacy_workshop_images " + this.value);
+						}
+					},
+					"shadows":
+					{
+						"title": "Spawned Object Shadows",
+						"type": "toggle",
+						"help": "Shadows of spawned objected can cause visual glitches or decrease performance, depending on the arcade.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "object_shadows");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "object_shadows " + this.value);
+
+							if( arcadeHud.oldIsMapLoaded )
+							{
+								aaapi.cmd("consoleCommand", "set_active_spawned_shadows " + this.value);
+							}
+						}
+					},
+					"allowmultipleactive":
+					{
+						"title": "Allow Multiple Active Animations.",
+						"type": "toggle",
+						"help": "If enabled, objects will remain in the ACTIVEIDLE animation state until their task is closed, regardless of how many tasks you have open. Otherwise, *only* the one task that is selected remains in ACTIVEIDLE. It is recommended you leave this DISABLED.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "allow_multiple_active");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "allow_multiple_active " + this.value);
+						}
+					},
+					"scalecollisions":
+					{
+						"title": "Scale Collision Models",
+						"type": "toggle",
+						"help": "Scale collision models to match visual model scale. This bugs out on certain models, making them unclickable or could cause crashes upon spawning scaled models when loading an arcade.<br /><br />Note that this feature is currently broken & that scaled collision models will not behave entirely as they should.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "scale_collisions");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "scale_collisions " + this.value);
+						}
+					},
+					"damagephysics":
+					{
+						"title": "Damage Enables Physics",
+						"type": "toggle",
+						"help": "If enabled, objects will automatically have physics enabled when they get damanged by a weapon.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "damage_physics");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "damage_physics " + this.value);
+						}
+					},
+					"precacheinstances":
+					{
+						"title": "Precache Models",
+						"type": "toggle",
+						"help": "Enabling this can greatly decrease the time it takes to load a large arcade. It is recommended to be left ON.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "precache_instances");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "precache_instances " + this.value);
+						}
+					},
+					"spawnobjectsinbatches":
+					{
+						"title": "Batch Object Spawn",
+						"type": "toggle",
+						"help": "Enabling this can greatly improve the time it takes to load large arcades, but you will experience stutter when large numbers of new objects spawn in a batch.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "spawn_objects_in_batches");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "spawn_objects_in_batches " + this.value);
+						}
+					},
+					"hidenodeorigins":
+					{
+						"title": "Hide Node Origins",
+						"type": "toggle",
+						"help": "Nodes are physical groups of objects.  If enabled, node origins (their center-point) will be invisible.  Otherwise, they'll show up as a small tablet. Takes effect upon the next map load.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (aaapi.cmdEx("getConVarValue", "node_model") == "models\\cabinets\\clear.mdl") ? "1" : "0";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							/*var cmd = "node_model " + this.value + ";";
+
+							if( val == "2" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 0.5;";
+							else if( val == "0" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 1;";*/
+
+							if( this.value == "1" )
+								aaapi.cmd("consoleCommand", "node_model \"models\\cabinets\\clear.mdl\"");
+							else
+								aaapi.cmd("consoleCommand", "node_model \"\"");
+						}
+					},
+					"buildghosts":
+					{
+						"title": "Use Transparency When Moving Objects",
+						"type": "toggle",
+						"help": "Transparency can make it easy to see what you're doing, but some models become COMPLETELY invisible when this is on.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "build_ghosts");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "build_ghosts " + this.value);
+						}
+					},
+					"objectfade":
+					{
+						"title": "Object Fade Distance",
+						"type": "slider",
+						"sliderMin": 200,
+						"sliderMax": 4000,
+						"sliderStep": 1.0,
+						"help": "Distance (in inches) at which to fade-out AArcade objects. Set to max to disable fade. Takes *full* effect only after a map load.",
+						"valueTitles": {"4000": "MAX"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "aapropfademin");
+							if( val < 0 )
+								val = this.sliderMax;
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							var minValue = parseNumber(this.value);
+							var maxValue = 0;
+							if( minValue == this.sliderMax )
+								minValue = -1;
+							else
+							{
+								maxValue = parseNumber(this.value);
+								maxValue += maxValue * 0.2;
+							}
+							
+							aaapi.cmd("consoleCommand", "aapropfademin " + minValue + "; aapropfademax " + maxValue);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"spawndist":
+					{
+						"title": "Object Spawn Distance",
+						"type": "slider",
+						"sliderMin": 400,
+						"sliderMax": 2000,
+						"sliderStep": 100.0,
+						"help": "The maximum distance from the player position that objects will spawn in at. You must use the Spawn Nearby Objects command to spawn in additional objects if you use this. Set to MAX to disable the distance check. This slider only impacts SP mode.",
+						"valueTitles": {"2000": "MAX"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "spawn_dist");
+							if( val <= 0 )
+								val = this.sliderMax;
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							var val = parseNumber(this.value);
+							if( val == this.sliderMax )
+								val = 0;
+							
+							aaapi.cmd("consoleCommand", "set_spawn_dist " + val);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"spawnobjectsinviewonly":
+					{
+						"title": "Spawn Objects Within View Only",
+						"type": "toggle",
+						"help": "If enabled AND there is a maximum object spawn distance set, this will cause ONLY objects that are within view of the player (in addition to being within the spawn distance) to spawn in.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "spawn_objects_within_view_only");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "spawn_objects_within_view_only " + this.value);
+						}
+					},
+					"spawnobjectsdoubletap":
+					{
+						"title": "Spawn Objects Double Tap",
+						"type": "toggle",
+						"help": "If enabled, you must press your Spawn Nearby Objects button TWICE before objects will actually spawn in. The first time you press it, you'll instead just see a list of nearby object titles.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "spawn_objects_double_tap");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "spawn_objects_double_tap " + this.value);
+						}
+					}
+				},
+				"twitch":
+				{
+					"twitchEnabled":
+					{
+						"title": "Enable Twitch",
+						"type": "toggle",
+						"help": "Twitch features include chatting with Twitch channels you are watching, as well as some bot commands that your own viewers can use that interact with AArcade.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "twitch_enabled");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "twitch_enabled " + this.value);
+
+							aaapi.cmd("closeTwitchConnection");
+							if( val === "1" )
+								aaapi.cmd("openTwitchConnection");
+						}
+					},
+					"twitchUsername":
+					{
+						"title": "Your Twitch Username",
+						"type": "text",
+						"help": "(REQUIRED) Your Twitch username, used for connecting to Twitch & chatting.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							this.value = g_twitchConfig.username;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							g_twitchConfig.username = val;
+							aaapi.cmd("setTwitchConfig", g_twitchConfig.username, g_twitchConfig.token, g_twitchConfig.channel);
+
+							if( g_twitchConfig.username !== "" && g_twitchConfig.token !== "" )
+							{
+								aaapi.cmd("closeTwitchConnection");
+								aaapi.cmd("openTwitchConnection");
+							}
+						}
+					},
+					"twitchToken":
+					{
+						"title": "Your Twitch Token <input type='button' value='GET YOUR TOKEN' onclick='aaapi.cmd(\"popout\", \"twitchtoken\", true);' />",
+						"type": "password",
+						"help": "(REQUIRED) Your Twitch OAuth token, so AArcade can send your chat messages as you.<br /><u>Do not stream yourself getting your token.</u>",
+						"valueTitles": {"placeholder": "oauth:"},
+						"value": null,
+						"getValue": function()
+						{
+							this.value = g_twitchConfig.token;
+						},
+						"setValue": function(val)
+						{
+							if( val !== "********" )
+							{
+								this.value = val;
+								g_twitchConfig.token = val;
+								aaapi.cmd("setTwitchConfig", g_twitchConfig.username, g_twitchConfig.token, g_twitchConfig.channel);
+
+								if( g_twitchConfig.username !== "" && g_twitchConfig.token !== "" )
+								{
+									aaapi.cmd("closeTwitchConnection");
+									aaapi.cmd("openTwitchConnection");
+								}
+							}
+						}
+					},
+					"twitchChannel":
+					{
+						"title": "Your Twitch Channel",
+						"type": "text",
+						"help": "(OPTIONAL) Your own Twitch channel, so AArcade can respond to Twitch Bot Commands such as !map or !linx.",
+						"valueTitles": {"placeholder": "#"},
+						"value": null,
+						"getValue": function()
+						{
+							this.value = g_twitchConfig.channel;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							g_twitchConfig.channel = val;
+							aaapi.cmd("setTwitchConfig", g_twitchConfig.username, g_twitchConfig.token, g_twitchConfig.channel);
+
+							if( g_twitchConfig.channel !== "" && g_twitchConfig.username !== "" && g_twitchConfig.token !== "" )
+							{
+								aaapi.cmd("joinTwitchChannel", g_twitchConfig.channel);
+							}
+						}
+					},
+					"twitchbot":
+					{
+						"title": "Allow Twitch Bot Commands",
+						"type": "toggle",
+						"help": "(OPTIONAL) Enabling this allows viewers of your twitch to use !map to be told what map you are on, and !linx to be told the title of the item you are watching, along with its link URLs.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							//var val = (aaapi.cmdEx("isTwitchBotEnabled")) ? "1" : "0";
+							var val = aaapi.cmdEx("getConVarValue", "twitch_bot_enabled");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("setTwitchBotEnabled", (val === "1"));
+						}
+					},
+					"twitchAutoChannels":
+					{
+						"title": "Auto-Join Twitch Channels",
+						"type": "text",
+						"help": "(OPTIONAL) Comma-separated list of Twitch channels you want to automatically join.",
+						"valueTitles": {"placeholder": "#"},
+						"value": null,
+						"getValue": function()
+						{
+							var twitchAutoChannels = localStorage.getItem("twitchAutoChannels");
+							if( !!twitchAutoChannels )
+								twitchAutoChannels = JSON.parse(twitchAutoChannels);
+							else
+								twitchAutoChannels = {};
+
+							var val = "";
+							var channelEntry;
+							var isFirstChannel = true;
+							for( var x in twitchAutoChannels )
+							{
+								if( isFirstChannel )
+								{
+									isFirstChannel = false;
+									channelEntry = "";
+								}
+								else
+									channelEntry = ", ";
+
+								if( x[0] == '#' )
+									channelEntry += x;
+								else
+									channelEntry += '#' + x;
+
+								val += channelEntry;
+							}
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							var twitchAutoChannels = {};
+							var vals = val.split(", ");
+							var channelEntry;
+							for( var i = 0; i < vals.length; i++ )
+							{
+								channelEntry = vals[i];
+								if( channelEntry[0] != '#' )
+									channelEntry = '#' + channelEntry;
+
+								twitchAutoChannels[channelEntry] = true;
+							}
+
+							var val = "";
+							var channelEntry;
+							var isFirstChannel = true;
+							for( var x in twitchAutoChannels )
+							{
+								if( isFirstChannel )
+								{
+									isFirstChannel = false;
+									channelEntry = "";
+								}
+								else
+									channelEntry = ", ";
+
+								if( x[0] == '#' )
+									channelEntry += x;
+								else
+									channelEntry += '#' + x;
+
+								val += channelEntry;
+							}
+
+							this.value = val;
+
+							localStorage.setItem("twitchAutoChannels", JSON.stringify(twitchAutoChannels));
+
+							// join new auto-join channels right meow, if we can.
+							if( aaapi.cmdEx("getConVarValue", "twitch_enabled") === "1" && g_twitchConfig.channel !== "" && g_twitchConfig.username !== "" && g_twitchConfig.token !== "" )
+							{
+								//for( var i = 0; i < vals.length; i++ )
+								for( var x in twitchAutoChannels )
+									aaapi.cmd("joinTwitchChannel", x);
+							}
+							/*
+							this.value = val;
+							g_twitchConfig.channel = val;
+							aaapi.cmd("setTwitchConfig", g_twitchConfig.username, g_twitchConfig.token, g_twitchConfig.channel);
+
+							if( g_twitchConfig.channel !== "" && g_twitchConfig.username !== "" && g_twitchConfig.token !== "" )
+							{
+								aaapi.cmd("joinTwitchChannel", g_twitchConfig.channel);
+							}*/
+						}
+					},
+					"twitchJoinedExisted":
+					{
+						"title": "Show Joined/Exited Notifications",
+						"type": "toggle",
+						"help": "Enable if you want to see joined & exited messages in the Twitch chat log.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "twitch_joinedexited_enabled");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "twitch_joinedexited_enabled " + this.value);
+
+							aaapi.cmd("closeTwitchConnection");
+							if( val === "1" )
+								aaapi.cmd("openTwitchConnection");
+						}
+					}
+				},
+				"sound":
+				{
+					"worldsound":
+					{
+						"title": "World Sound",
+						"type": "select",
+						"help": "Often times the environment sounds can be a bit much.",
+						"valueTitles": {"enabled": "Enabled (Always)", "focused": "Enabled (Focused Only)", "disabled": "Muted"},
+						"value": null,
+						"getValue": function()
+						{
+							var volumeVal = aaapi.cmdEx("getConVarValue", "volume");
+							var muteLoseFocusVal = aaapi.cmdEx("getConVarValue", "snd_mute_losefocus");
+							var val;
+							if( volumeVal == 0 )
+								val = "disabled";
+							else if( muteLoseFocusVal == 0 )
+								val = "enabled";
+							else
+								val = "focused";
+
+							this.value = val;
+							this.oldVolume = volumeVal;
+							this.oldMuteLoseFocus = muteLoseFocusVal;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							// only adjust the volume when needed!
+							var volumeCommand = "";
+							var focusCommand = "";
+							if( val == "disabled" )
+							{
+								if( categories.sound.volume.value > 0 )
+								{
+									categories.sound.volume.value = 0;
+									volumeCommand = "volume 0; ";
+
+									// update volume slider too!
+									var elems = document.querySelectorAll("input[type='range']");
+									for( var i = 0; i < elems.length; i++ )
+									{
+										if( elems[i].inputOption === categories.sound.volume )
+										{
+											elems[i].inputOption.value = categories.sound.volume.value;
+											elems[i].value = categories.sound.volume.value;
+											onSlide.call(elems[i]);
+
+											elems[i].style.backgroundColor = "";
+											elems[i].style.webkitTransition = "initial";
+											elems[i].classList.add("aaThemeColorOneBackgroundColor");
+											elems[i].offsetTop;
+											elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+											elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+											elems[i].style.backgroundColor = "#ddd";
+											break;
+										}
+									}
+								}
+							}
+							else if( val == "enabled" )
+							{
+								if( categories.sound.volume.value == 0 )
+								{
+									categories.sound.volume.value = 1;
+									volumeCommand = "volume 1; ";
+
+									// update volume slider too!
+									var elems = document.querySelectorAll("input[type='range']");
+									for( var i = 0; i < elems.length; i++ )
+									{
+										if( elems[i].inputOption === categories.sound.volume )
+										{
+											elems[i].inputOption.value = categories.sound.volume.value;
+											elems[i].value = categories.sound.volume.value;
+											onSlide.call(elems[i]);
+											
+											elems[i].style.backgroundColor = "";
+											elems[i].style.webkitTransition = "initial";
+											elems[i].classList.add("aaThemeColorOneBackgroundColor");
+											elems[i].offsetTop;
+											elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+											elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+											elems[i].style.backgroundColor = "#ddd";
+											break;
+										}
+									}
+								}
+
+								if( this.oldMuteLoseFocus == 1 )
+								{
+									this.oldMuteLoseFocus = 0;
+									focusCommand = "snd_mute_losefocus 0;";
+								}
+							}
+							else if( val == "focused" )
+							{
+								if( categories.sound.volume.value == 0 )
+								{
+									categories.sound.volume.value = 1;
+									volumeCommand = "volume 1; ";
+
+									// update volume slider too!
+									var elems = document.querySelectorAll("input[type='range']");
+									for( var i = 0; i < elems.length; i++ )
+									{
+										if( elems[i].inputOption === categories.sound.volume )
+										{
+											elems[i].inputOption.value = categories.sound.volume.value;
+											elems[i].value = categories.sound.volume.value;
+											onSlide.call(elems[i]);
+											
+											elems[i].style.backgroundColor = "";
+											elems[i].style.webkitTransition = "initial";
+											elems[i].classList.add("aaThemeColorOneBackgroundColor");
+											elems[i].offsetTop;
+											elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+											elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+											elems[i].style.backgroundColor = "#ddd";
+											break;
+										}
+									}
+								}
+
+								if( this.oldMuteLoseFocus == 0 )
+								{
+									this.oldMuteLoseFocus = 1;
+									focusCommand = "snd_mute_losefocus 1;";
+								}
+							}
+
+							aaapi.cmd("consoleCommand", volumeCommand + focusCommand);
+						}
+					},
+					"volume":
+					{
+						"title": "World Volume",
+						"type": "slider",
+						"sliderMin": 0,
+						"sliderMax": 1,
+						"sliderStep": 0.1,
+						"help": "Adjust the volume of world environment sounds.",
+						"valueTitles": {"0": "Muted"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "volume");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							var elems = document.querySelectorAll("select");
+							for( var i = 0; i < elems.length; i++ )
+							{
+								if( elems[i].inputOption === categories.sound.worldsound )
+								{
+									if( val > 0 && elems[i].value === "disabled" )
+									{
+										if( categories.sound.worldsound.oldMuteLoseFocus == 1 )
+											elems[i].value = "focused";
+										else
+											elems[i].value = "enabled";
+
+										elems[i].style.webkitTransition = "initial";
+										elems[i].classList.add("aaThemeColorOneBackgroundColor");
+										elems[i].offsetTop;
+										elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+										elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+									}
+									else if( val == 0 && elems[i].value !== "disabled" )
+									{
+										elems[i].value = "disabled";
+											
+										elems[i].style.webkitTransition = "initial";
+										elems[i].classList.add("aaThemeColorOneBackgroundColor");
+										elems[i].offsetTop;
+										elems[i].style.webkitTransition = "background-color 0.5s ease-in-out";
+										elems[i].classList.remove("aaThemeColorOneBackgroundColor");
+									}
+									break;
+								}
+							}
+
+							this.value = val;
+							aaapi.cmd("consoleCommand", "volume " + this.value);
+						}
+					},
+					"botvoice":
+					{
+						"title": "Anarchy Bot Voice",
+						"type": "toggle",
+						"help": "The voice that tells you about important events.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (localStorage.getItem("shouldSpeak") === "yes") ? "1" : "0";//aaapi.cmdEx("getConVarValue", "botvoice");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var goodVal = (val === "0") ? "no" : "yes";
+							localStorage.setItem("shouldSpeak", goodVal);
+							//aaapi.cmd("consoleCommand", "botvoice " + this.value);
+						}
+					},
+					"coindrop":
+					{
+						"title": "Coin Drop Sound",
+						"type": "toggle",
+						"help": "Play the sound of inserting a quarter when you launch shortcuts.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (localStorage.getItem("coinDrop") !== "no") ? "1" : "0";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var goodVal = (val === "0") ? "no" : "yes";
+							localStorage.setItem("coinDrop", goodVal);
+						}
+					},
+					"avr":
+					{
+						"title": "Audio Visualization Reflections (AVR)",
+						"type": "select",
+						"help": "AVR has the reflections on your screens respond to the audio levels coming from your primary sound output device.",
+						"valueTitles": {"0": "Disabled", "1": "Rainbow", "2": "Double Rainbow", "3": "Red", "4": "Green", "5": "Blue"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "avr");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "avr " + this.value);
+						}
+					},
+					"avramplify":
+					{
+						"title": "AVR Amplify",
+						"type": "slider",
+						"sliderMin": 0.1,
+						"sliderMax": 3.0,
+						"sliderStep": 0.1,
+						"help": "Your audio signal will be amplified by this amount when calculating AVR from it.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "avramp");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "avramp " + this.value);
+						}
+					},
+					"local_auto_playlists":
+					{
+						"title": "Auto-Playlist Other MP3s In Same Folder",
+						"type": "select",
+						"help": "Enabling this will turn MP3s into playlists of all the other MP3's in the same folder when you play them.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "local_auto_playlists");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "local_auto_playlists " + val);
+						}
+					}
+				},
+				"camera":
+				{
+					"attractmodetime":
+					{
+						"title": "Showcase Mode Transition Duration",
+						"type": "slider",
+						"sliderMin": 0.5,
+						"sliderMax": 8.0,
+						"sliderStep": 0.5,
+						"help": "The amount of time, in seconds, that the showcase camera takes to get to the next screenshot.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "attract_mode_time");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "attract_mode_time " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"attractmodehold":
+					{
+						"title": "Showcase Mode Hold Duration",
+						"type": "slider",
+						"sliderMin": 1.0,
+						"sliderMax": 60.0,
+						"sliderStep": 1.0,
+						"help": "The amount of time, in seconds, that the showcase camera holds at each screenshot position.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "attract_mode_hold");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "attract_mode_hold " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"attractmodedrift":
+					{
+						"title": "Showcase Mode Drift Speed",
+						"type": "slider",
+						"sliderMin": 0.0,
+						"sliderMax": 4.0,
+						"sliderStep": 0.5,
+						"help": "The speed of drift, in inches per seconds, that the showcase camera drifts while holding each screenshot position.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "attract_mode_drift");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "attract_mode_drift " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"showcasewipe":
+					{
+						"title": "Showcase Mode Before & After Wipe",
+						"type": "toggle",
+						"help": "When enabled, showcase mode will do a before & after wipe after cutting to each screenshot to show how much you've customized the area.",
+						"valueTitles": {"0": "Off", "1": "On"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "attract_mode_wipe");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "attract_mode_wipe " + this.value);
+						}
+					},
+					"fov":
+					{
+						"title": "FOV",
+						"type": "slider",
+						"sliderMin": 60,
+						"sliderMax": 120,
+						"sliderStep": 1.0,
+						"help": "Field of View",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "lastfov");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "fov " + this.value + "; lastfov " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"stereorendering":
+					{
+						"title": "Stereo Rendering",
+						"type": "toggle",
+						"help": "Stereo rendering is used for 3D modes.",
+						"valueTitles": {"0": "Off", "1": "On"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "usesbs");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "sbs_rendering " + this.value);
+						}
+					},
+					"ipd":
+					{
+						"title": "Stereo Rendering IPD",
+						"type": "slider",
+						"sliderMin": 40,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "The IPD of the average human is 63.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "ipd");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "ipd " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"cameramode":
+					{
+						"title": "Camera Mode",
+						"type": "select",
+						"help": "Choose which kind of camera perspective to use.",
+						"valueTitles": {"firstperson": "Firstperson", "thirdperson": "Thirdperson", "placeholder": "Change Camera Mode..."},
+						"value": null,
+						"getValue": function()
+						{
+							this.value = "";
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", val);
+						}
+					},
+					/*"cameracollide":
+					{
+						"title": "Camera Collisions",
+						"type": "select",
+						"help": "When enabled, the 3rd person camera attempts to not pass through solid objects.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_collision");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_collision " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},*/
+					"camyaw":
+					{
+						"title": "Camera YAW",
+						"type": "slider",
+						"sliderMin": -170,
+						"sliderMax": 180,
+						"sliderStep": 10.0,
+						"help": "Cam YAW.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_idealyaw");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_idealyaw " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"campitch":
+					{
+						"title": "Camera Pitch",
+						"type": "slider",
+						"sliderMin": -170,
+						"sliderMax": 180,
+						"sliderStep": 10.0,
+						"help": "Cam Pitch.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_idealpitch");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_idealpitch " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camdist":
+					{
+						"title": "Camera Distance",
+						"type": "slider",
+						"sliderMin": 50,
+						"sliderMax": 1000,
+						"sliderStep": 1.0,
+						"help": "Cam distance.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_idealdist");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_idealdist " + this.value + "; thirdperson;");
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camhoriz":
+					{
+						"title": "Camera Horizontal",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Cam horizontal.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_idealdistright");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_idealdistright " + this.value + "; thirdperson;");
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camvert":
+					{
+						"title": "Camera Vertical",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Cam vertical.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_idealdistup");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_idealdistup " + this.value + "; thirdperson;");
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camspeed":
+					{
+						"title": "Camera Smooth",
+						"type": "slider",
+						"sliderMin": 4.0,
+						"sliderMax": 200.0,
+						"sliderStep": 1.0,
+						"help": "Cam speed.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cam_ideallag");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cam_ideallag " + this.value);
+						}
+					},
+					"znear":
+					{
+						"title": "Z Near",
+						"type": "slider",
+						"sliderMin": 2,
+						"sliderMax": 10,
+						"sliderStep": 1.0,
+						"help": "Increasing Z-Near will also impact far away holograms from z-fighting with the wall they are placed on.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "znear");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "znear " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"znearvr":
+					{
+						"title": "Z Near VR",
+						"type": "slider",
+						"sliderMin": 2,
+						"sliderMax": 10,
+						"sliderStep": 1.0,
+						"help": "(VR) Increasing Z-Near will also impact far away holograms from z-fighting with the wall they are placed on.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "znearvr");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "znearvr " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"reshadedepth":
+					{
+						"title": "ReShade Depth",
+						"type": "toggle",
+						"help": "Toggle support for ReShade depth effects such as DoF & SSR. Turning this off will allow your hover titles & HUD to be visible again, but will also cause ReShade's depth effects to no longer have an impact.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "reshadedepth");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							//if( aaapi.cmdEx("getConVarValue", "reshade") )
+							//{
+								aaapi.cmd("consoleCommand", "reshadedepth " + this.value);
+							//}
+							//else
+							//{
+								//if( this.value == 0 )
+								//	aaapi.cmd("consoleCommand", "reshadedepth " + this.value);
+							//}
+						}
+					}
+				},
+				"vehicle":
+				{
+					/*"vehiclemodel":
+					{
+						"title": "Vehicle Model Override",
+						"type": "text",
+						"help": "Use the model specified here as an override for the visual model on the next Air Boat you spawn.",
+						"valueTitles": {"placeholder": "models/airboat.mdl"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "air_boat_model");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							if( val !== this.value )
+							{
+								this.value = val;
+								aaapi.cmd("consoleCommand", "air_boat_model \"" + this.value + "\"");
+							}
+						}
+					},*/
+					"vehiclecamx":
+					{
+						"title": "Camera Offset X",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Force an X offset on the eye position when driving vehicles. This value CAN be live-adjusted while sitting inside of the vehicle.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "vehicle_eye_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 0 )
+								this.value = valsArray[0];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "vehicle_eye_offset " + this.value + " " + categories.vehicle.vehiclecamy.value + " " + categories.vehicle.vehiclecamz.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehiclecamy":
+					{
+						"title": "Camera Offset Y",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Force a Y offset on the eye position when driving vehicles. This value CAN be live-adjusted while sitting inside of the vehicle.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "vehicle_eye_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 1 )
+								this.value = valsArray[1];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "vehicle_eye_offset " + categories.vehicle.vehiclecamx.value + " " + this.value + " " + categories.vehicle.vehiclecamz.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehiclecamz":
+					{
+						"title": "Camera Offset Z",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Force a Z offset on the eye position when driving vehicles. This value CAN be live-adjusted while sitting inside of the vehicle.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "vehicle_eye_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 2 )
+								this.value = valsArray[2];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "vehicle_eye_offset " + categories.vehicle.vehiclecamx.value + " " + categories.vehicle.vehiclecamy.value + " " + this.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehiclex":
+					{
+						"title": "Model Offset X",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Force an X offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 0 )
+								this.value = valsArray[0];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_offset " + this.value + " " + categories.vehicle.vehicley.value + " " + categories.vehicle.vehiclez.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehicley":
+					{
+						"title": "Model Offset Y",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Force a Y offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 1 )
+								this.value = valsArray[1];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_offset " + categories.vehicle.vehiclex.value + " " + this.value + " " + categories.vehicle.vehiclez.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehiclez":
+					{
+						"title": "Model Offset Z",
+						"type": "slider",
+						"sliderMin": -80,
+						"sliderMax": 80,
+						"sliderStep": 1.0,
+						"help": "Force a Z offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_offset");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 2 )
+								this.value = valsArray[2];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_offset " + categories.vehicle.vehiclex.value + " " + categories.vehicle.vehicley.value + " " + this.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehiclepitch":
+					{
+						"title": "Model Angles Pitch",
+						"type": "slider",
+						"sliderMin": -170,
+						"sliderMax": 180,
+						"sliderStep": 10.0,
+						"help": "Force a pitch offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_angles");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 0 )
+								this.value = valsArray[0];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_angles " + this.value + " " + categories.vehicle.vehicleyaw.value + " " + categories.vehicle.vehicleroll.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehicleyaw":
+					{
+						"title": "Model Angles Yaw",
+						"type": "slider",
+						"sliderMin": -170,
+						"sliderMax": 180,
+						"sliderStep": 10.0,
+						"help": "Force a Yaw offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_angles");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 1 )
+								this.value = valsArray[1];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_angles " + categories.vehicle.vehiclepitch.value + " " + this.value + " " + categories.vehicle.vehicleroll.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"vehicleroll":
+					{
+						"title": "Model Angles Roll",
+						"type": "slider",
+						"sliderMin": -170,
+						"sliderMax": 180,
+						"sliderStep": 1.0,
+						"help": "Force a Roll offset on the visual model position used on the next Air Boat you spawn. This value CANNOT be live adjusted and only impacts the NEXT vehicle you spawn.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var vals = aaapi.cmdEx("getConVarValue", "air_boat_angles");
+							var valsArray = vals.split(' ');
+							if( valsArray.length > 2 )
+								this.value = valsArray[2];
+							else
+								this.value = 0;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "air_boat_angles " + categories.vehicle.vehiclepitch.value + " " + categories.vehicle.vehicleyaw.value + " " + this.value + ";");
+							saveVehiclePresetState();
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					}
+				},
+				"youtube":
+				{
+					"youtube_end_behavior":
+					{
+						"title": "Video End Behavior",
+						"type": "select",
+						"help": "What do you want to happen when a YouTube video ends?",
+						"valueTitles": {"default": "Default", "close": "Auto-Close", "near": "Auto-Play Nearby", "loop": "Loop"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_end_behavior");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_end_behavior " + val);
+						}
+					},
+					"youtube_playlist_behavior":
+					{
+						"title": "Playlist Behavior",
+						"type": "select",
+						"help": "How do you want AArcade to cue playlist items?",
+						"valueTitles": {"default": "Default", "resume": "Resume", "shuffle": "Shuffle"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_playlist_behavior");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_playlist_behavior " + val);
+						}
+					},
+					"youtube_video_behavior":
+					{
+						"title": "Video Behavior",
+						"type": "select",
+						"help": "How do you want AArcade to cue video items?",
+						"valueTitles": {"default": "Default", "resume": "Resume", "random": "Random"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_video_behavior");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_video_behavior " + val);
+						}
+					},
+					"youtube_related":
+					{
+						"title": "Related Video",
+						"type": "select",
+						"help": "How do you want AArcade to handle related videos?",
+						"valueTitles": {"default": "Default", "show": "Show", "search": "Title", "user": "User"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_related");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_related " + val);
+						}
+					},
+					"youtube_mixes":
+					{
+						"title": "Mixes As Playlists",
+						"type": "select",
+						"help": "Mixes are auto-playlists that YouTube generates.  Disable this if you are frustrated by too many videos w/ playlists.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_mixes");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_mixes " + val);
+						}
+					},
+					"youtube_annotations":
+					{
+						"title": "Annotations",
+						"type": "select",
+						"help": "These are the clickable cards that people put into their videos.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "youtube_annotations");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "youtube_annotations " + val);
+						}
+					}
+				},
+				"ui":
+				{
+					"arcadehud":
+					{
+						"title": "Arcade Controls HUD",
+						"type": "toggle",
+						"help": "Shows you what the buttons do while you walk around.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "show_arcade_hud");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "show_arcade_hud " + this.value);
+						}
+					},
+					"ezmode":
+					{
+						"title": "EZ Mode",
+						"type": "toggle",
+						"help": "You will see the game-like UI (when available) instead of the Windows-like menus.",
+						"valueTitles": {"0": "Off", "1": "On"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("ezmode");
+							if( !!!val )
+								val = "1";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("ezmode", this.value);
+						}
+					},/*
+					"hidesocial":
+					{
+						"title": "Hide Social and Chat",
+						"type": "toggle",
+						"help": "Completely hide the Chat and Social portions of the Main Menu.",
+						"valueTitles": {"0": "Shown", "1": "Hidden"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("hideChatSocial");
+							if( !!!val )
+								val = "0";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("hideChatSocial", val);
+						}
+					},
+					"twentyfourclock":
+					{
+						"title": "Use 12-Hour Clock",
+						"type": "toggle",
+						"help": "Disabling this will use a 24 hour clock instead.",
+						"valueTitles": {"0": "Enabled", "1": "Disabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("twentyFourClock");
+							if( !!!val )
+								val = "0";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("twentyFourClock", val);
+						}
+					},*/
+					"rightfreemousetoggle":
+					{
+						"title": "Right Free Mouse Toggle",
+						"type": "toggle",
+						"help": "Allows holding the right-mouse button to toggle free-mouse-mode when you are *not* looking at an active screen.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "right_free_mouse_toggle");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "right_free_mouse_toggle " + this.value);
+						}
+					},
+					"autoclosetasks":
+					{
+						"title": "Auto Close Tasks",
+						"type": "toggle",
+						"help": "When enabled, AArcade will automatically close most tasks when you open a new task.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "auto_close_tasks");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "auto_close_tasks " + this.value);
+						}
+					},
+					"showwindowstaskbar":
+					{
+						"title": "Show Windows Task Bar",
+						"type": "toggle",
+						"help": "If enabled, AArcade will show your Windows task bar in addition to your AArcade task bar when in Free Mouse Mode.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "should_show_windows_task_bar");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "should_show_windows_task_bar " + this.value);
+						}
+					},
+					"imageTilesOnly":
+					{
+						"title": "Show Item Tiles w/ Images Only",
+						"type": "toggle",
+						"help": "If enabled, item tiles who's images fail to load will hide themselves from being displayed on menus.",
+						"valueTitles": {"0": "Off", "1": "On"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("imageTilesOnly");
+							if( !!!val )
+								val = "0";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("imageTilesOnly", this.value);
+						}
+					},
+					"modelThumbs":
+					{
+						"title": "Auto Generate Model Thumbnails",
+						"type": "toggle",
+						"help": "WARNING: Experimental! This can cause crashes if AArcade attempts to generate a thumbnail for an incompatible model! If enabled, AArcade will automatically generate thumbnail images of models to use in the UI menus.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("modelThumbs");
+							if( !!!val )
+								val = "0";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("modelThumbs", this.value);
+						}
+					},
+					"dragDropConfirm":
+					{
+						"title": "Drag & Drop Item Update Confirmation",
+						"type": "toggle",
+						"help": "If enabled, you will be shown a confirmation when dropping a file or URL into an item in the world.",
+						"valueTitles": {"0": "Off", "1": "On"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("dragDropConfirm");
+							if( !!!val )
+								val = "0";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("dragDropConfirm", this.value);
+						}
+					},
+					"local_video_behavior":
+					{
+						"title": "Local VideoBehavior",
+						"type": "select",
+						"help": "What do you want to happen when a local video ends?",
+						"valueTitles": {"0": "Default", "1": "Resume"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "local_video_behavior");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "local_video_behavior " + val);
+						}
+					},
+					"local_video_end_behavior":
+					{
+						"title": "Local Video End Behavior",
+						"type": "select",
+						"help": "What do you want to happen when a local video ends?",
+						"valueTitles": {"0": "Do Not Loop", "1": "Loop"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "loop_local_videos");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							aaapi.cmd("consoleCommand", "loop_local_videos " + val);
+						}
+					},
+					"crosshaircolor":
+					{
+						"title": "Arcade Crosshair",
+						"type": "slider",
+						"sliderMin": 0,
+						"sliderMax": 4,
+						"sliderStep": 1,
+						"help": "The arcade crosshair lets you see when you are hovering over an object.",
+						"valueTitles": {"0": "Disabled", "1": "White", "2": "Black", "3": "Red", "4": "Blue", "5": "Green"},
+						"value": null,
+						"colorCodes":
+						{
+							"0": "0 0 0 0",
+							"1": "200 200 200 150",
+							"2": "0 0 0 250",
+							"3": "200 0 0 150",
+							"4": "0 0 200 150",
+							"5": "0 200 0  150"
+						},
+						"shouldShowValue": true,
+						"getValue": function()
+						{
+							this.shouldShowValue = aaapi.cmdEx("getConVarValue", "should_show_crosshair");
+
+							var val;
+							if( !this.shouldShowValue )
+								val = "0";
+							else
+							{
+								val = aaapi.cmdEx("getConVarValue", "crosshair_color");
+
+								var found = false;
+								for( var x in this.colorCodes )
+								{
+									if( this.colorCodes[x] === val )
+									{
+										val = x;
+										found = true;
+										break;
+									}
+								}
+
+								if( !found )
+									val = "1";
+							}
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+
+							var cmd;
+							if( val !== "0" )
+								cmd = "crosshair_color \"" + this.colorCodes[val] + "\"; hide_arcade_crosshair; show_arcade_crosshair;";
+							else
+								cmd = "hide_arcade_crosshair";
+
+							aaapi.cmd("consoleCommand", cmd);
+						}
+					},
+					"imageviewing":
+					{
+						"title": "Image Viewer Mode",
+						"type": "select",
+						/*"sliderMin": 0,
+						"sliderMax": 1,
+						"sliderStep": 1,*/
+						"help": "Adjust how images are displayed to you in Anarchy Arcade.",
+						"valueTitles": {"0": "Dynamic & Interactive", "1": "Always Stretched"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "autoinspect_image_flags");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "autoinspect_image_flags " + this.value);
+						}
+					},
+					"librarysearchmax":
+					{
+						"title": "Max Library Search Results",
+						"type": "slider",
+						"sliderMin": 20,
+						"sliderMax": 200,
+						"sliderStep": 1,
+						"help": "Adjust how many search results are shown in your Library Browser.<br /><br />Remember, the more letters you type, the fewer results there are to sift through.",
+						"valueTitles": {"20": "<b>20</b> (You are good at searching)", "200": "<b>200</b> (You like big lists)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("librarysearchmax");
+							if( !!!val )
+								val = "40";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("librarysearchmax", this.value);
+						}
+					},
+					"showbackgroundwallpapers":
+					{
+						"title": "Library Background Wallpapers",
+						"type": "toggle",
+						"help": "Show item wallpapers in the background of the Library Browser (when in EZ Mode.)<br /><br />Uses a transparent background if disabled.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("showbackgroundwallpapers");
+							if( !!!val )
+								val = "0";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("showbackgroundwallpapers", this.value);
+						}
+					},
+					"hovertitles":
+					{
+						"title": "Hover Titles",
+						"type": "toggle",
+						"help": "Show the title of items when you hover over their cabinets.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cl_hovertitles");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cl_hovertitles " + this.value);
+						}
+					},
+					"toast":
+					{
+						"title": "Event Notifications",
+						"type": "toggle",
+						"help": "Show important events in the top-left portion of the screen, such as when a new Web Browser is opened.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "cl_toastmsgs");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "cl_toastmsgs " + this.value);
+						}
+					},
+					"colorScheme":
+					{
+						"title": "Color Scheme",
+						"type": "select",
+						"help": "Change the colors that the UI uses.",
+						"valueTitles": {"windowsWannabe": "Windows Wannabe", "windowsWannabeDark": "Windows Wannabe (Dark)", "redBaron": "Red Baron", "redBaronDark": "Red Baron (Dark)", "fiftyShades": "Fifty Shades", "fiftyShadesDark": "Fifty Shades (Dark)"},
+						"value": null,
+						"getValue": function()
+						{
+							var themeName = localStorage.getItem("aaColorThemeName");
+							this.value = themeName;
+						},
+						"setValue": function(val)
+						{
+							var themeName = val;
+							if( !!!themeName || !!!arcadeHud.themes[themeName] )
+								themeName = "redBaron";
+
+							localStorage.setItem("aaColorThemeName", themeName);
+							this.value = themeName;
+							window.location = "asset://ui/options.html?tab=ui";
+						}
+					},
+					"webScreeshotUrl":
+					{
+						"title": "Web Screenshot URL",
+						"type": "text",
+						"help": "(ADVANCED) If you plan on uploading your screenshots to the internet, you can specify the URL of the web folder that you will put them at. This will allow proper META tags to be generated in your screenshots, which makes them look very nice when you link them in chat applications like Discord or Steam PMs.",
+						"valueTitles": {"placeholder": "ex. http://www.domian.com/folder/"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "interactive_directory_url");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "interactive_directory_url " + this.value);
+						}
+					},
+					"startupWallpaper":
+					{
+						"title": "Startup Wallpaper",
+						"type": "webfile",
+						"help": "Customize what is shown while AArcade starts up.",
+						"valueTitles": {"placeholder": "Browse or paste URL"},
+						"value": null,
+						"getValue": function()
+						{
+							var startupWallpaper = localStorage.getItem("aaStartupWallpaper");
+							if( !startupWallpaper )
+								startupWallpaper = "";
+
+							this.value = startupWallpaper;
+						},
+						"setValue": function(val)
+						{
+							if( val !== this.value )
+							{
+								localStorage.setItem("aaStartupWallpaper", val);
+								this.value = val;
+								window.location = "asset://ui/options.html?tab=ui";
+							}
+						}
+					},
+					"panohelp":
+					{
+						"title": "Show Panorama Instructions",
+						"type": "toggle",
+						"help": "Shows you the instructions for how to take panoramas prior to creating a new one.",
+						"valueTitles": {"0": "Skip", "1": "Show"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("show_pano_help");
+							if( !!!val )
+								val = "1";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val + "";
+							localStorage.setItem("show_pano_help", this.value);
+						}
+					},
+					/*"tutorial_nag":
+					{
+						"title": "Main Menu Tutorial Nag",
+						"type": "toggle",
+						"help": "Show the Tutorial button on the Main Menu.",
+						"valueTitles": {"0": "No", "1": "Yes"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (localStorage.getItem("tutorial_nag") == 0) ? "0" : "1";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var goodVal = (val === "0") ? 0 : 1;
+							localStorage.setItem("tutorial_nag", goodVal);
+						}
+					},*/
+					"steamgames_nag":
+					{
+						"title": "Main Menu Steam Games Nag",
+						"type": "slider",
+						"sliderMin": 0,
+						"sliderMax": 14,
+						"sliderStep": 1,
+						"help": "Show the Steam Games button on the Main Menu.",
+						"valueTitles":
+						{
+							"0": "Never",
+							"1": "Once A Day",
+							"2": "Every Other Day",
+							"3": "Once Every 3 Days",
+							"4": "Once Every 4 Days",
+							"5": "Once Every 5 Days",
+							"6": "Once Every 6 Days",
+							"7": "Once Every Week",
+							"8": "Once Every 8 Days",
+							"9": "Once Every 9 Days",
+							"10": "Once Every 10 Days",
+							"11": "Once Every 11 Days",
+							"12": "Once Every 12 Days",
+							"13": "Once Every 13 Days",
+							"14": "Every Other Week"
+						},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("steamgames_nag");
+							if( !!!val )
+								val = "14";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.removeItem("last_steamgames_nag");
+							localStorage.setItem("steamgames_nag", this.value);
+						}
+					}
+				}/*,
+				"libretro":
+				{
+					"autolibretro":
+					{
+						"title": "Auto Run w/ Libretro",
+						"type": "toggle",
+						"help": "Automatically run compatible shortcuts on the in-game screens w/ Libretro.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "auto_libretro");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "auto_libretro " + this.value);
+						}
+					},
+					"waitforlibretro":
+					{
+						"title": "Wait For Libretro To Close",
+						"type": "toggle",
+						"help": "This allows AArcade to hang while Libretro cores finish closing. Having this enabled allows you to directly switch between Libretro cabinets. (If it is disabled, you'll have to deselect one Libretro cabinet prior to selecting the next one.)",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "wait_for_libretro");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "wait_for_libretro " + this.value);
+						}
+					}
+				},
+				"kodi":
+				{
+					"kodi_enable":
+					{
+						"title": "Enable Kodi Video Playback",
+						"type": "toggle",
+						"help": "Instead of opening normally when you click PLAY, video files can be sent to Kodi via the Web Server feature in Kodi's Options > Services > Web Server menu.  The info you enter on that Kodi menu is what you type into AArcade's option boxes here. You should be running Kodi on the same PC as AArcade because the file location of the video needs to be the same.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "kodi");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "kodi " + this.value);
+						}
+					},
+					"kodi_ip":
+					{
+						"title": "Kodi IP",
+						"type": "text",
+						"help": "If you use Kodi, this is the IP of the PC running Kodi.  Usually your own LAN IP.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "kodi_ip");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "kodi_ip \"" + this.value + "\"");
+						}
+					},
+					"kodi_port":
+					{
+						"title": "Kodi Port",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PORT.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "kodi_port");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "kodi_port \"" + this.value + "\"");
+						}
+					},
+					"kodi_user":
+					{
+						"title": "Kodi User",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for USERNAME.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "kodi_user");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "kodi_user \"" + this.value + "\"");
+						}
+					},
+					"kodi_password":
+					{
+						"title": "Kodi Password",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PASSWORD.  Note that the Kodi web server API is accessed through GET requests, so your password is NOT encrypted and therfore NOT private and stored in a PUBLIC Source engine console variable.  Do NOT use a real password on your Kodi Web Server if you're using it for LAN stuff like this.",
+						"valueTitles": {"placeholder": "(NOT HIDDEN)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "kodi_password");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "kodi_password \"" + this.value + "\"");
+						}
+					}
+				},
+				"broadcast":
+				{
+					"broadcast_enable":
+					{
+						"title": "Enable Broadcast Mode Meta Output",
+						"type": "toggle",
+						"help": "This is for Twitch streamers to tie AArcade into their OBS overlay. It causes META info about the selected item be outputted into a file in the specified folder. It also outputs an event when a game is launched that includes the title of the game.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "broadcast_mode");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "broadcast_mode " + this.value);
+						}
+					},
+					"broadcast_game":
+					{
+						"title": "Game Name",
+						"type": "text",
+						"help": "This is to control the name of the game you are set as broadcasting.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "broadcast_game");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "set_broadcast_game \"" + this.value + "\"");
+						}
+					},
+					"broadcast_auto_game":
+					{
+						"title": "Automatically Set Game Name",
+						"type": "toggle",
+						"help": "This will cause AArcade to automatically set your game to the title of any item you launch, and then set it back to AArcade upon returning to AArcade & unpausing it after.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "broadcast_auto_game");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "broadcast_auto_game " + this.value);
+						}
+					},
+					"broadcast_folder":
+					{
+						"title": "Broadcast Folder",
+						"type": "text",
+						"help": "This is the folder that meta output is written to, if enabled.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.cmdEx("getConVarValue", "broadcast_folder");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.cmd("consoleCommand", "broadcast_folder \"" + this.value + "\"");
+						}
+					}
+				}*/
+			};
+
+			function findOptionById(optionId)
+			{
+				var option;
+				var categoriesKeys = Object.keys(categories);
+				for( var i = 0; i < categoriesKeys.length; i++ )
+				{
+					category = categories[categoriesKeys[i]];
+					option = category[optionId];
+					if( !!option )
+						break;
+				}
+
+				return option;
+			}
+
+			function fileBrowse(optionId)
+			{
+				var option = findOptionById(optionId);
+				if( !!!option )
+					return;
+
+				var fieldElem;
+				var elems = document.querySelectorAll(".aaKeyValueTableValue > input[type='text']");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].inputOption === option )
+					{
+						fieldElem = elems[i];
+						break;
+					}
+				}
+
+				if( !!!fieldElem )
+					return;
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					fieldElem.value = chosenFile;
+					fieldElem.focus();
+					entryForm.querySelector("input[type='submit']").click();
+				}.bind(fieldElem));
+			}
+
+			function parseNumber(num)
+			{
+				return Number(parseFloat(num).toFixed(2));
+			}
+
+			function onSlide(e)
+			{
+				var option = this.inputOption;
+				var row = this.parentNode;
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var val = parseNumber(this.value);
+
+				var valTitle = option.valueTitles[val + ""];
+				if( !!valTitle )
+					labelDiv.innerHTML = valTitle;
+				else
+					labelDiv.innerHTML = val;
+
+				if( typeof option.onSlide === "function" )
+					option.onSlide.call(option, val);
+			}
+
+			var category;
+			var optionsTable;
+			var option;
+			var optionRow;
+			var optionTitleCell;
+			var optionValueCell;
+			var toggleButton;
+			var toggleButtonMarker;
+			var toggleButtonValueLabel;
+			var selectBox;
+			var selectBoxOption;
+			var sliderValueLabel;
+			var title;
+
+			// these might be obsolete!!
+			var optionContainerElem;
+			var inputOptionContainerElem;
+			var inputOptionTitleElem;
+			var inputOptionElem;
+			var inputOptionToggleMarkerElem;
+
+			var autoSaveOkay = true;
+			var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+			if( !!connectedSessionInfo )// && !connectedSessionInfo.isHost )
+			{
+				autoSaveOkay = false;
+			}
+
+			for( var categoryId in categories )
+			{
+				category = categories[categoryId];
+				optionsTable = document.querySelector("div[tabid='" + categoryId + "'] .aaKeyValueTable");
+
+				if( !!!optionsTable )
+					continue;
+
+				for( var optionId in category )
+				{
+					option = category[optionId];
+					option.getValue();
+
+					// Now put stuff into it
+					optionRow = document.createElement("tr");
+					optionRow.className = "helpNote";
+					optionRow.setAttribute("help", option.help);
+
+					if( optionId === "autosave" && !autoSaveOkay )
+						optionRow.style.display = "none";
+
+					// OPTION TITLE
+					optionTitleCell = document.createElement("td");
+					optionTitleCell.className = "aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize";
+					optionTitleCell.innerHTML = option.title + ":";
+
+					// OPTION VALUE
+					optionValueCell = document.createElement("td");
+					optionValueCell.style.cssText = "text-align: right; padding: 4px; white-space: nowrap;";
+					optionValueCell.className = "aaKeyValueTableValue";
+
+					// AUX BUTTONS
+					optionAuxCell = document.createElement("td");
+					optionAuxCell.style.cssText = "width: 1px;";
+					optionAuxCell.className = "aaKeyValueTableAux";
+
+					if( option.type === "toggle" )
+					{
+						// TOGGLE BUTTON VALUE LABEL
+						toggleButtonValueLabel = document.createElement("div");
+						toggleButtonValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
+						toggleButtonValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
+
+						title = option.valueTitles[option.value.toString()];
+						toggleButtonValueLabel.innerHTML = title;
+
+						toggleButton = document.createElement("div");
+						toggleButton.className = "inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground";
+						toggleButton.inputOption = option;
+						toggleButton.addEventListener("click", function(e)
+						{
+							toggleSwitch(this);
+						}.bind(toggleButton), true);
+
+						toggleButtonMarker = document.createElement("div");
+						toggleButtonMarker.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+
+						if( option.value + "" !== "0" )
+						{
+							toggleButtonMarker.className = "aaThemeColorOneHighBackgroundColor aaThemeColorOneHighBorderColor";
+
+							toggleButtonMarker.className += " toggleSwitchOn";
+						}
+						else
+							toggleButtonMarker.className = "aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor";
+
+						// composite
+						toggleButton.appendChild(toggleButtonMarker);
+						optionValueCell.appendChild(toggleButtonValueLabel);
+						optionValueCell.appendChild(toggleButton);
+					}
+					else if( option.type === "slider" )
+					{
+						// SLIDER VALUE LABEL
+						sliderValueLabel = document.createElement("div");
+						sliderValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
+						sliderValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
+
+						var val = parseNumber(option.value);
+						var valTitle = option.valueTitles[val + ""];
+						if( !!valTitle )
+							sliderValueLabel.innerHTML = valTitle;
+						else
+							sliderValueLabel.innerHTML = val;
+
+						var slider = document.createElement("input");
+						slider.inputOption = option;
+						slider.type = "range";
+						slider.min = option.sliderMin;
+						slider.max = option.sliderMax;
+						slider.step = option.sliderStep;
+						slider.value = val;
+						slider.style.backgroundColor = "#ddd";
+						slider.addEventListener("input", onSlide.bind(slider), true);
+
+						slider.addEventListener("mouseup", function(e)
+						{
+
+							var option = this.inputOption;
+
+							var val = parseNumber(this.value);
+							if( val == option.value )
+								return;
+
+							this.style.backgroundColor = "";
+							this.style.webkitTransition = "initial";
+							this.classList.add("aaThemeColorOneBackgroundColor");
+							this.offsetTop;
+							this.style.webkitTransition = "background-color 0.5s ease-in-out";
+							this.classList.remove("aaThemeColorOneBackgroundColor");
+							this.style.backgroundColor = "#ddd";
+
+							this.value = val;
+							option.setValue.call(option, val);
+						}.bind(slider), true);
+
+						optionValueCell.appendChild(sliderValueLabel);
+						optionValueCell.appendChild(slider);
+					}
+					else if( option.type === "select" )
+					{
+						selectBox = document.createElement("select");
+						selectBox.className = "aaTextSizeFontSize";
+						selectBox.inputOption = option;
+
+						selectBox.addEventListener("change", function(e)
+						{
+							var selectedIndex = this.selectedIndex;
+							var selectedOption = this.options[selectedIndex];
+
+							var option = this.inputOption;
+							option.setValue.call(option, selectedOption.value);
+
+							this.style.webkitTransition = "initial";
+							this.classList.add("aaThemeColorOneBackgroundColor");
+							this.offsetTop;
+							this.style.webkitTransition = "background-color 0.5s ease-in-out";
+							this.classList.remove("aaThemeColorOneBackgroundColor");
+						}.bind(selectBox), true);
+
+						if( !!option.valueTitles.placeholder )
+						{
+							selectBoxOption = document.createElement("option");
+							selectBoxOption.text = option.valueTitles.placeholder;
+							selectBoxOption.value = "";
+							selectBoxOption.selected = true;
+							selectBoxOption.disabled = true;
+							selectBox.appendChild(selectBoxOption);
+						}
+
+						for( var value in option.valueTitles )
+						{
+							if( value === "placeholder" )
+								continue;
+
+							selectBoxOption = document.createElement("option");
+							selectBoxOption.text = option.valueTitles[value];
+							selectBoxOption.value = value;
+
+							if( value == option.value )
+								selectBoxOption.selected = true;
+
+							selectBox.appendChild(selectBoxOption);
+						}
+
+						// compose
+						optionValueCell.appendChild(selectBox);
+					}
+					else if( option.type === "webfile" )
+					{
+						optionAuxCell.innerHTML = '\
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse(\'' + optionId + '\');">\
+								' + arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor") + '\
+						</div>';
+
+						textBox = document.createElement("input");
+						textBox.type = "text";
+
+						textBox.className = "aaTextSizeFontSize";
+						textBox.inputOption = option;
+						textBox.value = option.value;
+						textBox.placeholder = option.valueTitles["placeholder"];
+						textBox.addEventListener("blur", function(e)
+						{
+							if( this.value != this.inputOption.value )
+								this.value = this.inputOption.value;
+						}.bind(textBox), true);
+
+						optionValueCell.appendChild(textBox);
+					}
+					else if( option.type === "text" || option.type === "password" )
+					{
+						textBox = document.createElement("input");
+
+						if( option.type === "text" && option.title.toLowerCase().indexOf("password") === -1 )
+							textBox.type = "text";
+						else
+							textBox.type = "password";
+
+						textBox.className = "aaTextSizeFontSize";
+						textBox.inputOption = option;
+						textBox.value = option.value;
+						textBox.placeholder = option.valueTitles["placeholder"];
+						textBox.addEventListener("blur", function(e)
+						{
+							this.value = this.inputOption.value;
+						}.bind(textBox), true);
+
+						optionValueCell.appendChild(textBox);
+					}
+
+					optionRow.appendChild(optionTitleCell);
+					//optionRow.appendChild(optionValueTitleCell);
+					optionRow.appendChild(optionValueCell);
+					optionRow.appendChild(optionAuxCell);
+					optionsTable.appendChild(optionRow);
+				}
+			}
+
+			function onInputOptionTextFormSubmit(option, value)
+			{
+				option.setValue.call(option, value);
+			}
+
+			function toggleSwitch(toggleButton)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( valueTitleKeys[i] !== toggleButton.inputOption.value.toString() )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( valueTitleKeys[i] !== toggleButton.inputOption.value.toString() )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+
+			function yesImportMaps()
+			{
+				gotoPage('importMaps.html', 'import');
+			}
+
+			function noExportMaps()
+			{
+				//console.log("nope");
+			}
+
+			function askImportMaps()
+			{
+				createModalPrompt("Are You Sure?", "Importing ALL available maps may take a couple minutes if there are hundreds of maps found.", "yesImportMaps();", "noImportMaps();");
+			}
+
+			function yesExportModels()
+			{
+				gotoPage('importModels.html', 'import');
+			}
+
+			function noExportModels()
+			{
+				//console.log("nope");
+			}
+
+			function askImportModels()
+			{
+				createModalPrompt("Are You Sure?", "Importing ALL available models may take <b>dozens</b> of minutes if there are thousands of new models detected.", "yesExportModels();", "noExportModels();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					if( e.currentTarget !== e.target )
+						return;
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+
+				modalHTML += "</div>";
+				modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Continue" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+		</script>
+
+	</body>
+</html>

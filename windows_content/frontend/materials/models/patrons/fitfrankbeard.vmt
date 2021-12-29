@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/fitfrankbeard"
+	"$bumpmap" "models\patrons/fitfrankbeard_normal"
+	"$model" "1"
+}

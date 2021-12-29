@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/cowboycarl_hat_diffuse"
+	"$bumpmap" "models\patrons/cowboycarl_Hat_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

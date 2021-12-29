@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-M94_CeqFTCgTJ"
+		}
+		"title"		"PCSX2"
+		"file"		"X:\Emulators\PCSX2\pcsx2.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-L8sbSQI_sIcIz"
+		"download"		"http://www.pcsx2.com/"
+		"reference"		"http://www.pcsx2.com/"
+		"filepaths"
+		{
+			"-om88gxMENnvyXRezzVi"
+			{
+				"id"		"-om88gxMENnvyXRezzVi"
+				"path"		"X:\PSX2\Roms\"
+			}
+		}
+	}
+}

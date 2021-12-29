@@ -1,0 +1,22 @@
+"map"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"id"		"c6ec08b6"
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+		}
+		"title"		"sm_apartment"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"file"		"sm_apartment.bsp"
+			}
+		}
+	}
+}

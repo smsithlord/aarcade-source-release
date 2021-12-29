@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"2ea31aef"
+		}
+		"title"		"table_pad_t"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\icons\table_pad_t.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

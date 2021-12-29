@@ -1,0 +1,1717 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+
+		<style>
+			input[type=checkbox]:not(:checked):disabled+label
+			{
+				text-decoration: line-through;
+			}
+
+			input[type=radio]:not(:checked):disabled+label
+			{
+				text-decoration: line-through;
+			}
+		</style>
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var entityIndex = arcadeHud.getParameterByName("entity");
+			if( entityIndex === null )
+				entityIndex = -1;
+			
+			var entityInfo;
+			if( entityIndex !== -1 )
+				entityInfo = aaapi.cmdEx("getEntityInfo", parseInt(entityIndex));
+
+			if( !!!uiBack )
+				uiBack = "window.location='asset://ui/welcome.html';";
+
+			// PREPARE TYPES
+			var allTypes = aaapi.cmdEx("getAllLibraryTypes");
+			for( var x in allTypes )
+			{
+				// FIXME: There needs to be a standard way to deal with types that are missing required fields!! (ie. corrupted types)
+				if( !!!allTypes[x].title )
+					allTypes[x].title = "Untitled Type";
+			}
+/*
+			var allTypesSorted = [];
+
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+*/
+
+			// PREPARE APPS
+			var allApps = aaapi.cmdEx("getAllLibraryApps");
+
+			/*
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( !!!a.title || (!!b.title && a.title.toLowerCase() < b.title.toLowerCase()) )
+					return -1;
+				else if( !!!b.title || (!!a.title && a.title.toLowerCase() > b.title.toLowerCase()) )
+					return 1;
+				else
+					return 0;
+			});
+*/
+		</script>
+	</head>
+	<body style="background-color: transparent;">
+
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Export", "width: 520px;", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			var tabId;
+			var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+			if( !!connectedSessionInfo )
+				tabId = "online";
+			else
+				tabId = "servers";
+			//console.log(JSON.stringify(connectedSessionInfo));
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "meta",
+						"title": "Meta Data"
+					}/*,
+					{
+						"id": "assets",
+						"title": "Art Assets"
+					}*/
+				],
+				"activeTabId": "meta"
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px;" tabid="meta">
+
+			<div class="aaTitleTextSizeFontSize aaTitleText">Selection</div>
+			<!--<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="text-align: left; font-family: Arial;">-->
+				<div id="selectionRadios">
+					<input type="radio" value="full" name="exportWhat" onclick="changed(this);" id="allObjects" style="margin-right: 6px;" checked /><label for="allObjects">All Objects</label><br />
+					<input type="radio" value="selected" onclick="changed(this);" name="exportWhat" id="selectedObject" style="margin-right: 6px;" /><label for="selectedObject">Selected Object</label><br />
+					<input type="radio" value="fullmedia" onclick="changed(this);" name="exportWhat" style="margin-right: 6px;" id="fullmediabox" /><label for="fullmediabox">Full Arcade w/ Media Library</label>
+				</div>
+			<!--</div>-->
+
+			<div id="includeStuff">
+				<div class="aaTitleTextSizeFontSize aaTitleText">Include</div>
+				<div id="includesCheckboxes">
+					<input type="checkbox" name="exportIncludes" value="shortcuts" style="margin-right: 6px;" id="shortbox" checked disabled></input><label for="shortbox">Shortcut Meta Data</label><br />
+					<input type="checkbox" name="exportIncludes" value="fullpath" style="margin-right: 6px;" id="fullpath" checked></input><label for="fullpath">Full Local File Paths</label><br />
+					<div id="the3dstuff" style="display: inline-block;">
+						<input type="checkbox" name="exportIncludes" value="3d" style="margin-right: 6px;" id="the3dbox"></input><label for="the3dbox">3D Cabinets/Positions/Rotations/Scales/Anims</label><br />
+						<input type="checkbox" name="exportIncludes" value="nonshortcuts" style="margin-right: 6px;" id="nonshortbox"></input><label for="nonshortbox">Non-Shortcut Props</label>
+					</div>
+				</div>
+			</div>
+
+			<div id="formatStuff">
+				<div class="aaTitleTextSizeFontSize aaTitleText">Format</div>
+				<div id="formatRadios">
+					<input onclick="changed(this);" type="radio" name="exportFormat" value="json" style="margin-right: 6px;" id="jsonbox" checked /><label for="jsonbox">JSON</label><br />
+					<div style="display: none;">
+						<input id="msfbox" onclick="changed(this);" type="radio" name="exportFormat" value="msf" style="margin-right: 6px;" /><label for="msfbox">Meta Shortcut Format XML</label>
+					</div>
+					<input id="jmlbox" onclick="changed(this);" type="radio" name="exportFormat" value="jml" style="margin-right: 6px;" /><label for="jmlbox">Janus JML</label><br />
+					<input onclick="changed(this);" type="radio" name="exportFormat" value="text" style="margin-right: 6px;" id="textbox" /><label for="textbox">Plain Text</label><br />
+					<input onclick="changed(this);" type="radio" name="exportFormat" value="urls" style="margin-right: 6px;" id="urlsbox" /><label for="urlsbox">Plain Text (URLs only)</label><br />
+					<input onclick="changed(this);" type="radio" name="exportFormat" value="yturls" style="margin-right: 6px;" id="yturlsbox" /><label for="yturlsbox">Plain Text (YouTube URLs only)</label><br />
+					<input onclick="changed(this);" type="radio" name="exportFormat" value="ytplaylist" style="margin-right: 6px;" id="ytplaylistbox" /><label for="ytplaylistbox">YouTube Playlist</label>
+				</div>
+			</div>
+			<br />
+
+			<div id="resultBox" style="display: block; opacity: 0; pointer-events: none; position: absolute;"><textarea style="width: 100%;" rows="7"></textarea></div>
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Export Data" onclick="exportData();" help="The resulting data will automatically be copied to your clipboard." style="margin: 10px; width: 94%;" />
+		</div>
+
+		<!--<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px;" tabid="assets">
+			Coming Soon
+		</div>-->
+
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload" style="display: block !important;">&bull;&nbsp;</a>
+
+		<script>
+			var resultBoxElem = document.querySelector("#resultBox");
+			var resultTextBoxElem = resultBoxElem.querySelector("textarea");
+			var selectionRadiosElem = document.querySelector("#selectionRadios");
+			var formatRadiosElem = document.querySelector("#formatRadios");
+			var formatStuffElem = document.querySelector("#formatStuff");
+			var includeStuffElem = document.querySelector("#includeStuff");
+			var includesCheckboxesElem = document.querySelector("#includesCheckboxes");
+			var the3dStuffElem = document.querySelector("#the3dStuff");
+			var the3dbox = document.querySelector("#the3dbox");
+			var useFullLocalFilePathsElem = document.querySelector("#fullpath");
+			var nonShortcutElem = document.querySelector("#nonshortbox");
+			var textboxElem = document.querySelector("#textbox");
+			var urlsElem = document.querySelector("#urlsbox");
+			var yturlsElem = document.querySelector("#yturlsbox");
+			var ytplaylistElem = document.querySelector("#ytplaylistbox");
+			var msfElem = document.querySelector("#msfbox");
+			var jmlElem = document.querySelector("#jmlbox");
+			var jsonboxElem = document.querySelector("#jsonbox");
+
+			var selectedObjectElem = document.querySelector("#selectedObject");
+
+			if( !!entityInfo )
+			{
+				selectedObjectElem.checked = true;
+				changed();
+			}
+			else
+			{
+				selectedObjectElem.checked = false;
+				selectedObjectElem.disabled = true;
+				changed();
+			}
+
+			function changed(elem)
+			{
+				// get the selected SELECTION
+				var checkedSelectionRadio;
+				var elems = selectionRadiosElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].checked )
+					{
+						checkedSelectionRadio = elems[i];
+						break;
+					}
+				}
+
+				// get the selected FORMAT
+				var checkedFormatRadio;
+				elems = formatRadiosElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].checked )
+					{
+						checkedFormatRadio = elems[i];
+						break;
+					}
+				}
+
+				// enable everything
+				/*
+				elems = selectionRadiosElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].value === "shortcuts" )
+						continue;
+
+					elems[i].disabled = false;
+				}
+				*/
+
+				elems = formatRadiosElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].value === "json" )
+						continue;
+					
+					elems[i].disabled = false;
+				}
+
+				elems = includesCheckboxesElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].value === "shortcuts" )
+						continue;
+					
+					elems[i].disabled = false;
+				}
+
+				if( checkedFormatRadio.value === "urls" || checkedFormatRadio.value === "yturls" || checkedFormatRadio.value === "ytplaylist" )
+				{
+					useFullLocalFilePathsElem.checked = false;
+					useFullLocalFilePathsElem.disabled = true;
+				}
+
+				if( checkedSelectionRadio.value === "selected" || checkedFormatRadio.value === "urls" || checkedFormatRadio.value === "yturls" || checkedFormatRadio.value === "ytplaylist" )
+				{
+					the3dbox.checked = false;
+					the3dbox.disabled = true;
+				}
+
+				if( checkedSelectionRadio.value === "fullmedia" )
+				{
+					the3dbox.checked = true;
+					the3dbox.disabled = true;
+				}
+
+				if( checkedSelectionRadio.value === "selected" || checkedFormatRadio.value === "urls" || checkedFormatRadio.value === "yturls" || checkedFormatRadio.value === "ytplaylist" )
+				{
+					nonShortcutElem.checked = false;
+					nonShortcutElem.disabled = true;
+				}
+
+				if( checkedSelectionRadio.value === "fullmedia" )
+				{
+					nonShortcutElem.checked = true;
+					nonShortcutElem.disabled = true;
+				}
+				
+				if( checkedSelectionRadio.value === "fullmedia" )
+				{
+					if( jmlElem.checked )
+						jsonboxElem.checked = true;
+
+					jmlElem.checked = false;
+					jmlElem.disabled = true;
+
+					textboxElem.checked = false;
+					textboxElem.disabled = true;
+
+					urlsElem.checked = false;
+					urlsElem.disabled = true;
+
+					yturlsElem.checked = false;
+					yturlsElem.disabled = true;
+
+					ytplaylistElem.checked = false;
+					ytplaylistElem.disabled = true;
+				}
+				
+				if( checkedSelectionRadio.value === "full" )
+				{
+					if( jmlElem.checked )
+						jsonboxElem.checked = true;
+
+					jmlElem.checked = false;
+					jmlElem.disabled = true;
+				}
+			}
+
+			function selectionChanged(elem)
+			{
+				var elems = formatStuffElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elem.value === "fullmedia" && elems[i].value === "json" )
+					{
+						elems[i].checked = true;
+						elems[i].disabled = false;
+					}
+					else
+						elems[i].disabled = (elem.value === "fullmedia");
+				}
+
+				elems = includeStuffElem.querySelectorAll("input");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].value === "shortcuts" || elems[i].value === "fullpath" )
+						continue;
+
+					if( elem.value === "fullmedia" )
+					{
+						elems[i].checked = true;
+						elems[i].disabled = true;
+					}
+					else if( elem.value === "selected" )
+					{
+						elems[i].checked = false;
+						elems[i].disabled = true;
+					}
+					else
+						elems[i].disabled = false;
+				}
+/*
+				var checkedFormatRadio;
+				var radios = formatRadiosElem.querySelectorAll("input[type='radio']");
+				for( var i = 0; i < radios.length; i++ )
+				{
+					if( radios[i].checked )
+					{
+						checkedFormatRadio = radios[i];
+						break;
+					}
+				}
+
+				if( checkedFormatRadio )
+					formatChanged(checkedFormatRadio);
+*/
+			}
+
+
+			var urls;
+			function isURLNeeded(url, ytOnly, ytPlaylistsAccepted)
+			{
+				if( arguments.length < 3 )
+					ytPlaylistsAccepted = false;
+
+				if( !!!url || url === "" || url.toLowerCase().indexOf("http") !== 0 || urls.indexOf(url) >= 0 )
+					return false;
+				else
+				{
+					if( !!!ytOnly )
+						return true;
+					else
+					{
+						var youTubeId = arcadeHud.extractYouTubeId(url);
+						var youTubePlaylistId = arcadeHud.extractYouTubePlaylistId(url);
+						if( !!youTubeId || (ytPlaylistsAccepted && youTubePlaylistId))
+							return true;
+						else
+							return false;
+					}
+				}
+			}
+
+			function doesNeedField(item, field)
+			{
+				if( field === "modelfile" )
+				{
+					if( !!!item.platforms || !!!item.platforms[arcadeHud.platformId] || !!!item.platforms[arcadeHud.platformId].file || item.platforms[arcadeHud.platformId].file === "" )
+						return false;
+					else
+						return true;
+				}
+				else if( field === "workshopid" )
+				{
+					if( !!!item.platforms || !!!item.platforms[arcadeHud.platformId] || !!!item.platforms[arcadeHud.platformId].workshopid || item.platforms[arcadeHud.platformId].workshopid === "" )
+						return false;
+					else
+						return true;
+				}
+				else if( field === "mountid" )
+				{
+					if( !!!item.platforms || !!!item.platforms[arcadeHud.platformId] || !!!item.platforms[arcadeHud.platformId].mountid || item.platforms[arcadeHud.platformId].mountid === "" )
+						return false;
+					else
+						return true;
+				}
+				else if( field === "modeldownload" )
+				{
+					if( !!!item.platforms || !!!item.platforms[arcadeHud.platformId] || !!!item.platforms[arcadeHud.platformId].download || item.platforms[arcadeHud.platformId].download === "" )
+						return false;
+					else
+						return true;
+				}
+				else
+				{
+					if( !!!item[field] || item[field] === "" )
+						return false;
+					else
+						return true;
+				}
+			}
+
+			function prepDataField(data)
+			{
+				if( data === undefined )
+					return "";
+
+				if( useFullLocalFilePathsElem.checked !== true && data[1] === ":" && "abcdefghijklmnopqrstuvxyz".indexOf(data.toLowerCase()[0]) >= 0 )
+				{
+					var lastFound = data.lastIndexOf("/");
+					if( lastFound < 0 )
+						lastFound = data.lastIndexOf("\\");
+
+					if( lastFound >= 0 )
+						return data.substring(lastFound+1);
+					else
+						return data;
+				}
+				else
+					return data;
+			}
+
+			function stripQuotes(text)
+			{
+				return text.replace(/['"]+/g, "");// /['"]+/g, ''
+			}
+
+			function escapeXml(unsafe) {
+			    return unsafe.replace(/[<>&'"]/g, function (c) {
+			        switch (c) {
+			            case '<': return '&lt;';
+			            case '>': return '&gt;';
+			            case '&': return '&amp;';
+			            case '\'': return '&apos;';
+			            case '"': return '&quot;';
+			        }
+			    });
+			}
+
+			function exportData()
+			{
+				urls = [];
+				resultTextBoxElem.value = "";
+
+				var checkedSelectionRadio;
+				var radios = selectionRadiosElem.querySelectorAll("input[type='radio']");
+				for( var i = 0; i < radios.length; i++ )
+				{
+					if( radios[i].checked )
+					{
+						checkedSelectionRadio = radios[i];
+						break;
+					}
+				}
+
+				var checkedFormatRadio;
+				var radios = formatRadiosElem.querySelectorAll("input[type='radio']");
+				for( var i = 0; i < radios.length; i++ )
+				{
+					if( radios[i].checked )
+					{
+						checkedFormatRadio = radios[i];
+						break;
+					}
+				}
+
+				if( checkedFormatRadio.value === "urls" )
+				{
+					if( checkedSelectionRadio.value === "selected" )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							if( isURLNeeded(item.file) )
+								urls.push(item.file);
+
+							if( isURLNeeded(item.preview) )
+								urls.push(item.preview);
+
+							if( isURLNeeded(item.screen) )
+								urls.push(item.screen);
+
+							if( isURLNeeded(item.marquee) )
+								urls.push(item.marquee);
+
+							if( isURLNeeded(item.stream) )
+								urls.push(item.stream);
+
+							if( isURLNeeded(item.download) )
+								urls.push(item.download);
+
+							if( isURLNeeded(item.reference) )
+								urls.push(item.reference);
+
+							for( var i = 0; i < urls.length; i++ )
+								resultTextBoxElem.value += urls[i] + "\n";
+
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+					else if( checkedSelectionRadio.value === "full" )
+					{
+						var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						while(response.success)
+						{
+							if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" )
+							{
+								var item = aaapi.cmdEx("getLibraryItem", response.entry.itemId);
+								if( !!item )
+								{
+									if( isURLNeeded(item.file) )
+										urls.push(item.file);
+
+									if( isURLNeeded(item.preview) )
+										urls.push(item.preview);
+
+									if( isURLNeeded(item.screen) )
+										urls.push(item.screen);
+
+									if( isURLNeeded(item.marquee) )
+										urls.push(item.marquee);
+
+									if( isURLNeeded(item.stream) )
+										urls.push(item.stream);
+
+									if( isURLNeeded(item.download) )
+										urls.push(item.download);
+
+									if( isURLNeeded(item.reference) )
+										urls.push(item.reference);
+								}
+							}
+
+							response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+						}
+
+						for( var i = 0; i < urls.length; i++ )
+							resultTextBoxElem.value += urls[i] + "\n";
+
+						copyToClipboard(resultTextBoxElem);
+					}
+				}
+				else if( checkedFormatRadio.value === "yturls" )
+				{
+					if( checkedSelectionRadio.value === "selected" )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							if( isURLNeeded(item.file, true) )
+								urls.push(item.file);
+
+							if( isURLNeeded(item.preview, true) )
+								urls.push(item.preview);
+
+							if( isURLNeeded(item.screen, true) )
+								urls.push(item.screen);
+
+							if( isURLNeeded(item.marquee, true) )
+								urls.push(item.marquee);
+
+							if( isURLNeeded(item.stream, true) )
+								urls.push(item.stream);
+
+							if( isURLNeeded(item.download, true) )
+								urls.push(item.download);
+
+							if( isURLNeeded(item.reference, true) )
+								urls.push(item.reference);
+
+							for( var i = 0; i < urls.length; i++ )
+								resultTextBoxElem.value += urls[i] + "\n";
+
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+					else if( checkedSelectionRadio.value === "full" )
+					{
+						var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						while(response.success)
+						{
+							if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" )
+							{
+								var item = aaapi.cmdEx("getLibraryItem", response.entry.itemId);
+								if( !!item )
+								{
+									if( isURLNeeded(item.file, true) )
+										urls.push(item.file);
+
+									if( isURLNeeded(item.preview, true) )
+										urls.push(item.preview);
+
+									if( isURLNeeded(item.screen, true) )
+										urls.push(item.screen);
+
+									if( isURLNeeded(item.marquee, true) )
+										urls.push(item.marquee);
+
+									if( isURLNeeded(item.stream, true) )
+										urls.push(item.stream);
+
+									if( isURLNeeded(item.download, true) )
+										urls.push(item.download);
+
+									if( isURLNeeded(item.reference, true) )
+										urls.push(item.reference);
+								}
+							}
+
+							response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+						}
+
+						for( var i = 0; i < urls.length; i++ )
+							resultTextBoxElem.value += urls[i] + "\n";
+
+						copyToClipboard(resultTextBoxElem);
+					}
+				}
+				else if( checkedFormatRadio.value === "ytplaylist" )
+				{
+					var dynamicYouTubeLink = "https://www.youtube.com/watch_videos?video_ids=";
+					var youTubeIds = [];
+					var youTubeId;
+
+					if( checkedSelectionRadio.value === "selected" )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							youTubeId = arcadeHud.extractYouTubeId(item.file);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+
+							youTubeId = arcadeHud.extractYouTubeId(item.preview);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+							
+							youTubeId = arcadeHud.extractYouTubeId(item.screen);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+							
+							youTubeId = arcadeHud.extractYouTubeId(item.marquee);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+							
+							youTubeId = arcadeHud.extractYouTubeId(item.stream);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+							
+							youTubeId = arcadeHud.extractYouTubeId(item.download);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+							
+							youTubeId = arcadeHud.extractYouTubeId(item.reference);
+							if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+								youTubeIds.push(youTubeId);
+
+							for( var i = 0; i < youTubeIds.length; i++ )
+							{
+								if( i > 0 )
+									dynamicYouTubeLink += ",";
+
+								dynamicYouTubeLink += youTubeIds[i];
+							}
+
+							if( youTubeIds.length > 0 )
+								resultTextBoxElem.value = dynamicYouTubeLink;
+							
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+					else if( checkedSelectionRadio.value === "full" )
+					{
+						var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						while(response.success)
+						{
+							if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" )
+							{
+								var item = aaapi.cmdEx("getLibraryItem", response.entry.itemId);
+								if( !!item )
+								{
+									youTubeId = arcadeHud.extractYouTubeId(item.file);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+
+									youTubeId = arcadeHud.extractYouTubeId(item.preview);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+									
+									youTubeId = arcadeHud.extractYouTubeId(item.screen);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+									
+									youTubeId = arcadeHud.extractYouTubeId(item.marquee);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+									
+									youTubeId = arcadeHud.extractYouTubeId(item.stream);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+									
+									youTubeId = arcadeHud.extractYouTubeId(item.download);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+									
+									youTubeId = arcadeHud.extractYouTubeId(item.reference);
+									if( !!youTubeId && youTubeIds.indexOf(youTubeId) < 0 )
+										youTubeIds.push(youTubeId);
+								}
+							}
+
+							response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+						}
+
+						for( var i = 0; i < youTubeIds.length; i++ )
+						{
+							if( i > 0 )
+								dynamicYouTubeLink += ",";
+
+							dynamicYouTubeLink += youTubeIds[i];
+						}
+
+						resultTextBoxElem.value = dynamicYouTubeLink;
+						copyToClipboard(resultTextBoxElem);
+					}
+				}
+				else if( checkedFormatRadio.value === "text" )
+				{
+					if( checkedSelectionRadio.value === "selected" )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							var hr = "";
+							for( var i = 0; i < item.title.length; i++ )
+								hr += "=";
+
+							resultTextBoxElem.value = hr + "\n";
+							resultTextBoxElem.value += item.title + "\n";
+							resultTextBoxElem.value += hr + "\n";
+
+							if( doesNeedField(item, "file") )
+								resultTextBoxElem.value += "File: " + prepDataField(item.file) + "\n";
+
+							if( doesNeedField(item, "screen") )
+								resultTextBoxElem.value += "Screen: " + prepDataField(item.screen) + "\n";
+							
+							if( doesNeedField(item, "marquee") )
+								resultTextBoxElem.value += "Marquee: " + prepDataField(item.marquee) + "\n";
+							
+							if( doesNeedField(item, "preview") )
+								resultTextBoxElem.value += "Preview: " + prepDataField(item.preview) + "\n";
+							
+							if( doesNeedField(item, "stream") )
+								resultTextBoxElem.value += "Stream: " + prepDataField(item.stream) + "\n";
+							
+							if( doesNeedField(item, "download") )
+								resultTextBoxElem.value += "Download: " + prepDataField(item.download) + "\n";
+							
+							if( doesNeedField(item, "reference") )
+								resultTextBoxElem.value += "Reference: " + prepDataField(item.reference) + "\n";
+							
+							if( doesNeedField(item, "description") )
+								resultTextBoxElem.value += "Description: " + prepDataField(item.description) + "\n";
+							
+							if( doesNeedField(item, "keywords") )
+								resultTextBoxElem.value += "Tags: " + prepDataField(item.keywords) + "\n";
+
+							var type = allTypes[item.type];
+							if( !!type )
+								resultTextBoxElem.value += "Type: " + prepDataField(type.title) + "\n";
+
+							var app = allApps[item.app];
+							if( !!app )
+								resultTextBoxElem.value += "App: " + prepDataField(app.title) + "\n";
+
+							resultTextBoxElem.value += "\n";
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+					else if( checkedSelectionRadio.value === "full" )
+					{
+						var worldInfo = aaapi.cmdEx("getWorldInfo");
+						if( worldInfo.success )
+						{
+							var infoTitle = "Arcade Info";
+							var hr = "";
+							for( var j = 0; j < infoTitle.length; j++ )
+								hr += "=";
+
+							resultTextBoxElem.value += hr + "\n";
+							resultTextBoxElem.value += infoTitle + "\n";
+							resultTextBoxElem.value += hr + "\n";
+
+							var instanceTitle = worldInfo.instance.title;
+							if( !!!instanceTitle || instanceTitle === "" )
+								instanceTitle = "Unnamed";
+
+							resultTextBoxElem.value += "Arcade Title: " + instanceTitle + "\n";
+
+							if( worldInfo.instance.mountIds !== "" )
+								resultTextBoxElem.value += "Arcade Mounts: " + worldInfo.instance.mountIds + "\n";
+
+							if( worldInfo.instance.workshopIds !== "" )
+								resultTextBoxElem.value += "Arcade Workshops: " + worldInfo.instance.workshopIds + "\n";
+
+							if( worldInfo.map.title !== "" )
+								resultTextBoxElem.value += "Map Title: " + worldInfo.map.title + "\n";
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].file !== "" )
+								resultTextBoxElem.value += "Map File: " + worldInfo.map.platforms[arcadeHud.platformId].file + "\n";
+
+							if( worldInfo.map.keywords !== "" )
+								resultTextBoxElem.value += "Map Keywords: " + worldInfo.map.keywords + "\n";
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].mountIds )
+								resultTextBoxElem.value += "Map Mounts: " + worldInfo.map.platforms[arcadeHud.platformId].mountIds + "\n";
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].workshopIds )
+								resultTextBoxElem.value += "Map Workshops: " + worldInfo.map.platforms[arcadeHud.platformId].workshopIds + "\n";
+
+							//resultTextBoxElem.value += "Map Download: " + worldInfo.map.platforms[arcadeHud.platformId].download + "\n";
+
+							resultTextBoxElem.value += "\n";
+						}
+
+						var usedModels = [];
+						var usedItems = [];
+						var goodEntries = [];
+						var payloadItem;
+
+						var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						while(response.success)
+						{
+							if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" && (the3dbox.checked || usedItems.indexOf(response.entry.itemId) < 0) )
+							{
+								goodEntries.push(response.entry);
+								usedItems.push(response.entry.itemId);
+							}
+
+							response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+						}
+
+						for( var i = 0; i < goodEntries.length; i++ )
+						{
+							var item = aaapi.cmdEx("getLibraryItem", goodEntries[i].itemId);
+							if( !!item )
+							{
+								if( item.title === "" )
+									item.title = "Untitled";
+
+								var hr = "";
+								for( var j = 0; j < item.title.length; j++ )
+									hr += "=";
+
+								resultTextBoxElem.value += hr + "\n";
+								resultTextBoxElem.value += item.title + "\n";
+								resultTextBoxElem.value += hr + "\n";
+
+								if( doesNeedField(item, "file") )
+									resultTextBoxElem.value += "File: " + prepDataField(item.file) + "\n";
+
+								if( doesNeedField(item, "screen") )
+									resultTextBoxElem.value += "Screen: " + prepDataField(item.screen) + "\n";
+								
+								if( doesNeedField(item, "marquee") )
+									resultTextBoxElem.value += "Marquee: " + prepDataField(item.marquee) + "\n";
+								
+								if( doesNeedField(item, "preview") )
+									resultTextBoxElem.value += "Preview: " + prepDataField(item.preview) + "\n";
+								
+								if( doesNeedField(item, "stream") )
+									resultTextBoxElem.value += "Stream: " + prepDataField(item.stream) + "\n";
+								
+								if( doesNeedField(item, "download") )
+									resultTextBoxElem.value += "Download: " + prepDataField(item.download) + "\n";
+								
+								if( doesNeedField(item, "reference") )
+									resultTextBoxElem.value += "Reference: " + prepDataField(item.reference) + "\n";
+								
+								if( doesNeedField(item, "description") )
+									resultTextBoxElem.value += "Description: " + prepDataField(item.description) + "\n";
+								
+								if( doesNeedField(item, "keywords") )
+									resultTextBoxElem.value += "Tags: " + prepDataField(item.keywords) + "\n";
+
+								var type = allTypes[item.type];
+								if( !!type )
+									resultTextBoxElem.value += "Type: " + prepDataField(type.title) + "\n";
+
+								var app = allApps[item.app];
+								if( !!app )
+									resultTextBoxElem.value += "App: " + prepDataField(app.title) + "\n";
+
+								// now, if we are also doing 3d transforms, add object & model info.
+								if( the3dbox.checked )
+								{
+									var model = aaapi.cmdEx("getLibraryModel", goodEntries[i].modelId);
+									if( !!model && !!model.platforms && !!model.platforms[arcadeHud.platformId] && !!model.platforms[arcadeHud.platformId].file && !!model.platforms[arcadeHud.platformId].file !== "" )
+									{
+										resultTextBoxElem.value += "Model: " + prepDataField(model.platforms[arcadeHud.platformId].file) + "\n";
+									}
+
+									if( doesNeedField(model, "modeldownload") )
+										resultTextBoxElem.value += "Download: " + prepDataField(model.platforms[arcadeHud.platformId].download) + "\n";
+									
+									if( doesNeedField(model, "workshopid") )
+									{
+										var subscription = aaapi.cmdEx("getWorkshopSubscription", model.platforms[arcadeHud.platformId].workshopid);
+										var subscriptionTitle = (!!subscription) ? subscription.title : "Unknown";
+
+										resultTextBoxElem.value += "Workshop: (" + prepDataField(model.platforms[arcadeHud.platformId].workshopid) + ") " + subscriptionTitle + "\n";
+									}
+									
+									if( doesNeedField(model, "mountid") )
+									{
+										var mount = aaapi.cmdEx("getMount", model.platforms[arcadeHud.platformId].mountid);
+										var mountTitle = (!!mount) ? mount.title : "Unknown";
+										resultTextBoxElem.value += "Mounts: (" + prepDataField(model.platforms[arcadeHud.platformId].mountid) + ") " + mountTitle + "\n";
+									}
+
+									var object = aaapi.cmdEx("getObject", goodEntries[i].id);
+									if( !!object )
+									{
+										if( !!object.origin && object.origin !== "" )
+											resultTextBoxElem.value += "Origin: " + prepDataField(object.origin) + "\n";
+
+										if( !!object.angles && object.angles !== "" )
+											resultTextBoxElem.value += "Angles: " + prepDataField(object.angles) + "\n";
+
+										if( !!object.scale && object.scale !== "" && object.scale != 1 )
+											resultTextBoxElem.value += "Scale: " + prepDataField(object.scale) + "\n";
+
+										if( object.hasOwnProperty("slave") && object.slave )
+										{
+											var slaveVal = (object.slave) ? 1 : 0;
+											resultTextBoxElem.value += "Slave: " + slaveVal + "\n";
+										}
+
+										if( !!object.anim && object.anim.toLowerCase() !== "idle" && object.anim !== "" )
+											resultTextBoxElem.value += "Anim: " + prepDataField(object.anim) + "\n";
+									}
+								}
+
+								resultTextBoxElem.value += "\n";
+							}
+							else if( nonShortcutElem.checked && (the3dbox.checked || usedModels.indexOf(goodEntries[i].modelId) < 0) )
+							{
+								usedModels.push(goodEntries[i].modelId);
+
+								var model = aaapi.cmdEx("getLibraryModel", goodEntries[i].modelId);
+								if( !!model )
+								{
+									if( model.title === "" )
+										model.title = "Untitled";
+
+									var hr = "";
+									for( var j = 0; j < model.title.length; j++ )
+										hr += "=";
+
+									resultTextBoxElem.value += hr + "\n";
+									resultTextBoxElem.value += model.title + "\n";
+									resultTextBoxElem.value += hr + "\n";
+
+									if( doesNeedField(model, "modelfile") )
+										resultTextBoxElem.value += "Model: " + prepDataField(model.platforms[arcadeHud.platformId].file) + "\n";
+
+									if( doesNeedField(model, "screen") )
+										resultTextBoxElem.value += "Screen: " + prepDataField(model.screen) + "\n";
+									
+									if( doesNeedField(model, "preview") )
+										resultTextBoxElem.value += "Preview: " + prepDataField(model.preview) + "\n";
+									
+									if( doesNeedField(model, "keywords") )
+										resultTextBoxElem.value += "Tags: " + prepDataField(model.keywords) + "\n";
+									
+									if( doesNeedField(model, "modeldownload") )
+										resultTextBoxElem.value += "Download: " + prepDataField(model.platforms[arcadeHud.platformId].download) + "\n";
+									
+									if( doesNeedField(model, "workshopid") )
+									{
+										var subscription = aaapi.cmdEx("getWorkshopSubscription", model.platforms[arcadeHud.platformId].workshopid);
+										var subscriptionTitle = (!!subscription) ? subscription.title : "Unknown";
+
+										resultTextBoxElem.value += "Workshop: (" + prepDataField(model.platforms[arcadeHud.platformId].workshopid) + ") " + subscriptionTitle + "\n";
+									}
+									
+									if( doesNeedField(model, "mountid") )
+									{
+										var mount = aaapi.cmdEx("getMount", model.platforms[arcadeHud.platformId].mountid);
+										var mountTitle = (!!mount) ? mount.title : "Unknown";
+										resultTextBoxElem.value += "Mounts: (" + prepDataField(model.platforms[arcadeHud.platformId].mountid) + ") " + mountTitle + "\n";
+									}
+
+									// now, if we are also doing 3d transforms, add object & model info.
+									if( the3dbox.checked )
+									{
+										var object = aaapi.cmdEx("getObject", goodEntries[i].id);
+										if( !!object )
+										{
+											if( !!object.origin && object.origin !== "" )
+												resultTextBoxElem.value += "Origin: " + prepDataField(object.origin) + "\n";
+
+											if( !!object.angles && object.angles !== "" )
+												resultTextBoxElem.value += "Angles: " + prepDataField(object.angles) + "\n";
+
+											if( !!object.scale && object.scale !== "" && object.scale != 1 )
+												resultTextBoxElem.value += "Scale: " + prepDataField(object.scale) + "\n";
+
+											if( object.hasOwnProperty("slave") && object.slave )
+											{
+												var slaveVal = (object.slave) ? 1 : 0;
+												resultTextBoxElem.value += "Slave: " + slaveVal + "\n";
+											}
+
+											if( !!object.anim && object.anim.toLowerCase() !== "idle" && object.anim !== "" )
+												resultTextBoxElem.value += "Anim: " + prepDataField(object.anim) + "\n";
+										}
+									}
+
+									resultTextBoxElem.value += "\n";
+								}
+							}
+						}
+
+						copyToClipboard(resultTextBoxElem);
+					}
+				}
+				else if( checkedFormatRadio.value === "msf" )
+				{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							//var payloadItem = {};
+							var payloadTag = "<msfitem";
+							if( doesNeedField(item, "title") )
+								payloadTag += ' title="' + encodeURIComponent(prepDataField(item.title)) + '"';
+
+							if( doesNeedField(item, "file") )
+								payloadTag += ' file="' + encodeURIComponent(prepDataField(item.file)) + '"';
+
+							if( doesNeedField(item, "screen") )
+								payloadTag += ' screen="' + encodeURIComponent(prepDataField(item.screen)) + '"';
+							
+							if( doesNeedField(item, "marquee") )
+								payloadTag += ' marquee="' + encodeURIComponent(prepDataField(item.marquee)) + '"';
+							
+							if( doesNeedField(item, "preview") )
+								payloadTag += ' preview="' + encodeURIComponent(prepDataField(item.preview)) + '"';
+							
+							if( doesNeedField(item, "stream") )
+								payloadTag += ' stream="' + encodeURIComponent(prepDataField(item.stream)) + '"';
+							
+							if( doesNeedField(item, "download") )
+								payloadTag += ' download="' + encodeURIComponent(prepDataField(item.download)) + '"';
+							
+							if( doesNeedField(item, "reference") )
+								payloadTag += ' reference="' + encodeURIComponent(prepDataField(item.reference)) + '"';
+							
+							if( doesNeedField(item, "description") )
+								payloadTag += ' description="' + encodeURIComponent(prepDataField(item.description)) + '"';
+							
+							if( doesNeedField(item, "keywords") )
+								payloadTag += ' keywords="' + encodeURIComponent(prepDataField(item.keywords)) + '"';
+
+							/*var bestImage = payloadItem.screen;
+							if( !!!bestImage )
+								bestImage = payloadItem.marquee;
+							if( !!!bestImage )
+								bestImage = payloadItem.file;
+
+							if( !!!payloadItem.marquee )
+								payloadItem.marquee = bestImage;
+
+							if( !!!payloadItem.screen )
+								payloadItem.screen = bestImage;*/
+
+							var type = allTypes[item.type];
+							if( !!type )
+								payloadTag += ' type="' + encodeURIComponent(prepDataField(type.title)) + '"';
+
+							var app = allApps[item.app];
+							if( !!app )
+								payloadTag += ' app="' + encodeURIComponent(prepDataField(app.title)) + '"';
+							
+							payloadTag += " />";
+
+							resultTextBoxElem.value += payloadTag;
+
+							/*
+							<aacabinet cabinet_id="arcademachine" controlpanel_part_name="cabinet-front" js_id="supersmashland" marquee_part_name="cabinet-marquee" msf='' pos="0 0 -2" scale="1.25 1.25 1.25" screen_part_name="screen"/>
+							*/
+
+							//resultTextBoxElem.value += "http://aarcade.tv/view.html?item=" + encodeURIComponent(JSON.stringify(payloadItem));
+							copyToClipboard(resultTextBoxElem);
+						}
+				}
+				else if( checkedFormatRadio.value === "jml" )
+				{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							var payloadItem = {};
+							if( doesNeedField(item, "title") )
+								payloadItem.title = stripQuotes(prepDataField(item.title));
+
+							if( doesNeedField(item, "file") )
+								payloadItem.file = stripQuotes(prepDataField(item.file));
+
+							if( doesNeedField(item, "screen") )
+								payloadItem.screen = stripQuotes(prepDataField(item.screen));
+							
+							if( doesNeedField(item, "marquee") )
+								payloadItem.marquee = stripQuotes(prepDataField(item.marquee));
+							
+							if( doesNeedField(item, "preview") )
+								payloadItem.preview = stripQuotes(prepDataField(item.preview));
+							
+							if( doesNeedField(item, "stream") )
+								payloadItem.stream = stripQuotes(prepDataField(item.stream));
+							
+							if( doesNeedField(item, "download") )
+								payloadItem.download = stripQuotes(prepDataField(item.download));
+							
+							if( doesNeedField(item, "reference") )
+								payloadItem.reference = stripQuotes(prepDataField(item.reference));
+							
+							if( doesNeedField(item, "description") )
+								payloadItem.description = stripQuotes(prepDataField(item.description));
+							
+							if( doesNeedField(item, "keywords") )
+								payloadItem.keywords = stripQuotes(prepDataField(item.keywords));
+
+							var bestImage = payloadItem.screen;
+							if( !!!bestImage )
+								bestImage = payloadItem.marquee;
+							if( !!!bestImage )
+								bestImage = payloadItem.file;
+
+							if( !!!payloadItem.marquee )
+								payloadItem.marquee = bestImage;
+
+							if( !!!payloadItem.screen )
+								payloadItem.screen = bestImage;
+
+							var type = allTypes[item.type];
+							if( !!type )
+								payloadItem.type = stripQuotes(prepDataField(type.title));
+
+							var app = allApps[item.app];
+							if( !!app )
+								payloadItem.app = stripQuotes(prepDataField(app.title));
+
+
+							var stringified = JSON.stringify(payloadItem);
+							stringified = escapeXml(stringified);
+
+
+							payloadTag = "<aacabinet cabinet_id=\"arcademachine\" controlpanel_part_name=\"cabinet-front\"  marquee_part_name=\"cabinet-marquee\" pos=\"0 0 0\" scale=\"1.0 1.0 1.0\" screen_part_name=\"screen\" msf=\"" + stringified + "\">";
+
+							resultTextBoxElem.value += payloadTag;
+
+							/*
+							<aacabinet cabinet_id="arcademachine" controlpanel_part_name="cabinet-front" js_id="supersmashland" marquee_part_name="cabinet-marquee" msf='' pos="0 0 -2" scale="1.25 1.25 1.25" screen_part_name="screen"/>
+							*/
+
+							//resultTextBoxElem.value += "http://aarcade.tv/view.html?item=" + encodeURIComponent(JSON.stringify(payloadItem));
+							copyToClipboard(resultTextBoxElem);
+						}
+				}
+				else if( checkedFormatRadio.value === "json" )
+				{
+					if( checkedSelectionRadio.value === "selected" )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						if( !!item )
+						{
+							payloadItem = {};
+
+							if( doesNeedField(item, "title") )
+								payloadItem.title = prepDataField(item.title);
+
+							if( doesNeedField(item, "file") )
+								payloadItem.file = prepDataField(item.file);
+
+							if( doesNeedField(item, "screen") )
+								payloadItem.screen = prepDataField(item.screen);
+							
+							if( doesNeedField(item, "marquee") )
+								payloadItem.marquee = prepDataField(item.marquee);
+							
+							if( doesNeedField(item, "preview") )
+								payloadItem.preview = prepDataField(item.preview);
+							
+							if( doesNeedField(item, "stream") )
+								payloadItem.stream = prepDataField(item.stream);
+							
+							if( doesNeedField(item, "download") )
+								payloadItem.download = prepDataField(item.download);
+							
+							if( doesNeedField(item, "reference") )
+								payloadItem.reference = prepDataField(item.reference);
+							
+							if( doesNeedField(item, "description") )
+								payloadItem.description = prepDataField(item.description);
+							
+							if( doesNeedField(item, "keywords") )
+								payloadItem.keywords = prepDataField(item.keywords);
+
+							var type = allTypes[item.type];
+							if( !!type )
+								payloadItem.type = prepDataField(type.title);
+
+							var app = allApps[item.app];
+							if( !!app )
+								payloadItem.app = prepDataField(app.title);
+
+							//if( jmlElem.checked )
+							//	resultTextBoxElem.value += "http://aarcade.tv/view.html?item=" + encodeURIComponent(JSON.stringify(payloadItem));
+							//else
+								resultTextBoxElem.value += JSON.stringify(payloadItem);
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+					else if( checkedSelectionRadio.value === "full" )
+					{
+						var completeResults = {};
+
+						var worldInfo = aaapi.cmdEx("getWorldInfo");
+						if( worldInfo.success )
+						{
+							var info = {};
+
+							var instanceTitle = worldInfo.instance.title;
+							if( !!!instanceTitle || instanceTitle === "" )
+								instanceTitle = "Unnamed";
+
+
+							info.arcadeTitle = instanceTitle;
+
+							if( worldInfo.instance.mountIds !== "" )
+								info.mounts = worldInfo.instance.mountIds;
+
+							if( worldInfo.instance.workshopIds !== "" )
+								info.workshops = worldInfo.instance.workshopIds;
+
+							if( worldInfo.map.title !== "" )
+								info.mapTitle = worldInfo.map.title;
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].file !== "" )
+								info.mapFile = worldInfo.map.platforms[arcadeHud.platformId].file;
+
+							if( worldInfo.map.keywords !== "" )
+								info.keywords = worldInfo.map.keywords;
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].mountIds )
+								info.mapMounts = worldInfo.map.platforms[arcadeHud.platformId].mountIds;
+
+							if( worldInfo.map.platforms[arcadeHud.platformId].workshopIds )
+								info.mapWorkshops = worldInfo.map.platforms[arcadeHud.platformId].workshopIds;
+
+							//resultTextBoxElem.value += "Map Download: " + worldInfo.map.platforms[arcadeHud.platformId].download + "\n";
+
+							completeResults.info = info;
+						}
+
+						var usedItems = [];
+						var usedModels = [];
+						var goodEntries = [];
+						var payloadItem;
+
+						var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						while(response.success)
+						{
+							if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" && (the3dbox.checked || usedItems.indexOf(response.entry.itemId) < 0) )
+							{
+								goodEntries.push(response.entry);
+								usedItems.push(response.entry.itemId);
+							}
+
+							response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+						}
+
+						var totalResults = [];
+						for( var i = 0; i < goodEntries.length; i++ )
+						{
+							var item = aaapi.cmdEx("getLibraryItem", goodEntries[i].itemId);
+							if( !!item )
+							{
+								payloadItem = {};
+
+								if( doesNeedField(item, "title") )
+									payloadItem.title = prepDataField(item.title);
+
+								if( doesNeedField(item, "file") )
+									payloadItem.file = prepDataField(item.file);
+
+								if( doesNeedField(item, "screen") )
+									payloadItem.screen = prepDataField(item.screen);
+								
+								if( doesNeedField(item, "marquee") )
+									payloadItem.marquee = prepDataField(item.marquee);
+								
+								if( doesNeedField(item, "preview") )
+									payloadItem.preview = prepDataField(item.preview);
+								
+								if( doesNeedField(item, "stream") )
+									payloadItem.stream = prepDataField(item.stream);
+								
+								if( doesNeedField(item, "download") )
+									payloadItem.download = prepDataField(item.download);
+								
+								if( doesNeedField(item, "reference") )
+									payloadItem.reference = prepDataField(item.reference);
+								
+								if( doesNeedField(item, "description") )
+									payloadItem.description = prepDataField(item.description);
+								
+								if( doesNeedField(item, "keywords") )
+									payloadItem.keywords = prepDataField(item.keywords);
+
+								var type = allTypes[item.type];
+								if( !!type )
+									payloadItem.type = prepDataField(type.title);
+
+								var app = allApps[item.app];
+								if( !!app )
+									payloadItem.app = prepDataField(app.title);
+
+								// now, if we are also doing 3d transforms, add object & model info.
+								if( the3dbox.checked )
+								{
+									var model = aaapi.cmdEx("getLibraryModel", goodEntries[i].modelId);
+									if( !!model && !!model.platforms && !!model.platforms[arcadeHud.platformId] && !!model.platforms[arcadeHud.platformId].file && !!model.platforms[arcadeHud.platformId].file !== "" )
+									{
+										payloadItem.model = prepDataField(model.platforms[arcadeHud.platformId].file);
+									}
+
+									if( doesNeedField(model, "modeldownload") )
+									{
+										payloadItem.download = prepDataField(model.platforms[arcadeHud.platformId].download);
+									}
+									
+									if( doesNeedField(model, "workshopid") )
+									{
+										var subscription = aaapi.cmdEx("getWorkshopSubscription", model.platforms[arcadeHud.platformId].workshopid);
+										var subscriptionTitle = (!!subscription) ? subscription.title : "Unknown";
+
+										payloadItem.workshop = "(" + prepDataField(model.platforms[arcadeHud.platformId].workshopid) + ") " + subscriptionTitle;
+									}
+									
+									if( doesNeedField(model, "mountid") )
+									{
+										var mount = aaapi.cmdEx("getMount", model.platforms[arcadeHud.platformId].mountid);
+										var mountTitle = (!!mount) ? mount.title : "Unknown";
+										payloadItem.mounts = "(" + prepDataField(model.platforms[arcadeHud.platformId].mountid) + ") " + mountTitle;
+									}
+
+									var object = aaapi.cmdEx("getObject", goodEntries[i].id);
+									if( !!object )
+									{
+										if( !!object.origin && object.origin !== "" )
+											payloadItem.origin = prepDataField(object.origin);
+
+										if( !!object.angles && object.angles !== "" )
+											payloadItem.angles = prepDataField(object.angles);
+
+										if( !!object.scale && object.scale !== "" && object.scale != 1 )
+											payloadItem.scale = prepDataField(object.scale);
+
+										if( object.hasOwnProperty("slave") && object.slave )
+										{
+											var slaveVal = (object.slave) ? 1 : 0;
+											payloadItem.slave = slaveVal;
+										}
+
+										if( !!object.anim && object.anim.toLowerCase() !== "idle" && object.anim !== "" )
+											payloadItem.anim = prepDataField(object.anim);
+									}
+								}
+
+								totalResults.push(payloadItem);
+								//resultTextBoxElem.value += JSON.stringify(payloadItem);
+							}
+							else if( nonShortcutElem.checked && (the3dbox.checked || usedModels.indexOf(goodEntries[i].modelId) < 0) )
+							{
+								usedModels.push(goodEntries[i].modelId);
+								payloadItem = {};
+
+								var model = aaapi.cmdEx("getLibraryModel", goodEntries[i].modelId);
+								if( !!model )
+								{
+									if( model.title === "" )
+										model.title = "Untitled";
+
+									if( doesNeedField(model, "modelfile") )
+										payloadItem.model = prepDataField(model.platforms[arcadeHud.platformId].file);
+
+									if( doesNeedField(model, "screen") )
+										payloadItem.screen = prepDataField(model.screen);
+									
+									if( doesNeedField(model, "preview") )
+										payloadItem.preview = prepDataField(model.preview);
+									
+									if( doesNeedField(model, "keywords") )
+										payloadItem.keywords = prepDataField(model.keywords);
+									
+									if( doesNeedField(model, "modeldownload") )
+										payloadItem.download = prepDataField(model.platforms[arcadeHud.platformId].download);
+									
+									if( doesNeedField(model, "workshopid") )
+									{
+										var subscription = aaapi.cmdEx("getWorkshopSubscription", model.platforms[arcadeHud.platformId].workshopid);
+										var subscriptionTitle = (!!subscription) ? subscription.title : "Unknown";
+
+										payloadItem.workshops = "(" + prepDataField(model.platforms[arcadeHud.platformId].workshopid) + ") " + subscriptionTitle;
+									}
+									
+									if( doesNeedField(model, "mountid") )
+									{
+										var mount = aaapi.cmdEx("getMount", model.platforms[arcadeHud.platformId].mountid);
+										var mountTitle = (!!mount) ? mount.title : "Unknown";
+										payloadItem.mounts = "(" + prepDataField(model.platforms[arcadeHud.platformId].mountid) + ") " + mountTitle;
+									}
+
+									// now, if we are also doing 3d transforms, add object & model info.
+									if( the3dbox.checked )
+									{
+										var object = aaapi.cmdEx("getObject", goodEntries[i].id);
+										if( !!object )
+										{
+											if( !!object.origin && object.origin !== "" )
+												payloadItem.origin = prepDataField(object.origin);
+
+											if( !!object.angles && object.angles !== "" )
+												payloadItem.angles = prepDataField(object.angles);
+
+											if( !!object.scale && object.scale !== "" && object.scale != 1 )
+												payloadItem.scale = prepDataField(object.scale);
+
+											if( object.hasOwnProperty("slave") && object.slave )
+											{
+												var slaveVal = (object.slave) ? 1 : 0;
+												payloadItem.slave = slaveVal;
+											}
+
+											if( !!object.anim && object.anim.toLowerCase() !== "idle" && object.anim !== "" )
+												payloadItem.anim = prepDataField(object.anim);
+										}
+									}
+
+									totalResults.push(payloadItem);
+									//resultTextBoxElem.value += JSON.stringify(payloadItem);
+								}
+							}
+						}
+
+						completeResults.objects = totalResults;
+						resultTextBoxElem.value += JSON.stringify(completeResults);
+						copyToClipboard(resultTextBoxElem);
+					}
+					else if( checkedSelectionRadio.value === "fullmedia" )
+					{
+						var library = {
+							instances: {},
+							maps: {},
+							items: {},
+							models: {},
+							types: {},
+							apps: {}
+						};
+
+						var instance = {};
+
+						var worldInfo = aaapi.cmdEx("getWorldInfo");
+						var response = aaapi.cmdEx("getInstance", worldInfo.instance.id);
+						if( !!response )
+						{
+							response = response.instance;
+
+							var instanceTitle = response.title;
+							if( instanceTitle === "" )
+								instanceTitle = "Unnamed";
+
+							instance.generation = 3;
+							instance.info = {
+								id: worldInfo.instance.id,
+								created: 0,
+								owner: "local",
+								title: instanceTitle,
+								map: worldInfo.map.info.id
+							};
+
+							if( response.workshopIds !== "" )
+							{
+								if( !!!instance.info.platforms )
+								{
+									instance.info.platforms = {};
+									instance.info.platforms[arcadeHud.platformId] = {};
+								}
+
+								instance.info.platforms[arcadeHud.platformId].workshopIds = response.workshopIds;
+							}
+
+							if( response.mountIds !== "" )
+							{
+								if( !!!instance.info.platforms )
+								{
+									instance.info.platforms = {};
+									instance.info.platforms[arcadeHud.platformId] = {};
+								}
+
+								instance.info.platforms[arcadeHud.platformId].mountIds = response.mountIds;
+							}
+
+							instance.objects = {};
+
+							var goodEntries = [];
+							var response = aaapi.cmdEx("getNearestObjectToPlayerLook");
+							while(response.success)
+							{
+								if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" )
+									goodEntries.push(response.entry);
+
+								response = aaapi.cmdEx("getNextNearestObjectToPlayerLook");
+							}
+
+							var object;
+							var instanceObject;
+							for( var i = 0; i < goodEntries.length; i++ )
+							{
+								instanceObject = aaapi.cmdEx("getObject", goodEntries[i].id);
+								if( !!!instanceObject )
+									continue;
+
+								object = {
+									//id: instanceObject.id,
+									item: instanceObject.item,
+									model: instanceObject.model,
+									slave: (instanceObject.slave) ? 1 : 0,
+									scale: instanceObject.scale,
+									origin: instanceObject.origin,
+									angles: instanceObject.angles,
+									anim: instanceObject.anim
+								};
+
+								instance.objects[instanceObject.id] = object;
+
+								library.instances[worldInfo.instance.id] = instance;
+
+								var item = (!!!library.items[goodEntries[i].itemId]) ? aaapi.cmdEx("getLibraryItem", goodEntries[i].itemId) : null;
+								if( !!item )
+								{
+									var itemPayload = {
+										//info: {id: goodEntries[i].itemId},
+										title: item.title,
+										file: prepDataField(item.file),
+										screen: prepDataField(item.screen),
+										marquee: prepDataField(item.marquee),
+										preview: prepDataField(item.preview),
+										stream: prepDataField(item.stream),
+										download: prepDataField(item.download),
+										reference: prepDataField(item.reference),
+										description: item.description,
+										keywords: item.keywords,
+										type: item.type,
+										app: item.app
+									};
+
+									library.items[goodEntries[i].itemId] = itemPayload;
+
+									if( item.type !== "" && !!!library.types[item.type] )
+									{
+										var type = allTypes[item.type];
+										if( !!type )
+										{
+											var typePayload = {
+												title: type.title,
+												fileFormat: type.fileFormat,
+												priority: type.priority,
+												titleFormat: type.titleFormat
+											};
+
+											library.types[item.type] = typePayload;
+										}
+									}
+
+									if( item.app !== "" && !!!library.types[item.app] )
+									{
+										var app = allApps[item.app];
+										if( !!app )
+										{
+											var appPayload = {
+												title: app.title,
+												type: app.type,
+												filepaths: {},
+												reference: app.reference,
+												file: prepDataField(app.file),
+												download: app.download
+											};
+
+											if( !!app.filepaths && useFullLocalFilePathsElem.checked === true )
+											{
+												for( var x in app.filepaths )
+													appPayload.filepaths[x] = {path: app.filepaths[x].path};
+											}
+
+											library.apps[item.app] = appPayload;
+
+											if( app.type !== "" && !!!library.types[app.type] )
+											{
+												var type = allTypes[app.type];
+												if( !!type )
+												{
+													var typePayload = {
+														title: type.title,
+														fileFormat: type.fileFormat,
+														priority: type.priority,
+														titleFormat: type.titleFormat
+													};
+
+													library.types[app.type] = typePayload;
+												}
+											}
+										}
+									}
+								}
+
+								if( goodEntries[i].modelId !== goodEntries[i].itemId )
+								{
+									var model = (!!!library.models[goodEntries[i].modelId]) ? aaapi.cmdEx("getLibraryModel", goodEntries[i].modelId) : null;
+									if( !!model )
+									{
+										var modelPayload = {
+											title: model.title,
+											screen: prepDataField(model.screen),
+											preview: prepDataField(model.preview),
+											keywords: model.keywords
+										};
+
+										modelPayload.platforms = {};
+										modelPayload.platforms[arcadeHud.platformId] = {
+											"file": model.platforms[arcadeHud.platformId].file,
+											"download": model.platforms[arcadeHud.platformId].download,
+											"workshopid": model.platforms[arcadeHud.platformId].workshopid,
+											"mountid": model.platforms[arcadeHud.platformId].mountid
+										};
+
+										library.models[goodEntries[i].modelId] = modelPayload;
+									}
+								}
+							}
+
+							resultTextBoxElem.value += JSON.stringify(library);
+							copyToClipboard(resultTextBoxElem);
+						}
+					}
+				}
+
+				resultBoxElem.style.opacity = "1.0";
+				resultBoxElem.style.pointerEvents = "all";
+				resultBoxElem.style.position = "relative";
+			}
+
+			function copyToClipboard(elem)
+			{
+				//elem.offsetHeight;
+				elem.focus();
+				elem.select();
+				aaapi.cmd("doCopy");
+			}
+		</script>
+	</body>
+</html>

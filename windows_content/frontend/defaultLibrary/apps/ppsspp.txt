@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-M94_CeqFTCgTL"
+		}
+		"title"		"PPSSPP"
+		"file"		"X:\Emulators\ppsspp64\PPSSPPWindows64.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-MhOJ6uzCorTMR"
+		"download"		"http://www.PPSSPP.com/"
+		"reference"		"http://www.PPSSPP.com/"
+		"filepaths"
+		{
+			"-om88gxLojUbBNXeWP96"
+			{
+				"id"		"-om88gxLojUbBNXeWP96"
+				"path"		"X:\Emulators\PPSSPP\roms\"
+			}
+		}
+	}
+}

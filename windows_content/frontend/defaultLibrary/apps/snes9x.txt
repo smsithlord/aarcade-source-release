@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-O-mDp7rZzhqyz"
+		}
+		"title"		"Snes9x"
+		"file"		"X:\Emulators\Snes9x\Snes9x.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-KtCXxiB-yIQVh"
+		"download"		"http://www.Snes9x.com/"
+		"reference"		"http://www.Snes9x.com/"
+		"filepaths"
+		{
+			"-om88gxM1dJKgdvBLe8r"
+			{
+				"id"		"-om88gxM1dJKgdvBLe8r"
+				"path"		"X:\Emulators\Snes9x\Roms\"
+			}
+		}
+	}
+}

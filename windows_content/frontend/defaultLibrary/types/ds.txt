@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MURUoxnjvk3Ci"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"ds"
+		"priority"		"1"
+		"fileformat"		"/(.nds)$/i"
+	}
+}

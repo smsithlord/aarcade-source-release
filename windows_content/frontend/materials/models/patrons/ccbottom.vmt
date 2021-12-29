@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/ccbottom"
+	"$bumpmap" "models\patrons/ccbottom_normal"
+	"$model" "1"
+}

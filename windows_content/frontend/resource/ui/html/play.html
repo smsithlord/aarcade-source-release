@@ -1,0 +1,1747 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
+	</head>
+	<body>
+		<div id="worldContextContainer" style="pointer-events: none; position: fixed; z-index: 999999; -webkit-transition: all; -webkit-transition-delay: 0.3s; -webkit-transition-duration: 0.3s; -webkit-transition-timing-function: ease-in; opacity: 0; border: 5px solid rgba(0, 0, 0, 0.5); border-radius: 5px; top: 540px; left: 960px;">
+			<input type="button" value="Play Now" class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" onclick="playNow();" style="min-width: 160px; width: 100%; margin: 0;" /><br />
+			<input type="button" value="Instances" class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" onclick="viewInstances();" style="min-width: 160px; width: 100%; margin: 0;" />
+			<div style="background-color: rgba(0, 0, 0, 0.5);" class="aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor"></div>
+		</div>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+			<div id="loadingThing" style="padding: 16px; border-width: 2px; border-style: solid; display: inline-block; border-radius: 24px; opacity: 0.7;" class="aaThemeColorTwoShadedBorderColor aaThemeColorTwoShadedBackground"><div class="loadingIndicator aaThemeColorOneBorderColor"></div></div>
+		<div style="display: inline-block; display: none;" id="invisolayer">
+
+		<script>
+			var g_screenshots = aaapi.cmdEx("getAllMapScreenshots");
+
+			var backpackMapEntries;
+			backpackMapEntries = localStorage.getItem("myBackpackMaps");
+			if( !!backpackMapEntries )
+				backpackMapEntries = JSON.parse(backpackMapEntries);
+			else
+				backpackMapEntries = [];
+
+			var g_hiddenMaps = localStorage.getItem("hiddenMaps");
+			if( !!g_hiddenMaps )
+				g_hiddenMaps = JSON.parse(g_hiddenMaps);
+			else
+				g_hiddenMaps = {};
+
+			// get the current mapHistory (or create an empty mapHistory)
+			var mapHistory;
+			var g_serversInitialized = false;
+			var g_mapsInitialized = false;
+			mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			var maps;
+
+			var badMapFiles;
+			var worldContextContainer;
+			var searchingForServersElem;
+			var earlyaccessElem;
+			var serversTable;
+			var g_localUserIP;
+			var g_localUserHashedIP;
+			var rootRef;
+			var html = "Instances";
+			var iconSize = arcadeHud.themeSizes.IconSize;
+			var iconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Maps", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+
+			// otherwise, use session storage
+			if( !!!tabId )
+				tabId = sessionStorage.getItem("aaPlayTab", tabId);
+
+			// otherwise, let arcadeHud decide
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "worlds",
+						"title": "Worlds"
+					},
+					{
+						"id": "custom",
+						"title": "All Maps"
+					},
+					{
+						"id": "designer",
+						"title": "Level Designer"
+					}/*,
+					{
+						"id": "favorites",
+						"title": "Favorites"
+					}*//*,
+					{
+						"id": "servers",
+						"title": "Servers"
+					}*/
+				],
+				"activeTabId": tabId,
+				"onChangeCallbackName": "onChangeCallback"
+			});
+			document.write(windowTabsHeaderHTML);
+
+			function onChangeCallback(tabId)
+			{
+				if( tabId !== "designer" )
+					sessionStorage.setItem("aaPlayTab", tabId);
+
+				if( tabId !== "worlds" )
+					worldContextContainer.style.display = "none";
+				else
+					worldContextContainer.style.display = "block";
+
+				if( tabId === "servers" )
+				{
+					if( !g_serversInitialized )
+						initServersTab();
+				}
+				else if( tabId === "custom" )// || tabId === "favorites")
+				{
+					// move the #mapStuff object from .aaTabContent[tabid=custom] to .aaTabContent[tabid=favorites]
+/*
+					var mapStuff = document.querySelector("#mapStuff");
+					if(tabId === "custom")
+						document.querySelector(".aaTabContent[tabid=custom]").appendChild(mapStuff);
+					else
+						document.querySelector(".aaTabContent[tabid=favorites]").appendChild(mapStuff);
+*/
+					if( !g_mapsInitialized )
+					{
+						setTimeout(function()
+						{
+							g_mapsInitialized = true;
+
+							maps = new Array();
+							var mapz = aaapi.cmdEx("getAllMaps");
+							// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
+							badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
+
+							//, "de_aztec_csgoportpk.bsp", "de_vigil.bsp", "de_villa_cocaina"
+
+							for( var y in mapz )
+							{
+								if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+									maps.push(mapz[y]);
+							}
+
+							worldContextContainer.mapFileShort = null;
+
+							//var onlyFavorites = (tabId === "custom");
+
+							//if( tabId === "custom" )
+							//{
+								// create a container for the most recent maps and add it to the top of the maps list.
+								var recentContainer = document.createElement("div");
+								recentContainer.id = "recentContainer";
+								recentContainer.className = "aaThemeColorTwoShadedBackground aaThemeColorTwoBorderColor helpNote";
+								recentContainer.setAttribute("help", "These are your 4 most recently loaded maps.");
+								recentContainer.style.cssText = "border-style: solid; border-width: 2px; border-radius: 20px; padding: 20px; text-align: center;";
+
+								// spawn the most recent maps
+								maps.sort(sortRecent);
+								for( var x = 0; x < maps.length && x < 4; x++)
+									generateMap(maps, x, recentContainer, false);//onlyFavorites);
+
+								mapsContainer.appendChild(recentContainer);
+							//}
+
+							// spawn all of the maps, alphabetically.
+							maps.sort(sortFilename);
+							for( var x = 0; x < maps.length; x++)
+								generateMap(maps, x, null, false);//onlyFavorites);
+
+							deadSea(document.querySelector("#mapsContainer"));
+						}, 100);
+					}
+				}
+			}
+
+
+			var favoriteMaps = {};
+			for( var i = 0; i < backpackMapEntries.length; i++ )
+			{
+				if( !!backpackMapEntries[i].map )
+					favoriteMaps[backpackMapEntries[i].map] = true;
+			}
+
+			function sortFilename(a, b)
+			{
+				// sm_ first, & alphabetical
+				if( !!favoriteMaps[a.info.id] && !!!favoriteMaps[b.info.id] )
+					return -1;
+				else if( !!favoriteMaps[b.info.id] && !!!favoriteMaps[a.info.id] )
+					return 1;
+				//else if( !!favoriteMaps[b.info.id] && !!favoriteMaps[a.info.id] )
+				//	return 0;
+				else if( !!!favoriteMaps[b.info.id] && (b.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 || b.platforms[arcadeHud.platformId].file.indexOf("meta_") === 0) && (a.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 && a.platforms[arcadeHud.platformId].file.indexOf("meta_") !== 0) )
+					return 1;
+				else if( !!!favoriteMaps[a.info.id] && (a.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 || a.platforms[arcadeHud.platformId].file.indexOf("meta_") === 0) && (b.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 && b.platforms[arcadeHud.platformId].file.indexOf("meta_") !== 0) )
+					return -1;
+				else
+				{
+					if( a.platforms[arcadeHud.platformId].file.toLowerCase() < b.platforms[arcadeHud.platformId].file.toLowerCase() )
+						return -1;
+					else if( a.platforms[arcadeHud.platformId].file.toLowerCase() > b.platforms[arcadeHud.platformId].file.toLowerCase() )
+						return 1;
+					else
+						return 0;
+				}
+			}
+
+			function sortRecent(a, b)
+			{
+				// most recently visited, then alphabetical
+				// check for timestamps
+				var a_mapHistoryEntry = mapHistory[a.info.id];
+				var b_mapHistoryEntry = mapHistory[b.info.id];
+
+				if( !!a_mapHistoryEntry && !!a_mapHistoryEntry.timestamp && !!b_mapHistoryEntry && !!b_mapHistoryEntry.timestamp )
+				{
+
+					var a_time = a_mapHistoryEntry.timestamp;
+					var b_time = b_mapHistoryEntry.timestamp;
+					if( b_time > a_time )
+						return 1;
+					else if( a_time > b_time )
+						return -1;
+					else
+						return 0;
+				}
+				else if( !!b_mapHistoryEntry && !!b_mapHistoryEntry.timestamp && (!!!a_mapHistoryEntry || !!!a_mapHistoryEntry.timestamp) )
+					return 1;
+				else if( !!a_mapHistoryEntry && !!a_mapHistoryEntry.timestamp && (!!!b_mapHistoryEntry || b_mapHistoryEntry.timestamp) )
+					return -1;
+				else if( a.platforms[arcadeHud.platformId].file.toLowerCase() < b.platforms[arcadeHud.platformId].file.toLowerCase() )
+					return -1;
+				else if( a.platforms[arcadeHud.platformId].file.toLowerCase() > b.platforms[arcadeHud.platformId].file.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			}
+
+			worldContextContainer.addEventListener("mouseover", function(e)
+			{
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0.7s";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "1.0";
+			}, true);
+
+			worldContextContainer.addEventListener("mouseout", function(e)
+			{
+				worldContextContainer.style.pointerEvents = "none";
+				worldContextContainer.style.webkitTransitionDelay = "0";
+				worldContextContainer.style.webkitTransitionDuration = "0";
+				worldContextContainer.style.opacity = "0";
+			}, true);
+
+			function mapIconClicked(elem)
+			{
+				playNow();
+				return;
+
+				/* insta-"context" menu
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "0.99";
+				worldContextContainer.offsetTop;
+				worldContextContainer.style.opacity = "1.0";
+				*/
+			}
+
+			function mapIconMouseMoveListener(e)
+			{
+				if( worldContextContainer.style.pointerEvents !== "none" )
+				{
+					document.removeEventListener("mousemove", mapIconMouseMoveListener, true);
+					return;
+				}
+
+				worldContextContainer.style.top = e.clientY + 1;
+				worldContextContainer.style.left = e.clientX + 1;
+
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0.7s";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "1.0";
+
+				document.removeEventListener("mousemove", mapIconMouseMoveListener, true);
+				//worldContextContainer.style.display = "none";
+			}
+
+			function playNow(testMapName)
+			{
+				//console.log("Play Now: " + worldContextContainer.mapFileShort);
+
+				if( !!!testMapName )
+					testMapName = worldContextContainer.mapFileShort.toLowerCase() + ".bsp";
+
+				var map;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if( testMapName === maps[i].platforms[arcadeHud.platformId].file.toLowerCase() )
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!map )
+				{
+					// try to find an entry for us in the mapHistory
+					var hasInstanceToLoad = false;
+					var mapHistoryEntry = mapHistory[map.info.id];
+					/*if( !!!mapHistoryEntry )
+					{
+						mapHistoryEntry = {
+							"instanceId": "",
+							"timestamp": 0
+						};
+					}*/
+
+					var pos = "";
+					var rot = "";
+
+					var mapInstances = aaapi.cmdEx("getMapInstances", map.info.id);
+
+					if( !!mapHistoryEntry )
+					{
+						var screenshot;
+						if( !!mapHistoryEntry.screenshotId && mapHistoryEntry.screenshotId !== "" )
+							screenshot = g_screenshots[mapHistoryEntry.screenshotId];
+
+						if( !!screenshot )
+						{
+							pos = screenshot.body.position;//mapHistoryEntry.position;
+							rot = screenshot.camera.rotation;
+
+							if( mapHistoryEntry.instanceId === "" )
+								mapHistoryEntry.instanceId = screenshot.instance.id.substring(2);
+						}
+
+						var loadableInstance = false;
+						if( mapHistoryEntry.instanceId != "")
+						{
+							for( var j = 0; j < mapInstances.length; j++ )
+							{
+								if( mapInstances[j].id == mapHistoryEntry.instanceId )
+								{
+									loadableInstance = true;
+									//mapHistoryEntry.instanceId = "";
+									break;
+								}
+							}
+						}
+
+						if( !loadableInstance || mapHistoryEntry.instanceId === "" )
+						{
+							//mapInstances = aaapi.cmdEx("getMapInstances", map.info.id);
+							
+							if( mapInstances.length > 0 )
+								mapHistoryEntry.instanceId = mapInstances[0].id;
+						}
+
+						if( mapHistoryEntry.instanceId !== "" )
+						{
+							mapHistoryEntry.timestamp = new Date().getTime();
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+							hasInstanceToLoad = true;
+						}
+						//localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+					}
+
+					if( !!mapHistoryEntry && !!!screenshot )
+					{
+						pos = mapHistoryEntry.position;
+						rot = mapHistoryEntry.rotation;
+					}
+
+					if( hasInstanceToLoad )
+					{
+						// if we are NOT the host and are in a universe, time to disc.
+						var universeInfo = aaapi.cmdEx("getConnectedSession");
+						if( !!universeInfo && universeInfo.connected && universeInfo.universe !== "" && universeInfo.instance !== "")// && !universeInfo.isHost )
+							aaapi.cmd("disconnectSession");
+
+						window.location = "asset://ui/loading.html?map=" + mapHistoryEntry.mapId + "&instance=" + mapHistoryEntry.instanceId + "&pos=" + pos + "&rot=" + rot + "&screenshot=" + mapHistoryEntry.screenshotId;
+					}
+					else
+					{
+						// are there any instances at all?
+						if( !!!mapInstances )
+							mapInstances = aaapi.cmdEx("getMapInstances", map.info.id);
+
+						if( mapInstances.length > 0 )
+							window.location = "asset://ui/playInstance.html?id=" + map.info.id;
+						else
+						{
+							// create our mapHistory entry
+							var mapHistoryEntry = {
+								"mapId": map.info.id,
+								"instanceId": "",
+								"position": "",
+								"rotation": "",
+								"screenshotId": "",
+								"timestamp": new Date().getTime()
+							};
+
+							// add our entry to the mapHistory
+							mapHistory[map.info.id] = mapHistoryEntry;
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+							// if we are NOT the host and are in a universe, time to disc.
+							var universeInfo = aaapi.cmdEx("getConnectedSession");
+							if( !!universeInfo && universeInfo.connected && universeInfo.universe !== "" && universeInfo.instance !== "")// && !universeInfo.isHost )
+								aaapi.cmd("disconnectSession");
+						
+							window.location = "asset://ui/loading.html?map=" + map.info.id + "&instance=" + "" + "&pos=" + "" + "&rot=" + "" + "&screenshot=" + "";
+						}
+					}
+				}
+			}
+
+			function viewInstances()
+			{
+				console.log("View Instances: " + worldContextContainer.mapFileShort);
+				
+				var map;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if( i === 0 )
+						console.log(JSON.stringify(maps[i]));
+					if( worldContextContainer.mapFileShort.toLowerCase() + ".bsp" === maps[i].platforms[arcadeHud.platformId].file.toLowerCase() )
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!map )
+				{
+					window.location = "asset://ui/playInstance.html?id=" + map.info.id;
+				}
+				else
+				{
+					console.log("ERROR: Could not find map with filename: " + worldContextContainer.mapFileShort + ".bsp");
+				}
+			}
+
+			function mapIconMouseOver(elem)
+			{
+				//elem.appendChild(worldContextContainer);
+				worldContextContainer.mapFileShort = elem.id;
+				worldContextContainer.querySelector("div").innerHTML = elem.id;
+				worldContextContainer.style.opacity = "0.01";
+				worldContextContainer.offsetTop;
+				worldContextContainer.style.opacity = "0";
+				document.addEventListener("mousemove", mapIconMouseMoveListener, true);
+			}
+
+			function mapIconMouseOut(elem)
+			{
+				if( worldContextContainer.style.pointerEvents !== "none" )
+				{
+					worldContextContainer.style.pointerEvents = "none";
+					worldContextContainer.style.webkitTransitionDelay = "0";
+					worldContextContainer.style.webkitTransitionDuration = "0";
+					worldContextContainer.style.opacity = "0";
+				}
+			}
+		</script>
+
+		<map name="starterlandmap" id="ImageMapsCom-image-maps-2016-03-11-231208">
+			<area shape="rect" coords="998,561,1000,563" alt="Image Map" style="outline:none;" title="Image Map" href="javascript: void(0);" />
+			<area id="sm_orchard" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="258,186,295,217,327,272,368,298,470,278,442,249,469,243,458,229,493,213,483,171,446,142,381,156,345,129,294,113,244,152,258,160" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);" />
+			<area id="sm_acreage" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="103,361,100,410,128,430,140,464,163,481,247,466,268,412,294,405,298,370,284,347,234,355,183,321,143,308,95,343" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_expo" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="329,347,328,401,344,460,438,515,510,500,509,493,607,472,620,477,690,462,689,411,713,386,578,292,502,308,472,310,445,320" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_apartmentsuite" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="724,350,725,434,747,450,922,414,916,353,892,335,873,337,853,323" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_primo" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="722,225,722,248,744,262,744,305,782,333,853,320,874,332,957,314,948,243,876,193" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_garage" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="545,107,545,141,591,176,752,149,748,128,806,115,811,88,782,48,752,45,613,78" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_apartment" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="709,244,643,259,627,290,650,331,678,338,740,325,738,270" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+		</map>
+
+		<map name="metaflatsmap">
+			<area coords="569,289,513,379,513,419,687,480,748,400,747,370" shape="poly" href="javascript: void(0);" id="meta_haze" onclick="mapIconClicked(this);" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);">
+			<area coords="637,176,578,238,581,288,784,361,837,290,837,237" shape="poly" href="javascript: void(0);" id="meta_gallery" onclick="mapIconClicked(this);" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);">
+			<area coords="549,145,394,344,395,389,480,416,633,228,632,175" shape="poly" href="javascript: void(0);" id="meta_hallway" onclick="mapIconClicked(this);" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);">
+			<area coords="468,242,240,167,179,239,170,312,402,382,473,301" shape="poly" href="javascript: void(0);" id="meta_shine" onclick="mapIconClicked(this);" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);">
+			<area coords="337,76,261,147,259,200,476,285,540,192,533,135" shape="poly" href="javascript: void(0);" id="meta_zen" onclick="mapIconClicked(this);" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);">
+		</map>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="worlds">
+			<img id="worldmap" src="metaflats.png" usemap="#metaflatsmap" /><br />
+			<select onchange="worldChanged(this);" style="width: 100%;" class="aaTitleTextSizeFontSize aaThemeColorTwoBackgroundColor aaTextColorTwoColor">
+				<option value="metaflats" selected>Meta Flats</option>
+				<option value="starterland">Old Town</option>
+			</select>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="custom" style="padding: 0; margin: 0;">
+			<div id="mapStuff">
+				<div style="padding: 2px; padding-top: 0;">
+					<input id="filterBox" placeholder="Search maps..." class="aaTitleTextSizeFontSize" style="width: 100%;" oninput="johnnyFive(this);" />
+				</div>
+				<div style="height: 750px; width: 1500px;">
+					<div id="mapsContainer" class="aaScrollBars" onscroll="deadSea(this);"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="designer">
+
+			<div class="aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding-bottom: 10px;"><center>Regular users should just build arcades in existing maps instead.<br /><br />AArcade's level design tool is called Hammer, and takes a whole lot of effort to use.<br />Only use it if you are good with computers & want to build your own map.<br /><br />Hammer is the same level editor that Counter-Strike & Team Fortress use also,<br />so there's lots of tutorials on the web!<br /><br /></center></div>
+
+			<select id="projectsList" class="aaTitleTextSizeFontSize" style="width: 100%;"></select>
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Launch Hammer" onclick="launchHammerClicked();" />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Watch Tutorial Video (OLD)" help="This video is for beginners learning how to use the map template! Good luck!<br />(I'll be making a new video & a written tutorial soon!)" onclick="aaapi.cmd('popout', 'hammer');" />
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="favorites" style="padding: 0; margin: 0;"></div>
+
+		<style>
+			#searchingForServers
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#earlyaccess
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#serversTable
+			{
+				width: 100%;
+				max-width: 700px;
+			}
+
+			#serversTable td
+			{
+				font-family: Arial;
+				padding: 8px;
+			}
+
+			#serversTable tr td:nth-child(1)
+			{
+				border-top-left-radius: 8px;
+				border-bottom-left-radius: 8px;
+				padding-right: 12px;
+				min-width: 420px;
+				max-width: 600px;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+
+			#serversTable tr:hover td:nth-child(1)
+			{
+				text-decoration: underline;
+			}
+
+			#serversTable tr td:nth-child(2)
+			{
+				border-top-right-radius: 8px;
+				border-bottom-right-radius: 8px;
+				margin-right: 12px;
+				white-space: nowrap;
+				width: 1px;
+			}
+
+			#serversTable tr:nth-child(even) td
+			{
+				background-color: transparent;
+			}
+		</style>
+
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+
+			.animatedEllipsis
+			{
+				display: inline;
+			}
+
+			.animatedEllipsis div
+			{
+				display: inline;
+				visibility: hidden;
+			}
+/*
+			.nonFavorite
+			{
+				display: hidden;
+			}*/
+		</style>
+
+		<div class="aaTabContent aaScrollBars aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="servers" style="max-height: 600px; padding-right: 32px; display: none;">
+			<div id="searchingForServers">
+				<center>
+					<br />
+					<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+					<br />
+					Searching for servers<div class="animatedEllipsis"><div>.</div><div>.</div><div>.</div></div>
+				</center>
+			</div>
+			<!--<div id="earlyaccess" style="display: none;"><div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize">EARLY ACCESS</div>Servers can only be joined in a web browser, for now.</div>-->
+			<table id="serversTable" cellspacing="0" cellpadding="0">
+			</table>
+		</div>
+
+		<script>
+			setInterval(function()
+			{
+				var animatedEllipsisElems = document.querySelectorAll(".animatedEllipsis");
+				var animatedEllipsisElem, animatedEllipsisDivs;
+				for( var i = 0; i < animatedEllipsisElems.length; i++ )
+				{
+					animatedEllipsisElem = animatedEllipsisElems[i];
+					if( !!!animatedEllipsisElem.state )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisElem.state++;
+
+					if( animatedEllipsisElem.state > 3 )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisDivs = animatedEllipsisElem.querySelectorAll("div");
+					for( var j = 0; j < animatedEllipsisDivs.length; j++ )
+					{
+						if( j < animatedEllipsisElem.state )
+							animatedEllipsisDivs[j].style.visibility = "visible";
+						else
+							animatedEllipsisDivs[j].style.visibility = "hidden";
+					}
+				}
+			}, 500);
+
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<style>
+			.instancesButtonContainer
+			{
+				display: none;
+			}
+
+			.mapThumbContainer:hover .instancesButtonContainer
+			{
+				display: block;
+			}
+		</style>
+
+		<script>
+			function worldChanged(elem)
+			{
+				var worldName = elem.options[elem.selectedIndex].value;
+				var mapElem = document.querySelector("#worldmap");
+				mapElem.src = worldName + ".png";
+				mapElem.setAttribute("usemap", "#" + worldName + "map");
+				 //id="worldmap" src="metaflats.png" usemap="#metaflatsmap"
+			}
+
+			var tga = new TGA();
+
+			var mapsContainer = document.querySelector("#mapsContainer");
+
+			function compareIds(testId, baseId)
+			{
+				var intTestId = Number(testId);
+				var intBaseId = Number(baseId);
+				
+				if( testId === baseId || (!isNaN(intTestId) && !isNaN(intBaseId) && intTestId === intBaseId) )
+					return true;
+				else
+					return false;
+			}
+
+			var universeInfo = aaapi.cmdEx("getConnectedSession");
+			var favoriteIconHTML = arcadeHud.generateIconHTML("favoriteicon.png", 24, 24, "aaThemeColorOneColor");
+			var unfavoriteIconHTML = arcadeHud.generateIconHTML("unfavoriteicon.png", 24, 24, "aaThemeColorOneColor");
+			var hideIconHTML = arcadeHud.generateIconHTML("eye.png", 24, 24, "aaThemeColorOneColor");
+			//var objectIconHTML = arcadeHud.generateIconHTML("objecticon.png", 24, 24, "aaThemeColorOneColor");
+			function generateMap(mapsList, x, containerElem, onlyFavorites)
+			{
+				if( !!g_hiddenMaps[mapsList[x].info.id] )
+					return;
+
+
+
+
+
+					var matchId = mapsList[x].info.id;
+					var alreadyExists = false;
+					for( var i = 0; i < backpackMapEntries.length; i++ )
+					{
+						if( backpackMapEntries[i].map === matchId )
+						{
+							alreadyExists = true;
+							break;
+						}
+					}
+
+					//if( onlyFavorites && !alreadyExists )
+					//	return;
+
+				var mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
+				var screenshotKeys = Object.keys(g_screenshots);
+				//var mapsList = maps;
+				var i, screenshots, screenshot;
+				//for( x = 0; x < mapsList.length; x++)
+				//{
+					//console.log(JSON.stringify(mapsList[x]));
+					mapName = mapsList[x].platforms[arcadeHud.platformId].file;
+					mapName = mapName.substring(0, mapName.length-4);
+
+					mapContainer = document.createElement("div");
+					mapContainer.className = "mapThumbContainer aaThemeColorOneHoverBorderColor aaThemeColorOneHoverShadedBackground";
+					mapContainer.style.cssText = "cursor: pointer; width: 240px; -webkit-transition: -webkit-transform 1s ease-in-out;";
+					mapContainer.map = mapsList[x];
+					mapContainer.addEventListener("click", function(e)
+					{
+						//console.log("huh??");
+						if( e.target.tagName !== "INPUT" )
+							playNow(this.map.platforms[arcadeHud.platformId].file.toLowerCase());
+					}.bind(mapContainer), false);
+
+					mapContainer.addEventListener("mouseover", function(e)
+					{
+						this.style.webkitTransform = "scale(1.2)";
+					}.bind(mapContainer), true);
+
+					mapContainer.addEventListener("mouseout", function(e)
+					{
+						this.style.webkitTransform = "initial";
+					}.bind(mapContainer), true);
+
+
+
+
+
+
+
+
+
+					buttonsContainer = document.createElement("div");
+					buttonsContainer.className = "instancesButtonContainer";
+					buttonsContainer.style.cssText = "position: absolute;";
+
+
+
+
+
+
+
+/*
+					if( !alreadyExists )
+						mapContainer.classList.add("nonFavorite");
+					else
+						mapContainer.classList.add("favorite");
+*/
+
+
+
+					if( !!!universeInfo || universeInfo.isHost )
+					{
+						spawnButtonContainer = document.createElement("div");
+						spawnButtonContainer.className = "helpNote";// aaOnlyIfMapLoaded
+						spawnButtonContainer.setAttribute("help", "Spawn this shortcut as an object in your current arcade.");
+						spawnButtonContainer.style.cssText = "display: inline-block;";
+						//spawnButtonContainer.style.cssText = "position: relative;";
+
+						spawnButton = document.createElement("div");
+						spawnButton.container = mapContainer;
+						//spawnButton.style.cssText = "position: absolute;";
+						spawnButton.map = mapsList[x];
+						spawnButton.addEventListener("click", function(e)
+						{
+							e.stopImmediatePropagation();
+
+							var screenshot = this.container.querySelector(".mapImage").screenshot;
+							var mapFile = "";
+							if(!!screenshot && !!screenshot.map && !!screenshot.map.file && screenshot.map.file !== "")
+								mapFile = screenshot.map.file.substring(0, screenshot.map.file.lastIndexOf("."));
+							else if( !!this.map && !!this.map.platforms && !!this.map.platforms[arcadeHud.platformId] && !!this.map.platforms[arcadeHud.platformId].file && this.map.platforms[arcadeHud.platformId].file !== "" )
+								mapFile = this.map.platforms[arcadeHud.platformId].file.substring(0, this.map.platforms[arcadeHud.platformId].file.lastIndexOf("."));
+
+							if( mapFile !== "" )
+							{
+								var smartTitle = "";
+								var smartURL = "travel.html?mapfile=" + mapFile;
+
+								var title = "";
+								if( !!screenshot && !!screenshot.instance && !!screenshot.instance.title && screenshot.instance.title !== "" )
+									title = screenshot.instance.title;
+								else if( !!this.map && !!this.map.title && this.map.title !== "" )
+									title = this.map.title;
+								else if( mapFile !== "" )
+									title = mapFile;
+
+								if( title !== "" )
+								{
+									smartTitle = "Jump To: " + title;
+
+									if( !!screenshot )
+									{
+										//console.log(JSON.stringify(screenshot));
+										smartURL += "&screenshot=" + screenshot.id;
+										smartURL += "&pos=" + screenshot.body.position;
+										smartURL += "&rot=" + screenshot.body.rotation;
+										smartURL += "&instance=" + screenshot.instance.id.substring(2);
+									}
+
+									//console.log(smartTitle);
+									//console.log(smartURL);
+
+									aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");
+						//	aaapi.cmd("addToastMessage", "Not found in arcade.");
+									document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(smartURL) + "&title=" + encodeURIComponent(smartTitle) + "&type=" + encodeURIComponent("-ohTuY-Me2QaaNaxvi6H");
+								}
+							}
+						}.bind(spawnButton), true);
+						spawnButton.innerHTML = arcadeHud.generateIconHTML("objecticon.png", 24, 24, "aaThemeColorOneColor");
+						spawnButtonContainer.appendChild(spawnButton);
+						buttonsContainer.appendChild(spawnButtonContainer);
+					}
+
+
+
+
+
+					if( !alreadyExists )
+					{
+						favoriteButtonContainer = document.createElement("div");
+						favoriteButtonContainer.className = "helpNote";
+						favoriteButtonContainer.setAttribute("help", "Add/remove this map to your favorites.");
+						favoriteButtonContainer.style.cssText = "display: inline-block;";
+
+						favoriteButton = document.createElement("div");
+						favoriteButton.map = mapsList[x];
+						favoriteButton.mode = "favorite";
+						favoriteButton.addEventListener("click", function(e)
+						{
+							e.stopImmediatePropagation();
+
+							if( this.mode === "favorite" )
+							{
+								if( addToBackpackMap(this.map, false) )
+								{
+									this.innerHTML = unfavoriteIconHTML;
+									this.mode = "unfavorite";
+								}
+							}
+							else
+							{
+								if( removeFromBackpackMap(this.map, false) )
+								{
+									this.innerHTML = favoriteIconHTML;
+									this.mode = "favorite";
+								}
+							}
+						}.bind(favoriteButton), true);
+						favoriteButton.innerHTML = favoriteIconHTML;
+						favoriteButtonContainer.appendChild(favoriteButton);
+						buttonsContainer.appendChild(favoriteButtonContainer);
+					}
+					else
+					{
+						unfavoriteButtonContainer = document.createElement("div");
+						unfavoriteButtonContainer.className = "helpNote";
+						unfavoriteButtonContainer.setAttribute("help", "Add/remove this map from your favorites.");
+						unfavoriteButtonContainer.style.cssText = "display: inline-block;";
+
+						unfavoriteButton = document.createElement("div");
+						unfavoriteButton.map = mapsList[x];
+						unfavoriteButton.mode = "unfavorite";
+						unfavoriteButton.addEventListener("click", function(e)
+						{
+							e.stopImmediatePropagation();
+
+							if( this.mode === "favorite" )
+							{
+								if( addToBackpackMap(this.map, false) )
+								{
+									this.innerHTML = unfavoriteIconHTML;
+									this.mode = "unfavorite";
+								}
+							}
+							else
+							{
+								if( removeFromBackpackMap(this.map, false) )
+								{
+									this.innerHTML = favoriteIconHTML;
+									this.mode = "favorite";
+								}
+							}
+						}.bind(unfavoriteButton), true);
+						unfavoriteButton.innerHTML = unfavoriteIconHTML;
+						unfavoriteButtonContainer.appendChild(unfavoriteButton);
+						buttonsContainer.appendChild(unfavoriteButtonContainer);
+					}
+
+
+
+
+
+					hideButtonContainer = document.createElement("div");
+					hideButtonContainer.className = "helpNote";
+					hideButtonContainer.setAttribute("help", "Hide this map on all map lists.");
+					hideButtonContainer.style.cssText = "display: inline-block;";
+					//hideButtonContainer.style.cssText = "position: relative;";
+
+					hideButton = document.createElement("div");
+					hideButton.container = mapContainer;
+					//hideButton.style.cssText = "position: absolute;";
+					hideButton.map = mapsList[x];
+					hideButton.addEventListener("click", function(e)
+					{
+						e.stopImmediatePropagation();
+						if( doHide(this.map) )
+						{
+							this.container.parentNode.removeChild(this.container);
+						}
+						//window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+					}.bind(hideButton), true);
+					hideButton.innerHTML = hideIconHTML;
+					hideButtonContainer.appendChild(hideButton);
+					buttonsContainer.appendChild(hideButtonContainer);
+
+
+
+
+
+					mapContainer.appendChild(buttonsContainer);
+
+
+
+
+
+					mapImage = document.createElement("div");
+					mapImage.className = "mapImage";
+					mapImage.style.cssText = "width: 240px; height: 135px;";
+
+					screenshots = [];
+					for( i = 0; i < screenshotKeys.length; i++ )
+					{
+						screenshot = g_screenshots[screenshotKeys[i]];
+
+						//if( screenshot.hasOwnProperty('multiplayer') && screenshot.multiplayer.isHost == 0 )
+						//	continue;
+
+						//if( screenshot.map.file === mapName + ".bsp" )
+						//if( screenshot.map.id === mapsList[x].info.id )
+						if( compareIds(screenshot.map.id, "id" + mapsList[x].info.id) || compareIds(screenshot.map.id, mapsList[x].info.id) )
+							screenshots.push(screenshot);
+					}
+
+					if( screenshots.length > 0 )
+					{
+						var screenshot = screenshots[0];
+						var mapId = screenshot.map.id.substring(2);
+						var mapHistoryEntry = mapHistory[mapId];
+						if( !!mapHistoryEntry && mapHistoryEntry.screenshotId !== "" && !!g_screenshots[mapHistoryEntry.screenshotId])// && (!g_screenshots[mapHistoryEntry.screenshotId].hasOwnProperty('multiplayer') || g_screenshots[mapHistoryEntry.screenshotId].multiplayer.isHost == 1))
+							screenshot = g_screenshots[mapHistoryEntry.screenshotId];
+
+						mapImage.screenshot = screenshot;
+					}
+					else
+					{
+						var img = document.createElement("img");
+						img.style.cssText = "width: 240px; height: 135px;";
+						img.src = "asset://ui/map.jpg";
+						mapImage.appendChild(img);
+					}
+
+					mapContainer.appendChild(mapImage);
+
+
+					instancesButtonContainer = document.createElement("div");
+					instancesButtonContainer.className = "instancesButtonContainer helpNote";
+					instancesButtonContainer.setAttribute("help", "View advanced options for loading this map.");
+					instancesButtonContainer.style.cssText = "position: relative; float: left; bottom: 32px;";
+
+					instancesButton = document.createElement("input");
+					instancesButton.type = "button";
+					instancesButton.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneBorderColor aaTextColorOneColor";
+					instancesButton.style.cssText = "cursor: pointer; position: absolute; padding: 4px; border-radius: 4px; font-weight: bold; letter-spacing: 0.1em;";
+					instancesButton.value = html;
+					instancesButton.map = mapsList[x];
+					instancesButton.addEventListener("click", function(e)
+					{
+						e.stopImmediatePropagation();
+						window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+						//aaapi.cmd("deleteScreenshot", this.shotId);
+						//window.location='asset://ui/welcome.html?tab=screenshots';
+					}.bind(instancesButton), true);
+
+					instancesButtonContainer.appendChild(instancesButton);
+					mapContainer.appendChild(instancesButtonContainer);
+
+
+
+
+
+
+					mapTitle = document.createElement("div");
+					mapTitle.className = "aaTitleTextSizeFontSize aaTitleText";
+					mapTitle.style.cssText = "text-align: left;";
+					mapTitleNode = document.createTextNode(mapsList[x].title);
+
+					mapTitle.appendChild(mapTitleNode);
+					mapContainer.appendChild(mapTitle);
+
+					if( !!!containerElem )
+						mapsContainer.appendChild(mapContainer);
+					else
+						containerElem.appendChild(mapContainer);
+					//count++;
+				//}
+			}
+
+			//var scrollElemHeight;
+			function deadSea(scrollElem)
+			{
+				var containerTop = scrollElem.offsetTop;
+				var containerBottom = containerTop + scrollElem.offsetHeight;
+
+				var elems = document.querySelectorAll(".mapThumbContainer");
+				var elem, elemTop, elemBottom, mapImage, screenshot;
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elem = elems[i];
+					elemTop = (elem.offsetTop - scrollElem.scrollTop);
+					elemBottom = (elem.offsetTop - scrollElem.scrollTop) + elem.offsetHeight;
+
+					mapImage = elem.querySelector(".mapImage");
+					if( elemTop <= containerBottom && elemBottom >= containerTop && !!!mapImage.firstChild && !!mapImage.screenshot && elem.style.display !== "none" )
+					{
+						screenshot = mapImage.screenshot;
+						tga.open( "screenshots/" + screenshot.id + ".tga", function(){
+							var elem = tga.getCanvas();
+							elem.style.width = "240px";
+							elem.style.height = "135px";
+							this.appendChild(elem);
+						}.bind(mapImage));
+					}
+				}
+			}
+
+			function johnnyFive(inputElem)
+			{
+				var searchVal = inputElem.value.toLowerCase();
+				var elems = document.querySelectorAll(".mapThumbContainer");
+				var elem;
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elem = elems[i];
+					if( elem.map.title.toLowerCase().indexOf(searchVal) >= 0 )
+						elem.style.display = "inline-block";
+					else
+						elem.style.display = "none";
+				}
+
+				if( searchVal === "" )
+					document.querySelector("#recentContainer").style.display = "block";
+				else
+					document.querySelector("#recentContainer").style.display = "none";
+
+				// cause the initially visible search result cards to load their thumbnails
+				deadSea(mapsContainer);
+			}
+
+			function addServerRow(lobbyId, title, count)
+			{
+				//var lobbyId = "huh";
+				//var title = "Yaddaz";
+				//var count = 420;
+
+				if( searchingForServersElem.style.display !== "none" )
+				{
+					searchingForServersElem.style.display = "none";
+					//earlyaccessElem.style.display = "block";
+				}
+
+				var row = document.createElement("tr");
+				row.className = "aaTitleTextSizeFontSize aaTextColorTwoColor";
+				row.setAttribute("lobbyId", lobbyId);
+				row.addEventListener("click", function(e)
+				{
+					aaapi.cmd("joinLobby", this.getAttribute("lobbyId"));
+					//aaapi.cmd("joinLobbyWeb", this.getAttribute("lobbyId"));
+				}.bind(row), false);
+
+				var titleCel = document.createElement("td");
+				titleCel.className = "aaThemeColorTwoBackgroundColor";
+
+				var iconElem = document.createElement("div");
+				iconElem.style.cssText = "display: inline; position: relative; top: -4px; padding-right: 12px;";
+				iconElem.innerHTML = iconHTML;
+				iconElem.addEventListener("click", function(e)
+				{
+					aaapi.cmd("joinLobbyWeb", this.getAttribute("lobbyId"));
+					e.preventDefault();
+					e.stopImmediatePropagation();
+				}.bind(row), false);
+
+				var titleText = document.createTextNode(title);
+
+				var playersCel = document.createElement("td");
+				playersCel.className = "aaTextSizeFontSize aaThemeColorTwoBackgroundColor"
+				playersCel.innerHTML = "(<div class='playersNumber' style='display: inline;'>" + count + "</div> players)";
+
+				row.appendChild(titleCel);
+				titleCel.appendChild(iconElem);
+				titleCel.appendChild(titleText);
+				row.appendChild(playersCel);
+				serversTable.appendChild(row);
+			}
+
+			function loadJavaScripts(fileNames)
+			{
+				// Decalre some important variables
+				var filesLoaded = 0;
+
+				// Async
+				return {
+						"then": function(loadJavaScriptsCallback)
+						{
+							//loadJavaScriptsCallback(fileNames[filesLoaded], loadJavaScriptsCallback);
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+						}
+					};
+
+				// Helper functions (that use the important variables)
+				function loadAJavaScript(fileName, loadJavaScriptsCallback)
+				{
+					var elem = document.createElement("script");
+					elem.type = "text/javascript";
+					elem.src = fileName;
+
+					elem.addEventListener("load", function()
+					{
+						filesLoaded++;
+
+						if( filesLoaded === fileNames.length )
+							loadJavaScriptsCallback();
+						else
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+					});
+
+					// We are added to the head so loading will begin immediately & asynchronously
+					document.getElementsByTagName("head")[0].appendChild(elem);
+				}
+			};
+
+			// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+			Number.prototype.unsign = function(bytes)
+			{
+				return this >= 0 ? this : Math.pow(256, bytes || 4) + this;
+			};
+
+			// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+			function generateCRC(data_in)
+			{
+				var data = data_in.toLowerCase();
+				data = data.replace(/\//g,"\\");
+
+			    var CRC = 0xffffffff;
+			    data = data.toLowerCase();
+			    for ( var j = 0; j < data.length; j++) {
+			        var c = data.charCodeAt(j);
+			        CRC ^= c << 24;
+			        for ( var i = 0; i < 8; i++) {
+			            if (CRC.unsign(8) & 0x80000000) {
+			                CRC = (CRC << 1) ^ 0x04C11DB7;
+			            } else {
+			                CRC <<= 1;
+			            }
+			        }
+			    }
+			    if (CRC < 0)
+			        CRC = CRC >>> 0;
+			    var CRC_str = CRC.toString(16);
+			    while (CRC_str.length < 8) {
+			        CRC_str = '0' + CRC_str;
+			    }
+
+			    return CRC_str;
+			};
+
+			function lobbyAdded(child, prevChildKey)
+			{
+				var lobbyInfo = child.val();
+				// if( false && !lobbyInfo.isPublic )
+				if( !lobbyInfo.isPublic )
+					return;
+
+				rootRef.child(lobbyInfo.universe).child("info").child("banned").child(g_localUserHashedIP).once("value", function(bannedSnapshot)
+				{
+					if( !bannedSnapshot.exists() )
+					{
+						rootRef.child(lobbyInfo.universe).child("library").child("instances").child(lobbyInfo.instance).child("current").once("value", function(instanceSnapshot)
+						{
+							var instanceInfo = instanceSnapshot.val();
+							if( !!!instanceInfo )
+							{
+								console.log("Error.  Instance was null.");
+								return;
+							}
+
+							// if( true || !!!instanceInfo.password || instanceInfo.password === "" )
+							if( !!!instanceInfo.password || instanceInfo.password === "" )
+							{
+								// fetch all users in this universe
+								rootRef.child(lobbyInfo.universe).child("users").once("value", function(usersSnapshot)
+								{
+									var users = usersSnapshot.val();
+									if( !!users )
+									{
+										var userCount = 0;
+										var usersKeys = Object.keys(users);
+										for( var i = 0; i < usersKeys.length; i++ )
+										{
+											var user = users[usersKeys[i]];
+											if( !!user.sessions )
+												userCount++;
+										}
+
+										//console.log(instanceInfo.title + " has " + userCount + " player(s).");
+										addServerRow(lobbyInfo.id, instanceInfo.title, userCount);
+/*
+										pleaseWaitElem.style.display = "none";
+
+										instanceContainerElem = document.createElement("div");
+										instanceContainerElem.className = "instanceContainer aaPrettyPanel";
+										instanceContainerElem.setAttribute("lobbyId", lobbyInfo.id);
+										instanceContainerElem.numUsers = userCount;
+										instanceContainerElem.addEventListener("click", function(e)
+										{
+											window.location = "live/" + this.getAttribute("lobbyId");
+										}.bind(instanceContainerElem), true);
+
+										var instanceTitleElem = document.createElement("div");
+										instanceTitleElem.className = "instanceTitle";
+
+										var instanceLiveImage = document.createElement("img");
+										instanceLiveImage.src = "live.gif";
+										instanceLiveImage.style.cssText = "height: 32px; vertical-align: middle; margin-right: 16px;";
+
+										var instanceTitleTextNode = document.createTextNode(instanceInfo.title);
+
+										var instanceNumPlayersElem = document.createElement("div");
+										instanceNumPlayersElem.className = "instanceNumPlayers";
+										if( userCount === 1 )
+											instanceNumPlayersElem.innerHTML = "(1 player)";
+										else
+											instanceNumPlayersElem.innerHTML = "(" + userCount + " players)";
+
+										instanceContainerElem.appendChild(instanceTitleElem);
+										instanceTitleElem.appendChild(instanceLiveImage);
+										instanceTitleElem.appendChild(instanceTitleTextNode);
+										instanceContainerElem.appendChild(instanceNumPlayersElem);
+										instanceListElem.appendChild(instanceContainerElem);
+*/
+									}
+								});
+							}
+						});
+					}
+				});
+			}
+
+			function lobbyRemoved(snapshot)
+			{
+			}
+
+			function initServersTab()
+			{
+				g_serversInitialized = true;
+
+				loadJavaScripts(["firebase.js"]).then(function()
+				{
+					var userId = aaapi.cmdEx("getConVarValue", "aamp_client_id");
+
+					g_localUserIP = userId;
+					g_localUserHashedIP = generateCRC(g_localUserIP);
+
+					rootRef = new Firebase("https://metaverse.firebaseio.com/");
+					rootRef.child("lobbies").on("child_added", lobbyAdded);
+					rootRef.child("lobbies").on("child_removed", lobbyRemoved);
+				});
+
+			}
+
+			searchingForServersElem = document.querySelector("#searchingForServers");
+			//earlyaccessElem = document.querySelector("#earlyaccess");
+			serversTable = document.querySelector("#serversTable");
+			worldContextContainer = document.querySelector("#worldContextContainer");
+
+
+
+
+			function addToBackpackMap(mapInfo, toggle)
+			{
+				var matchId = mapInfo.info.id;
+
+				var alreadyExists = false;
+				for( var i = 0; i < backpackMapEntries.length; i++ )
+				{
+					if( backpackMapEntries[i].map === matchId )
+					{
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var backpackMapEntry = {};
+					backpackMapEntry.map = matchId;
+					backpackMapEntries.unshift(backpackMapEntry);
+					localStorage.setItem("myBackpackMaps", JSON.stringify(backpackMapEntries));
+					aaapi.cmd("addToastMessage", "Added Map To Favorites");
+					return true;
+				}
+
+				if( !toggle )
+					removeFromBackpackMap(mapInfo, true);
+
+				return false;
+			}
+
+			function removeFromBackpackMap(mapInfo, toggle)
+			{
+				var matchId = mapInfo.info.id;
+				var alreadyExists = false;
+				for( var i = 0; i < backpackMapEntries.length; i++ )
+				{
+					if( backpackMapEntries[i].map === matchId )
+					{
+						alreadyExists = true;
+
+						// Remove this entry
+						backpackMapEntries.splice(i, 1);
+						localStorage.setItem("myBackpackMaps", JSON.stringify(backpackMapEntries));
+						aaapi.cmd("addToastMessage", "Removed Map From Favorites");
+						return true;
+					}
+				}
+
+				if( !toggle )
+					addToBackpackMap(mapInfo, true);
+
+				return false;
+			}
+
+			function doHide(mapInfo)
+			{
+				// Add the item to the hide list
+				g_hiddenMaps[mapInfo.info.id] = "1";
+				localStorage.setItem("hiddenMaps", JSON.stringify(g_hiddenMaps));
+
+				return true;
+			}
+		</script>
+
+		<script>
+			var projectsList = document.querySelector("#projectsList");
+
+			function launchHammerClicked()
+			{
+				if( projectsList.value === "+new" )
+				{
+					createModalPrompt("Project Name", "<input type='text' class='aaTitleTextSizeFontSize' style='width: 100%;' placeholder='Type your project name here' id='newProjectNameField' /><div id='hammerNameRules' style='display: none;'>Only letters, numbers, & underscores are allowed in project names.</div>", "Create & Launch Hammer", "hammerCreateNewProject();", "Cancel", "hammerCancel();", "validateProjectName");
+				}
+				else if( projectsList.value === "+none" )
+				{
+					launchHammer("");
+				}
+				else
+				{
+					launchHammer(projectsList.value);
+				}
+			}
+
+			var g_projectName;
+			function validateProjectName()
+			{
+				var hammerNameRules = document.querySelector("#hammerNameRules");
+				var testVal = document.querySelector("#newProjectNameField").value;
+				var regex = RegExp(/^[a-z0-9_]+$/i);
+				if( regex.test(testVal) )
+				{
+					g_projectName = testVal;
+					hammerNameRules.style.display = "false";
+					return true;
+				}
+				else
+				{
+					hammerNameRules.style.display = "block";
+					return false;
+				}
+			}
+
+
+			var projectNames;
+			var lastHammerProject;
+			function populateProjectsList()
+			{
+				// reset
+				projectsList.innerHTML = "";
+
+				var projectOption = document.createElement("option");
+				projectOption.value = "+new";
+				projectOption.text = "Create New Project";
+				projectsList.appendChild(projectOption);
+
+				// populate the list
+				projectNames = aaapi.cmdEx("getAllHammerProjects");
+				lastHammerProject = localStorage.getItem("lastHammerProject");
+				var projectName;
+				for( var i = 0; i < projectNames.length; i++ )
+				{
+					projectOption = document.createElement("option");
+					projectName = projectNames[i];
+					projectOption.value = projectName;
+					projectOption.text = projectName;
+
+					if( lastHammerProject === projectName )
+						projectOption.selected = true;
+
+					projectsList.appendChild(projectOption);
+				}
+
+				projectOption = document.createElement("option");
+				projectOption.value = "+none";
+				projectOption.text = "(blank project)";
+				projectsList.appendChild(projectOption);
+			}
+			populateProjectsList();
+
+			function launchHammer(projectName)
+			{
+				if( projectName !== "" )
+					localStorage.setItem("lastHammerProject", projectsList.value);
+
+				aaapi.cmd("showRawMainMenu");
+
+				if( projectName !== "" )
+					aaapi.cmd("consoleCommand", "last_opened_project \"" + projectName + "\"");
+
+				aaapi.cmd("openHammerProject", projectName);
+			}
+
+			function hammerCreateNewProject()
+			{
+				aaapi.cmd("createHammerProject", g_projectName);
+
+				// select it in the list so that the UI remembers which project.
+				var projectOption = document.createElement("option");
+				projectOption.value = g_projectName;
+				projectOption.text = g_projectName;
+				projectOption.selected = true;
+				projectsList.appendChild(projectOption);
+
+				launchHammer(g_projectName);
+			}
+
+			function hammerCancel()
+			{
+				// do nothing
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesTitle, yesAction, noTitle, noAction, validateFunc)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var styleText = (text !== "") ? "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;" : "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 300px;";
+
+				// header
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, styleText, true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				if( text !== "" )
+				{
+					// body
+					modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+					//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+					/*
+					modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+					modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+					modalHTML += text;
+					//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+					modalHTML += "</div>";
+
+					//modalHTML += "</td></tr></table>";
+					modalHTML += "</div>";
+				}
+
+				if( text !== "" )	// simple hax to get 2 different behaviors out of this prompt
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Disconnect" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+				else
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Quit" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].value = yesTitle;
+				buttons[0].addEventListener("click", function(e)
+				{
+					if( !!validateFunc && typeof window[validateFunc] === "function" )
+					{
+						if( !window[validateFunc]() )
+							return;
+					}
+
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].value = noTitle;
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			setTimeout(function()
+			{
+				var loadingThing = document.querySelector("#loadingThing");
+				loadingThing.parentNode.removeChild(loadingThing);
+				document.querySelector("#invisolayer").style.display = "inline-block";
+			}, 100);
+		</script>
+	</body>
+</html>

@@ -1,0 +1,52 @@
+"Unlittwotexture"
+{
+	"$model" 1
+
+	"$angle" 0.0
+	"$translate" "[0.0 0.0]"
+	"$center" "[0.5 0.5]"
+	"$offset" "0"
+
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	"$additive" 1
+	"$selfillum" 1
+	"$texture2" "dev/dev_scanline"
+	"$surfaceprop" "glass"
+	"%compileNoLight" 1
+	"%compilepassbullets" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+
+		"TextureScroll"
+		{
+			"texturescrollvar" "$texture2transform"
+			"texturescrollrate" .10
+			"texturescrollangle" 270
+		}
+
+		"Sine"
+		{
+			"sineperiod" 4
+			"sinemin" -0.1
+			"sinemax" 0.1
+			"timeoffset" "$offset"
+			"resultVar" "$translate[1]"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$basetexturetransform"
+		}
+	}
+}

@@ -1,0 +1,7 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/planets"
+	"$translucent" 1
+	"$alphatest" 1
+	"$nocull" 1
+}

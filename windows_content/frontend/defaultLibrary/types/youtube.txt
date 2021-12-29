@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-K1TlLlKit3VFt"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"youtube"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

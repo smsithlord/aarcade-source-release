@@ -1,0 +1,74 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\sithlord/holoclock_minutes"
+	"$model" "1"
+	"$additive" 1
+	"$selfillum" 1
+
+	"$angle" 0.0
+	"$translate" "[0.0 0.0]"
+	"$center" "[0.5 0.5]"
+
+	"$timeminutes" 0
+	"$maxminutes" 60
+	"$timescalar" 0
+
+	"$timeseconds" 0
+	"$maxseconds" 60
+	"$secondsscalar" 0
+
+	"$maxrot" "-360"
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "minutes"
+			"digit" "-1"
+			"resultVar" "$timeminutes"
+		}
+
+		"AASystemTime"
+		{
+			"type" "seconds"
+			"digit" "-1"
+			"resultVar" "$timeseconds"
+		}
+
+		"Divide"
+		{
+			"srcVar1"	"$timeseconds"
+			"srcVar2"	"$maxseconds"
+			"resultVar"	"$secondsscalar"
+		}
+
+		"Add"
+		{
+			"srcVar1" "$secondsscalar"
+			"srcVar2" "$timeminutes"
+			"resultVar" "$timeminutes"
+		}
+
+		"Divide"
+		{
+			"srcVar1"	"$timeminutes"
+			"srcVar2"	"$maxminutes"
+			"resultVar"	"$timescalar"
+		}
+
+		"Multiply"
+		{
+			"srcVar1"	"$timescalar"
+			"srcVar2"	"$maxrot"
+			"resultVar"	"$angle"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$basetexturetransform"
+		}
+	}
+}

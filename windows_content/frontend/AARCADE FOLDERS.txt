@@ -1,0 +1,15 @@
+Best places to put mods:
+
+1. User MOD Folder
+Anarchy Arcade/aarcade_user/custom/mod
+
+2. User Content Folder
+Anarchy Arcade/aarcade_user
+
+3. Vanilla Content Folder
+Anarchy Arcade/frontend
+
+4. Legacy Folder (obsolete)
+Anarchy Arcade/aarcade
+
+You must choose.  Choose wisely.

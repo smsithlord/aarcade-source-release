@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"6be6992b"
+		}
+		"title"		"pc_wallmount_small"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\pc_wallmount_small.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

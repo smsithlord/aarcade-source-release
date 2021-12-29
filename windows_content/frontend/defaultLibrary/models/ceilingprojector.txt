@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"8c55dd04"
+		}
+		"title"		"Ceiling Projector"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\sithlord\ceilingprojector.mdl"
+				"workshopid"		"676094073"
+			}
+		}
+	}
+}

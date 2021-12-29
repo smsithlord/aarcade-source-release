@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/single_car_racer_skin"
+	"$model" "1"
+}

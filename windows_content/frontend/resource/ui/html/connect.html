@@ -1,0 +1,973 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<!--script src="asset://ui/tga.js"></script-->	
+		<script src="asset://ui/scripts/md5.min.js"></script>
+
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+
+			.transferCount
+			{
+				display: inline;
+			}
+
+			.aaDownArrow
+			{
+				width: 0; 
+				height: 0; 
+				border-left: 12px solid transparent;
+				border-right: 12px solid transparent;
+
+				border-top-style: solid;
+				border-top-width: 12px;/* solid #555;*/
+			}
+		</style>
+
+		<script>
+			var g_lobby;
+			var g_lobbyId;
+			g_lobbyId = arcadeHud.getParameterByName("lobby");//aaapi.cmdEx("getCurrentLobby");	// test stim
+			//aaapi.cmd("setNextLobby", g_lobbyId);	// set this later so we can also set the title
+			//console.log(g_lobbyId);
+
+			function doCancel()
+			{
+				aaapi.cmd("setNextLobby", "");
+				aaapi.cmd("disconnectSession");
+				aaapi.cmd("restartNetwork");
+				window.location='asset://ui/welcome.html';
+			}
+
+			var defaultServerAddress = "https://metaverse.firebaseio.com/";
+			function searchForMapDownload()
+			{
+				var hash = aaapi.cmdEx('generateHashId', "maps/" + g_lobby.mapFile);
+				var assetAddress = defaultServerAddress + "assets/" + hash + ".json";
+				//console.log(assetAddress);
+				requestRestData(assetAddress, function(assetResponseText)
+				{
+					//console.log(assetResponseText);
+					var val = JSON.parse(assetResponseText);
+					if( !!!val )
+					{
+						console.log("Map is not available from the cloud!");
+
+						document.querySelector("#lookingForMap").style.display = "none";
+						document.querySelector("#mapNotFoundFile").innerHTML = g_lobby.mapFile;
+						document.querySelector("#mapNotFound").style.display = "block";
+						return;
+					}
+
+					prepTransfersMenu();
+
+					// time to download shit, so load up the full Firebase Storage codez
+					// and then get the download URL
+					// and then, finally, tell AArcade to dl it.
+					loadJavaScripts(["firebasefull.js", "scripts/metaverse.js"]).then(function()
+					{
+						createFirebaseGlobal();
+
+						var rootStorageRef = firebase.storage().ref();
+						var assetsRef = rootStorageRef.child("assets").child(hash);
+
+						var firstFile = {};
+						firstFile[hash] = val.file;
+						var allFiles = [firstFile];
+						var entry;
+						for( var x in val.other )
+						{
+							if( aaapi.cmdEx("checkIfFileExists", val.other[x]) ) // Filter out any files that already exist locally so that we don't waste time with network calls to the session cloud.
+								continue;
+
+							entry = {};
+							entry[x] = val.other[x];
+							allFiles.push(entry);
+						}
+
+						//console.log("File: " + allFiles[i][fileId]);
+						/*
+ViewListener: OnAddConsoleMessage: 97	{"f0b1a48d":"materials/boba_fett/portable_dhd/portable_dhd.vtf"}
+ViewListener: OnAddConsoleMessage: 97	{"f0d88a59":"materials/models/amiibo/mario/mario.vtf"}
+ViewListener: OnAddConsoleMessage: 97	{"f14aed84":"materials/models/mark2580/gtav/yacht_map/decor/prop_joshua_bark_02_n.vtf"}
+ViewListener: OnAddConsoleMessage: 97	{"f2378127":"materials/mark2580/gtav/shared/phongexponent.vtf"}
+ViewListener: OnAddConsoleMessage: 97	{"f3816a00":"models/unconid/nintendo_switch_new/switch_tablet.dx80.vtx"}
+ViewListener: OnAddConsoleMessage: 97	{"f39b2843":"materials/models/unconid/nintendo_switch_new/n_switch_joycon_l.vmt"}
+ViewListener: OnAddConsoleMessage: 97	{"f3adf518":"materials//shantzplacecss/zoeyltgreen.vtf"}
+ViewListener: OnAddConsoleMessage: 97	{"f3f2f015":"models/bong/nicebongstriker.mdl"}
+ViewListener: OnAddConsoleMessage: 97	{"f6cc5971":"materials/models/apocmodels/jurassicpark/props/obj_docksevacuation_binocular.vmt"}
+*/
+						/*var fileId;
+						var checkExistsPayload = ["checkExists"];
+						var existsResponse;
+						for( var i = 0; i < allFiles.length; i++ )
+						{
+							fileId = Object.keys(allFiles[i])[0];
+							checkExistsPayload.push(allFiles[i][fileId]);
+						}
+						existsResponse = aaapi.cmdEx.apply(null, checkExistsPayload);
+
+						if( !!existsResponse )
+						{
+
+						}*/
+
+
+						// Now that we have all files, let's get download URLs for every one of them, just in-case the user needs them.
+						var requestId = "hanSoloRequest";////this.requestId;
+						var resolvedURLs = [];
+						var resolvedSizes = [];
+						var lastResolved = -1;
+						function onAllResolved()
+						{
+							document.querySelector("#lookingForMap").style.display = "none";
+							//document.querySelector("#mapNotFoundFile").innerHTML = g_lobby.mapFile;
+							document.querySelector("#downloadMap").style.display = "block";
+
+							var fileId;
+							var payload = ["cloudAssetAvailable"];
+							payload.push(requestId);
+							for( var i = 0; i < allFiles.length; i++ )
+							{
+								fileId = Object.keys(allFiles[i])[0];
+								payload.push(fileId);
+								payload.push(allFiles[i][fileId]);
+								payload.push(resolvedURLs[i]);
+								payload.push(resolvedSizes[i]);
+							}
+
+							aaapi.cmd.apply(null, payload);
+						}
+
+						function resolveURL(resolveIndex)
+						{
+							var assetRequest = allFiles[resolveIndex];
+							var fileHash = Object.keys(assetRequest)[0];
+							var file = assetRequest[fileHash];
+							var storage = firebase.storage();
+							var rootStorageRef = storage.ref();
+							var assetsRef = rootStorageRef.child("assets");
+
+							var goodPath = file;
+							goodPath = goodPath.replace(/\\/g,"/");
+							var ref = assetsRef.child(goodPath + ".zip");
+
+							function assetExists(url)
+							{
+								resolvedURLs.push(url);
+								if( lastResolved < allFiles.length-1 )
+									resolveURL(lastResolved+1);
+								else
+									onAllResolved();
+							}
+
+							function assetDoesNotExist()
+							{
+								resolvedURLs.push("");
+								if( lastResolved < allFiles.length-1 )
+									resolveURL(lastResolved+1);
+								else
+									onAllResolved();
+							}
+
+							function metaDataSuccess(metaData)
+							{
+								resolvedSizes.push(metaData.size);
+								this.ref.getDownloadURL().then(assetExists.bind(this), assetDoesNotExist.bind(this));
+							}
+
+							function metaDataFailure(error)
+							{
+								resolvedSizes.push(0);
+								this.ref.getDownloadURL().then(assetExists.bind(this), assetDoesNotExist.bind(this));
+							}
+
+							lastResolved = resolveIndex;
+
+							var payload = {ref: ref, file: file, index: resolveIndex};
+							ref.getMetadata().then(metaDataSuccess.bind(payload)).catch(metaDataFailure.bind(payload));
+						}
+
+						if( lastResolved < allFiles.length-1 )
+							resolveURL(lastResolved+1);
+						else
+							onAllResolved();
+					});
+				});
+			}
+
+			function loadJavaScripts(fileNames)
+			{
+				// Decalre some important variables
+				var filesLoaded = 0;
+
+				// Async
+				return {
+						"then": function(loadJavaScriptsCallback)
+						{
+							//loadJavaScriptsCallback(fileNames[filesLoaded], loadJavaScriptsCallback);
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+						}
+					};
+
+				// Helper functions (that use the important variables)
+				function loadAJavaScript(fileName, loadJavaScriptsCallback)
+				{
+					var elem = document.createElement("script");
+					elem.type = "text/javascript";
+					elem.src = fileName;
+
+					elem.addEventListener("load", function()
+					{
+						filesLoaded++;
+
+						if( filesLoaded === fileNames.length )
+							loadJavaScriptsCallback();
+						else
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+					});
+
+					// We are added to the head so loading will begin immediately & asynchronously
+					document.getElementsByTagName("head")[0].appendChild(elem);
+				}
+			};
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";//"window.location='asset://ui/play.html';";
+			var uiClose = "";//"aaapi.cmd('deactivateInputMode');"
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Connecting...", "", true, true, uiBack, uiClose);
+			document.write(windowHeaderHTML);
+		</script>
+
+
+		<center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="searchingForLobby" style="display: block;">
+				<!--div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					Searching for lobby, please wait...
+				</div>
+				<br /-->
+				<div id="fetchingStuff" style="font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					<center>
+						<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+						<br />
+						PLEASE WAIT
+					</center>
+				</div>
+				<div style="width: 250px; margin-top: 16px; margin-bottom: 16px;">Searching for lobby...</div>
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Cancel" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" /><br />
+			</div>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="lobbyNotFound" style="display: none;">
+				<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					That lobby does not exist.  It may have ended.
+				</div>
+				<br />
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="OK" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" /><br />
+			</div>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="pleaseWait" style="display: none;">
+				<!--div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					Loading the map & connecting, please wait...
+				</div-->
+				<div id="fetchingStuff" style="font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					<center>
+						<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+						<br />
+						PLEASE WAIT
+					</center>
+				</div>
+				<div style="width: 250px; margin-top: 16px; margin-bottom: 16px;">Loading map...</div>
+			</div>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="lookingForMap" style="display: none;">
+				<div id="fetchingStuff" style="font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					<center>
+						<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+						<br />
+						PLEASE WAIT
+					</center>
+				</div>
+				<div style="width: 250px; margin-top: 16px; margin-bottom: 16px;">Looking for map...</div>
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Cancel" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" /><br />
+			</div>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="mapNotFound" style="display: none;">
+				<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;"><b>MAP NOT FOUND:</b> <div id="mapNotFoundFile" style="display: inline;"></div></div>
+				<br />
+				<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					You can get the map & try again, or load a different map.
+				</div>
+
+				<br />
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="OK" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" />
+			</div>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="downloadMap" style="display: none;">
+				<!--div id="fetchingStuff" style="font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					<center>
+						<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+						<br />
+						PLEASE WAIT
+					</center>
+				</div>
+				<div style="width: 250px; margin-top: 16px; margin-bottom: 16px;">Downloading map...</div-->
+
+				<div id="downloadsStuff">
+					<div style="display: none;" class="aaTitleTextSize aaTitleText aaTextColorTwoColor">DOWNLOADS (<div id="downloadedCount" class="transferCount">0</div>/<div id="downloadCount" class="transferCount">0</div>)</div>
+					<div id="downloadsPane" class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoShadedBackground aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 750px; border-radius: 8px; width: 750px;">
+						<div id="noDownloads" class="aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 8px;">There have been no downloads this session.</div>
+						<div id="downloading"></div>
+						<div id="downloads"></div>
+						<div id="requested"></div>
+						<div id="downloaded"></div>
+					</div>
+				</div>
+				<br />
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="OK" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" />
+			</div>
+
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" id="enterPassword" style="display: none;">
+				<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					This session requires a password.
+				</div>
+				<br />
+				<form id="enterPasswordForm" style="display: inline; margin: 0;"><input type="password" id="serverPassword" style="display: inline; text-align: center;" class="aaTitleTextSizeFontSize aaTextColorTwoColor" placeholder="type password here" /></form><br />
+				<br />
+				<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; font-weight: 900; display: none;" id="wrongPassword">
+					- WRONG PASSWORD -<br /><br />
+				</div>
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Join" help="Continue to join the server." style="padding: 12px; width: 100%;" onclick="tryPassword();" /><br />
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Cancel" help="Go back to the MAIN MENU." style="padding: 12px; width: 100%;" onclick="doCancel();" /><br />
+			</div>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var g_passwordedLobby;
+			function tryPassword()
+			{
+				var potentialPassword = document.querySelector("#serverPassword").value;
+				if( g_passwordedLobby.password === md5(potentialPassword + "katchup"))
+				{
+					document.querySelector("#enterPassword").style.display = "none";
+					onLobbyReady(g_passwordedLobby);
+				}
+				else
+				{
+					document.querySelector("#wrongPassword").style.display = "block";
+					document.querySelector("#enterPassword").focus();
+				}
+			}
+
+			document.querySelector("#enterPasswordForm").addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				tryPassword();
+				return true;
+			}, false);
+
+			function promptLobbyPassword(lobby)
+			{
+				if( !!lobby.password && lobby.password !== "" )
+				{
+					g_passwordedLobby = lobby;
+					document.querySelector("#searchingForLobby").style.display = "none";
+					document.querySelector("#enterPassword").style.display = "block";
+					setTimeout(function()
+					{
+						document.querySelector("#enterPassword").focus();
+					}, 100);
+				}
+				else
+					onLobbyReady(lobby);
+			}
+
+			var serverHistory = (localStorage.getItem("serverHistory")) ? JSON.parse(localStorage.getItem("serverHistory")) : {};
+
+			function onLobbyReady(lobby)
+			{
+				g_lobby = lobby;
+
+				var maps = [];
+				var mapz = aaapi.cmdEx("getAllMaps");
+				var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
+				for( var y in mapz )
+				{
+					if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+						maps.push(mapz[y]);
+				}
+
+				var map = null;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if(maps[i].platforms[arcadeHud.platformId].file.toLowerCase() == lobby.mapFile.toLowerCase())
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!!map || !aaapi.cmdEx("isMapLoadable", map.platforms[arcadeHud.platformId].file) )
+					map = null;
+
+				// TODO: If there are required MOUNTS, they must be confirmed to be mounted
+				// NOW.
+				// TODO: work
+
+				// Turn OFF autosave
+				var oldVal = aaapi.cmdEx("getConVarValue", "auto_save");
+				aaapi.cmd("consoleCommand", "old_auto_save " + oldVal + "; auto_save 0;");
+
+				// TODO: If the map is missing, OR if there are required workshop items,
+				// they must be downloaded NOW...
+				// TODO: work
+				// ...
+
+				if( !!!map )
+				{
+					document.querySelector("#searchingForLobby").style.display = "none";
+					document.querySelector("#lookingForMap").style.display = "block";
+
+					searchForMapDownload();
+					//document.querySelector("#mapNotFoundFile").innerHTML = lobby.mapFile;
+					//document.querySelector("#mapNotFound").style.display = "block";
+					return;
+				}
+
+				// TODO: Check if there is a LOCAL INSTANCE w/ the lobby.instanceId already.
+				// If there is, then confirm with the user that they know they'd save over
+				// a previously locally saved instance!
+				// TODO: work
+				// ...
+
+				// now we're ready to rock 'n roll
+				/*
+					mapId
+					instanceId
+					position
+					rotation
+					screenshotId
+				*/
+
+				// get the instance title
+				document.querySelector("#downloadMap").style.display = "none";
+				document.querySelector("#searchingForLobby").style.display = "none";
+				document.querySelector("#pleaseWait").style.display = "block";
+				aaapi.cmd("setNextLobby", g_lobbyId, lobby.instanceTitle);
+
+
+				// create our serverHistory entry
+				var serverHistoryEntry = {
+					"lobby": g_lobbyId,
+					"title": lobby.instanceTitle,
+					"mapfile": lobby.mapFile,
+					"author": lobby.author,
+					"instance": lobby.instanceId,
+					"timestamp": new Date().getTime()
+				};
+
+				// add our entry to the serverHistory
+				serverHistory[g_lobbyId] = serverHistoryEntry;
+
+				// save the serverHistory out
+				localStorage.setItem("serverHistory", JSON.stringify(serverHistory));
+
+
+				aaapi.cmd("loadMap", map.info.id, lobby.instanceId);
+			}
+
+			function requestRestData(url, callback)
+			{
+				var infoRequest = new XMLHttpRequest();
+				infoRequest.onreadystatechange = function()
+				{
+					if (infoRequest.readyState == 4 && infoRequest.status == 200)
+						callback(infoRequest.responseText);
+				};
+
+				infoRequest.open("GET", url, true);
+				infoRequest.send(null);
+			}
+
+			//var defaultServerAddress = "https://metaverse.firebaseio.com/";
+			function getLobbyConnectInfo(in_serverAddress, lobbyId)
+			{
+				var serverAddress = (!!in_serverAddress && in_serverAddress !== "") ? in_serverAddress : defaultServerAddress;
+				var lobbyAddress = serverAddress + "lobbies/" + lobbyId + ".json";
+
+				var lobby = {
+					"id": lobbyId,
+					"ownerName": "",
+					"password": "",
+					"ownerAvatar": "",
+					"instanceTitle": "",
+					"instanceId": "",
+					"numPlayers": -1,
+					"numObjects": -1,
+					"mapTitle": "",
+					"mapFile": "",
+					"mapDownload": "",
+					"workshop": "",
+					"mounts": ""
+				};
+
+				// check if we are banned
+				// TODO: Make sure the banning system can use AArcade: Source client ID's (as well as the web user IDs)
+				// Also, use the requestRestData method instead.
+				/*
+				sessionManager.metaverse.rootRef.child(sessionManager.metaverse.universe).child("info").child("banned").once("value", function(bannedSnapshot)
+				{
+					var bannedUsers = bannedSnapshot.val();
+					if( !!bannedUsers && !!bannedUsers[g_localUserHashedIP] )
+						window.location = "http://aarcade.tv/";
+					else
+						doLogIn();
+				});
+				*/
+
+				requestRestData(lobbyAddress, function(lobbyResponseText)
+				{
+					var lobbyResponseData = (!!lobbyResponseText) ? JSON.parse(lobbyResponseText) : {};
+
+					if( !!!lobbyResponseData )
+					{
+						//console.log("Lobby does not exist.  It may have ended.");
+						document.querySelector("#searchingForLobby").style.display = "none";
+						document.querySelector("#lobbyNotFound").style.display = "block";
+						return;
+					}
+
+					lobby.instanceId = lobbyResponseData.instance;
+
+					var ownerAddress = serverAddress + lobbyResponseData.universe + "/users/" + lobbyResponseData.owner + "/sessions.json";
+					requestRestData(ownerAddress, function(ownerResponseText)
+					{
+						var ownerResponseData = (!!ownerResponseText) ? JSON.parse(ownerResponseText) : {};
+
+						/*
+						var ownerInfo = null;
+						if( !!ownerResponseData )
+						{
+							var ownerResponseDataKeys = Object.keys(ownerResponseData);
+							if( ownerResponseDataKeys.length === 1 )
+								ownerInfo = ownerResponseData[ownerResponseDataKeys[0]];
+						}
+
+						if( !ownerInfo )
+						{
+							//console.log("ERROR: Could not retrieve owner info. Aborting.");
+							//return;
+
+							// TEST STIM
+							ownerInfo = JSON.parse('{"avatar":{"modified":0,"url":"http://aarcade.tv/anarchybot/avatars/default15.jpg"},"created":0,"displayName":"Unknown User","instance":"-pnMryt2r71uWq7jiG-l","item":{"id":"","modified":0},"mouse":{"modified":0,"x":0,"y":0},"object":{"id":"","modified":0},"say":{"modified":0,"text":""},"transform":{"body":{"angles":"0 0 0","modified":0,"origin":"0 0 0"},"head":{"angles":"0 0 0","modified":0,"origin":"0 0 0"}},"web":{"modified":0,"url":""}}');
+						}
+						lobby.ownerName = ownerInfo.displayName;
+						lobby.ownerAvatar = ownerInfo.avatar.url;
+						*/
+
+						var instanceUsersAddress = serverAddress + lobbyResponseData.universe + "/library/instances/" + lobbyResponseData.instance + "/users.json?shallow=true";
+
+						requestRestData(instanceUsersAddress, function(instanceUsersResponseText)
+						{
+							var instanceUsersResponseData = (!!instanceUsersResponseText) ? JSON.parse(instanceUsersResponseText) : {};
+
+							var playerKeys;
+							if( !!instanceUsersResponseData )
+								playerKeys = Object.keys(instanceUsersResponseData);
+							else
+								playerKeys = Object.keys({});//Object.keys(JSON.parse('{"-pnMrG5MHpbbl0A9XKyd":true,"13f185c7":true}'));	// test stim
+
+							lobby.numPlayers = playerKeys.length;
+
+							var instanceInfoAddress = serverAddress + lobbyResponseData.universe + "/library/instances/" + lobbyResponseData.instance + "/current.json";//?shallow=true";
+
+							requestRestData(instanceInfoAddress, function(instanceInfoResponseText)
+							{
+								var instanceInfoResponseData = (!!instanceInfoResponseText) ? JSON.parse(instanceInfoResponseText) : {};
+	// {"info":{"created":1518447368298,"id":"8f8353de","modified":1518447368298,"modifier":"-pX-opsUOw4MaaurotRD","owner":"-pX-opsUOw4MaaurotRD","removed":0,"remover":""},"map":"5874bc77","password":"","platforms":{"-KJvcne3IKMZQTaG7lPo":{"id":"-KJvcne3IKMZQTaG7lPo","mountIds":"","workshopIds":""}},"title":"Stoner Garage"}
+								lobby.author = instanceInfoResponseData.author;
+								//lobby.ownerAvatar = ownerInfo.avatar.url;
+
+								lobby.password = instanceInfoResponseData.password;
+								lobby.instanceTitle = instanceInfoResponseData.title;
+								lobby.author = instanceInfoResponseData.author;
+								lobby.workshop = instanceInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds;
+								lobby.mounts = instanceInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds;
+
+								var mapInfoAddress = serverAddress + lobbyResponseData.universe + "/library/maps/" + instanceInfoResponseData.map + "/current.json";
+								requestRestData(mapInfoAddress, function(mapInfoResponseText)
+								{
+									var mapInfoResponseData = (!!mapInfoResponseText) ? JSON.parse(mapInfoResponseText) : {};
+	//{"info":{"created":1518447364633,"id":"5874bc77","modified":1518447364633,"modifier":"-pX-opsUOw4MaaurotRD","owner":"-pX-opsUOw4MaaurotRD","removed":0,"remover":""},"keywords":"","platforms":{"-KJvcne3IKMZQTaG7lPo":{"download":"","file":"sm_garage.bsp","id":"-KJvcne3IKMZQTaG7lPo","mountIds":"","workshopIds":""}},"title":"sm_garage"}
+									//console.log(JSON.stringify(mapInfoResponseData));
+									lobby.mapTitle = mapInfoResponseData.title;
+									lobby.mapFile = mapInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+									lobby.mapDownload = mapInfoResponseData.platforms["-KJvcne3IKMZQTaG7lPo"].download;
+
+									promptLobbyPassword(lobby);
+/*
+									var objectsAddress = serverAddress + lobbyResponseData.universe + "/library/instances/" + lobbyResponseData.instance + "/objects.json?shallow=true";
+									requestRestData(objectsAddress, function(objectsResponseText)
+									{
+										var objectsResponseData = (!!objectsResponseText) ? JSON.parse(objectsResponseText) : {};
+
+										var objectKeys = Object.keys(objectsResponseData);
+										lobby.numObjects = objectKeys.length;
+
+										// fin
+										console.log(JSON.stringify(lobby));
+									});
+*/
+								});
+							});
+						});
+					});
+				});
+			}
+
+			// get info about this lobby
+			getLobbyConnectInfo(null, g_lobbyId);
+		</script>
+
+		<script>
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+			//Backup Library (' + formatBytes(aaapi.cmdEx("getDbSize")) + ')
+
+			var noDownloadsElem = document.querySelector('#noDownloads');
+			var downloadingContainer = document.querySelector('#downloading');
+			var downloadsContainer = document.querySelector('#downloads');
+			var downloadedContainer = document.querySelector('#downloaded');
+			var requestedContainer = document.querySelector('#requested');
+			var downloadCountContainer = document.querySelector('#downloadCount');
+			var downloadedCountContainer = document.querySelector('#downloadedCount');
+			var downloadsStuffContainer = document.querySelector('#downloadsStuff');
+			//var downloadedStuffContainer = document.querySelector('#downloadedStuff');
+			var downloadsPane = document.querySelector('#downloadsPane');
+			//var downloadedPane = document.querySelector('#downloadedPane');
+
+			var transfers = {
+				downloads: [],
+				downloaded: [],
+				requested: []
+			};
+
+			var downloads = transfers.downloads;
+			var downloadedList = {};
+			var downloaded = transfers.downloaded;
+			var requested = transfers.requested;
+			function processFileRequested(fileRequestEntry)
+			{
+				var container;
+				for( var i = 0; i < downloads.length; i++ )
+				{
+					//console.log(downloads[i].id + ' vs ' + fileRequestEntry.id);
+					if( downloads[i].id == fileRequestEntry.id )
+						return;
+				}
+
+				for( var i = 0; i < downloaded.length; i++ )
+				{
+					if( downloaded[i].id == fileRequestEntry.id )
+						return;
+				}
+				
+				var shortFileName = fileRequestEntry.file;
+				var found = shortFileName.lastIndexOf("/");
+				if( found < 0 )
+					found = shortFileName.lastIndexOf("\\");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(found+1);
+
+				found = shortFileName.lastIndexOf(".");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(0, found);
+
+				var myFakeMessage = {
+					"type": "byteprogress",
+					"text": "",
+					"title": shortFileName,
+					"id": fileRequestEntry.id,
+					"min": "",
+					"max": "",
+					"current": "",
+					"callbackMethod": "",
+					"slate": requestedContainer
+				};
+
+				arcadeHud.addHudLoadingMessage(myFakeMessage.type, myFakeMessage.text, myFakeMessage.title, myFakeMessage.id, myFakeMessage.min, myFakeMessage.max, myFakeMessage.current, myFakeMessage.callbackMethod, myFakeMessage.slate);
+			}
+
+			function processDownloadUpdate(downloadEntry)
+			{
+				var container, fileName, status, size, totalSize;//, percent;
+				var other;
+
+				totalSize = parseInt(downloadEntry.size);
+				sizeDownloaded = 0;
+
+				if( downloadedList.hasOwnProperty(downloadEntry.id) )
+					sizeDownloaded += parseInt(downloadEntry.size);
+
+				for( var x in downloadEntry.other )
+				{
+					other = downloadEntry.other[x];
+					totalSize += parseInt(other.size);
+
+					// check if this one is already downloaded or not
+					if( !!downloadedList && downloadedList.hasOwnProperty(x) )
+						sizeDownloaded += parseInt(other.size);
+				}
+				
+				var shortFileName = downloadEntry.file;
+				var found = shortFileName.lastIndexOf("/");
+				if( found < 0 )
+					found = shortFileName.lastIndexOf("\\");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(found+1);
+
+				found = shortFileName.lastIndexOf(".");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(0, found);
+
+				var myFakeMessage = {
+					"type": "byteprogress",
+					"text": "",
+					"title": shortFileName,
+					"id": downloadEntry.id,
+					"min": 0 + "",
+					"max": totalSize + "",
+					"current": sizeDownloaded + "",
+					"callbackMethod": "",
+					"slate": downloadsContainer
+				};
+
+				if( sizeDownloaded > 0 )
+				{
+					arcadeHud.removeHudLoadingMessage(downloadEntry.id);
+					myFakeMessage.slate = downloadingContainer;
+				}
+
+				arcadeHud.addHudLoadingMessage(myFakeMessage.type, myFakeMessage.text, myFakeMessage.title, myFakeMessage.id, myFakeMessage.min, myFakeMessage.max, myFakeMessage.current, myFakeMessage.callbackMethod, myFakeMessage.slate);
+			}
+
+			function processDownloadedUpdate(downloadedEntry)
+			{
+				var container, fileName, size, totalSize;//, percent;
+				var other;
+
+				totalSize = parseInt(downloadedEntry.size);
+				sizeDownloaded = 0;
+
+				if( !!downloadedList && !downloadedList.hasOwnProperty(downloadedEntry.id) )
+					sizeDownloaded += parseInt(downloadedEntry.size);
+
+				for( var x in downloadedEntry.other )
+				{
+					other = downloadedEntry.other[x];
+					totalSize += parseInt(other.size);
+
+					//if( !!downloadedList && !downloadedList.hasOwnProperty(x) )
+						sizeDownloaded += parseInt(other.size);
+				}
+
+				var shortFileName = downloadedEntry.file;
+				var found = shortFileName.lastIndexOf("/");
+				if( found < 0 )
+					found = shortFileName.lastIndexOf("\\");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(found+1);
+
+				found = shortFileName.lastIndexOf(".");
+				if( found > 0 )
+					shortFileName = shortFileName.substring(0, found);
+
+				var myFakeMessage = {
+					"type": "byteprogress",
+					"text": "",
+					"title": shortFileName,
+					"id": downloadedEntry.id,
+					"min": "",//0 + "",
+					"max": "",//totalSize + "",
+					"current": sizeDownloaded + "",
+					"callbackMethod": "",
+					"slate": downloadedContainer
+				};
+
+				arcadeHud.addHudLoadingMessage(myFakeMessage.type, myFakeMessage.text, myFakeMessage.title, myFakeMessage.id, myFakeMessage.min, myFakeMessage.max, myFakeMessage.current, myFakeMessage.callbackMethod, myFakeMessage.slate);
+			}
+
+			function prepTransfersMenu()
+			{
+				transfers = aaapi.cmdEx('getAllTransfers');
+				downloads = transfers.downloads;
+				downloadedList = (downloads.length > 0) ? downloads[0].downloaded : {};
+				downloaded = transfers.downloaded;
+				requested = transfers.requested;
+				
+				for( var i = 0; i < downloads.length; i++ )
+					processDownloadUpdate(downloads[i]);
+
+				for( var i = 0; i < downloaded.length; i++ )
+					processDownloadedUpdate(downloaded[i]);
+
+				for( var i = 0; i < requested.length; i++ )
+					processFileRequested(requested[i]);
+
+				if( (downloads.length > 0 || downloaded.length > 0 || requested.length > 0) && noDownloadsElem.style.display != 'none' )
+					noDownloadsElem.style.display = 'none';
+
+				// downloads
+				//while(downloadCountContainer.firstChild)
+					//downloadCountContainer.removeChild(downloadCountContainer.firstChild);
+				downloadCountContainer.innerHTML = '';
+
+				downloadCountContainer.appendChild(document.createTextNode(downloads.length + downloaded.length));
+
+				// downloaded
+				//while(downloadedCountContainer.firstChild)
+				//	downloadedCountContainer.removeChild(downloadedCountContainer.firstChild);
+				downloadedCountContainer.innerHTML = '';
+
+				downloadedCountContainer.appendChild(document.createTextNode(downloaded.length));
+			}
+
+			var transferListener = {
+				onFileRequested: function(fileRequestEntry)
+				{
+					if( !!!downloadedList )
+						downloadedList = {};
+
+					requested.push(fileRequestEntry);
+
+					if( noDownloadsElem.style.display != 'none' )
+						noDownloadsElem.style.display = 'none';
+
+					processFileRequested(fileRequestEntry);
+				},
+				onDownloadUpdate: function(transferEntry, fileId)
+				{
+					downloadedList = transferEntry.downloaded;
+
+					if( !!transferEntry.downloaded )
+						downloadedList = transferEntry.downloaded;
+					else if( !!!downloadedList )
+						downloadedList = {};
+
+					if( (downloads.length > 0 || downloaded.length > 0 || requested.length > 0) && noDownloadsElem.style.display != 'none' )
+						noDownloadsElem.style.display = 'none';
+
+					processDownloadUpdate(transferEntry);
+				},
+				onDownloadAdded: function(transferEntry)
+				{
+					// add it to downloads
+					downloads.push(transferEntry);
+
+					// if we are already on the list as a request, remove our hud msg there.
+					/*for( var i = 0; i < requested.length; i++ )
+					{
+						if( requested[i].id == transferEntry.id )
+						{
+							arcadeHud.removeHudLoadingMessage(transferEntry.id);
+							continue;
+						}
+					}*/
+
+					if( !!transferEntry.downloaded )
+						downloadedList = transferEntry.downloaded;
+					else if( !!!downloadedList )
+						downloadedList = {};
+
+					// downloads
+					//while(downloadCountContainer.firstChild)
+					//	downloadCountContainer.removeChild(downloadCountContainer.firstChild);
+					downloadCountContainer.innerHTML = '';
+
+					downloadCountContainer.appendChild(document.createTextNode(downloads.length + downloaded.length));
+
+					// downloaded
+					//while(downloadedCountContainer.firstChild)
+					//	downloadedCountContainer.removeChild(downloadedCountContainer.firstChild);
+					downloadedCountContainer.innerHTML = '';
+
+					downloadedCountContainer.appendChild(document.createTextNode(downloaded.length));
+
+					if( noDownloadsElem.style.display != 'none' )
+						noDownloadsElem.style.display = 'none';
+
+					processDownloadUpdate(transferEntry);
+				},
+				onDownloadComplete: function(transferEntry)
+				{
+					// remove the entry from downloads
+					for( var i = 0; i < downloads.length; i++ )
+					{
+						if( downloads[i].id == transferEntry.id )
+						{
+							downloads.splice(i, 1);
+							break;
+						}
+					}
+					arcadeHud.removeHudLoadingMessage(transferEntry.id);
+
+					// add it to downloaded
+					downloaded.push(transferEntry);
+
+					// downloads
+					//while(downloadCountContainer.firstChild)
+					//	downloadCountContainer.removeChild(downloadCountContainer.firstChild);\
+					downloadCountContainer.innerHTML = '';
+
+					downloadCountContainer.appendChild(document.createTextNode(downloads.length + downloaded.length));
+
+					// downloaded
+					//while(downloadedCountContainer.firstChild)
+					//	downloadedCountContainer.removeChild(downloadedCountContainer.firstChild);
+					downloadedCountContainer.innerHTML = '';
+
+					downloadedCountContainer.appendChild(document.createTextNode(downloaded.length));
+
+					if( noDownloadsElem.style.display != 'none' )
+						noDownloadsElem.style.display = 'none';
+
+					processDownloadedUpdate(transferEntry);
+
+					// TODO: make sure its the BSP that is the transfer that just finished, and then...
+					onLobbyReady(g_lobby);
+				}
+			};
+		</script>
+	</body>
+</html>

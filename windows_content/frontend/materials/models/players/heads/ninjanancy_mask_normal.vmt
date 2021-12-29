@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\heads/ninjanancy_mask_normal"
+	"$bumpmap" "models\players\heads/ninjanancy_Mask_normal"
+	"$model" "1"
+}

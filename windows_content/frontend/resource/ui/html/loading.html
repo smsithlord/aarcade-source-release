@@ -1,0 +1,420 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			.loadingIndicator
+			{
+				width: 24px;
+				height: 24px;
+				border-width: 6px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#briefing::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#briefing::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#briefing::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#briefing::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+		</style>
+
+		<script>
+			var mapId = arcadeHud.getParameterByName("map");
+			var map = aaapi.cmdEx("getMap", mapId).map;
+			var instanceId = arcadeHud.getParameterByName("instance");
+			var position = arcadeHud.getParameterByName("pos");
+			var rotation = arcadeHud.getParameterByName("rot");
+			var screenshotId = arcadeHud.getParameterByName("screenshot");
+			var screenshot = aaapi.cmdEx("getScreenshot", screenshotId.toLowerCase());
+			if( !!screenshot )
+				screenshot = screenshot.screenshot;
+
+			var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+			if( !!connectedSessionInfo && !connectedSessionInfo.isHost )
+			{
+				aaapi.cmd("disconnectSession");
+				aaapi.cmd("restartNetwork");
+			}
+		</script>
+	</head>
+	<body>
+
+		<img id='image' style='display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; -webkit-transition: all 0.5s ease-in-out;' src='' />
+
+		<div id='cleanPanel' style='cursor: default; position: absolute; bottom: 40px; left: 0;'>
+			<div class='hudLoadingMessagesContainer' style='width: 320px;'></div>
+			<div style="font-family: Arial; font-weight: 900; border-radius: 24px; border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 10px; opacity: 0.9;" class='aaThemeColorTwoLowBackgroundColor'>
+				<table cellspacing='0' cellpadding='0'>
+					<tr>
+						<td style='padding-left: 20px;'>
+							<div class="loadingIndicator aaThemeColorOneColor"></div>
+						</td>
+						<td style='padding-left: 16px; font-size: 40px; letter-spacing: 0.1em;' class='aaTextColorTwoColor aaTitleText'>
+							Loading...<div class="mapTitle aaTitleTextSizeFontSize" style='font-size: 16px; letter-spacing: 0.1em;'></div>
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var image = document.querySelector('#image');
+			var elems = document.querySelectorAll(".mapTitle");
+			for( var i = 0; i < elems.length; i++ )
+				elems[i].innerHTML = map.title;
+
+
+			function loadDefaultImage()
+			{
+				// there is no screenshot to use
+
+				// we will release the render hold after the image has loaded (or failed)
+				image.addEventListener('load', function(e)
+				{
+					image.style.display = 'block';
+					aaapi.cmd('setRenderHold', false);
+				});
+
+				image.addEventListener('error', function(e)
+				{
+					aaapi.cmd('setRenderHold', false);
+				});
+
+				// use the user's default custom image
+				image.src = 'asset://local/' + localStorage.getItem("aaStartupWallpaper");
+			}
+
+			if( !!screenshot )
+			{
+				// we have a screenshot to use
+				if( parseInt(screenshot.hasBigFile) != 0 )
+				{
+					//console.log('A');
+					// it has a large version to use
+
+					// we will release the render hold after the image has loaded (or failed)
+					image.addEventListener('load', function(e)
+					{
+						image.style.display = 'block';
+						aaapi.cmd('setRenderHold', false);
+					});
+					image.addEventListener('error', function(e)
+					{
+						aaapi.cmd('setRenderHold', false);
+					});
+
+					// use the image
+					image.src = "screenshots/" + screenshot.id + ".jpg";
+				}
+				else
+				{
+					//console.log('B');
+					// there is no large version, but there is a small TGA version (probably?)
+					var tga = new TGA();
+
+					// we will release the render hold after the image has loaded (or failed)
+					image.addEventListener('load', function(e)
+					{
+						image.style.display = 'block';
+						aaapi.cmd('setRenderHold', false);
+					});
+
+					var tgaTimeout = setTimeout(function()
+					{
+						aaapi.cmd('setRenderHold', false);
+					}, 500);
+
+					image.addEventListener('error', function(e)
+					{
+						aaapi.cmd('setRenderHold', false);
+					});
+
+					tga.open( "screenshots/" + screenshot.id + ".tga", function()
+					{
+						clearTimeout(tgaTimeout);
+						image.src = tga.getCanvas().toDataURL('image/jpeg', 0.9);
+					});
+				}
+			}
+			else
+				loadDefaultImage();
+
+			function yesSave()
+			{
+				aaapi.cmd("setSaveMode", "SAVEMODE_SAVE");
+				setTimeout(function()
+				{
+					aaapi.cmd("loadMap", mapId, instanceId, position, rotation, screenshotId);
+				}, 100);
+			}
+
+			function noSave()
+			{
+				aaapi.cmd("setSaveMode", "SAVEMODE_DISCARD");
+				setTimeout(function()
+				{
+					aaapi.cmd("loadMap", mapId, instanceId, position, rotation, screenshotId);
+				}, 100);
+			}
+
+			function askSave()
+			{
+				var volatileCount = aaapi.cmdEx("getVolatileCounts");
+				volatileCount.changed.instances = (!volatileCount.changed.hasOwnProperty("instances") || volatileCount.changed.instances == 0) ? 1 : volatileCount.changed.instances;
+
+				var volatileCountText = "Changed: ";
+				var isFirstEntry = true;
+				for( var x in volatileCount.changed )
+				{
+					if( !isFirstEntry )
+						volatileCountText += ", ";
+					else
+						isFirstEntry = false;
+
+					volatileCountText += volatileCount.changed[x] + " " + x;
+				}
+
+				createSaveModalPrompt("Save Changes", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br />" + volatileCountText, "yesSave();", "noSave();");
+			}
+
+			var aaSaveModalPromptMenu;
+			function createSaveModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaSaveModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaSaveModalPromptMenu.flashInterval )
+						{
+							aaSaveModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaSaveModalPromptMenu), 100);
+
+							aaSaveModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				/*
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+				//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+				//modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Discard" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaSaveModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+						aaSaveModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+
+				buttons[2].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					aaapi.cmd("setSaveMode", "SAVEMODE_NONE");
+					window.location = "welcome.html";
+				}, true);
+			}
+
+			if( !aaapi.cmdEx("getNeedsSave") || (!!connectedSessionInfo && !connectedSessionInfo.isHost))
+			{
+				setTimeout(function()
+				{
+					aaapi.cmd('setRenderHold', true);
+					aaapi.cmd("loadMap", mapId, instanceId, position, rotation, screenshotId);
+				}, 500);
+			}
+			else
+				askSave();
+		</script>
+	</body>
+</html>

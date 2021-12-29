@@ -1,0 +1,5 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "booster_pak/leaves"
+	"$bumpmap" "booster_pak/leaves_normal"
+}

@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta property="og:site_name" content="Anarchy Arcade"/>
+		<meta property="og:description" content="Objects are shortcuts. Click objects to watch their videos in your web browser, or launch their games w/ Steam."/>
+		<meta property="og:type" content="technology"/>
+		<meta property="og:title" content="Interactive 360 Screenshot"/><!-- dynamic -->
+		<meta property="og:image" content=""/><!-- dynamic -->
+		<meta property="og:url" content=""/><!-- dynamic -->
+		<title>Interactive 360 Screenshot - Anarchy Arcade</title><!-- dynamic -->
+		<link rel="stylesheet" href="pano/roller.css">
+
+		<!-- WEB <script src="web/panos.js"></script> -->
+
+		<script src="pano/three.min.js"></script>
+		<script src="pano/objloader.js"></script>
+		<script src="pano/scenemanager.js"></script>
+
+		<script>
+			var g_isWeb = false;
+			var g_showHoverBoxes = false;
+			var g_showTexts = false;
+			var g_objects = {};
+			var ytAPIPlayer;
+			var ytplayerready = false;
+
+			// 2. This code loads the IFrame Player API code asynchronously.
+			var tag = document.createElement('script');
+
+			tag.src = "https://www.youtube.com/iframe_api";
+			var firstScriptTag = document.getElementsByTagName('script')[0];
+			firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+		      // 3. This function creates an <iframe> (and YouTube player)
+			var playerVars = {
+				enablejsapi : 1,
+				iv_load_policy: 3
+			};
+
+			function onYouTubeIframeAPIReady()
+			{
+				ytplayerready = true;
+			}
+
+			function createPlayer(item, object)
+			{
+				if( !ytplayerready )
+					return;
+
+				var url = getBestLaunchUrl(item);
+				var youTubeId = ExtractYouTubeId(url);
+				var youTubePlaylist = ExtractYouTubePlaylistId(url);
+
+				if( !!!ytAPIPlayer )
+				{
+					var playerVars = {
+						rel: 0
+					};
+
+					if( !!youTubePlaylist )
+					{
+						playerVars.listType = "playlist";
+						playerVars.list = youTubePlaylist;
+					}
+
+					ytAPIPlayer = new YT.Player('ytPlayerContainer', {
+						height: "100%",
+						width: "100%",
+						videoId: youTubeId,
+						iv_load_policy: 3,
+						suggestedQuality: 'hd720',
+						events: {
+							'onReady': onPlayerReady,
+							'onStateChange': onPlayerStateChange,
+							'onError': onPlayerError
+						},
+						playerVars: playerVars
+					});
+				}
+				else
+				{
+					if( !!youTubePlaylist )
+					{
+						ytAPIPlayer.loadPlaylist({
+							list: youTubePlaylist,
+							listType: "playlist",
+							index: 0,
+							startSeconds: 0,
+							suggestedQuality: "default"
+						});
+					}
+					else
+					{
+						ytAPIPlayer.loadVideoById(youTubeId, 0, "default");
+					}
+				}
+
+				ytAPIPlayer.item = item;
+				ytAPIPlayer.lastObject = object;
+			}
+
+			var g_wasSkipNext = true;
+			function onPlayerError(event)
+			{
+				if( g_wasSkipNext )
+					skipNextYT();
+				else
+					skipBackYT();
+			}
+
+			function getNextObject(lastObject)
+			{
+				var item;
+				var nextObject;
+				var firstObject;
+				var ready;
+				var youTubeId;
+				var youTubePlaylist;
+				var url;
+				for( var x in g_objects )
+				{
+					item = g_library.items[g_objects[x].item];
+					url = getBestLaunchUrl(item);
+					youTubeId = ExtractYouTubeId(url);
+					if( !!!youTubeId )
+						continue;
+
+					if( !!!firstObject )
+						firstObject = g_objects[x];
+
+					if( lastObject === g_objects[x] )
+					{
+						ready = true;
+						continue;
+					}
+
+					if( !ready )
+						continue;
+
+					return g_objects[x];
+				}
+
+				return firstObject;
+			}
+
+			function getPrevObject(lastObject)
+			{
+				var item;
+				var recentObject;
+				var youTubeId;
+				var youTubePlaylist;
+				var url;
+
+
+
+				var curObject;
+				var needsLast = false;
+				for( var x in g_objects )
+				{
+					item = g_library.items[g_objects[x].item];
+					url = getBestLaunchUrl(item);
+					youTubeId = ExtractYouTubeId(url);
+					if( !!!youTubeId )
+						continue;
+
+					if( g_objects[x] === lastObject )
+					{
+						if( !!curObject )
+							break;
+
+						continue;
+					}
+
+					curObject = g_objects[x];
+				}
+
+				return curObject;
+			}
+
+			function skipBackYT()
+			{
+				var prevNearestObject = getPrevObject(ytAPIPlayer.lastObject);
+				ytAPIPlayer.lastObject = prevNearestObject;
+				var item = g_library.items[prevNearestObject.item];
+				viewItem(null, item, prevNearestObject);
+			}
+
+			function skipNextYT()
+			{
+				var nextNearestObject = getNextObject(ytAPIPlayer.lastObject);
+				ytAPIPlayer.lastObject = nextNearestObject;
+				var item = g_library.items[nextNearestObject.item];
+				viewItem(null, item, nextNearestObject);
+			}
+
+			function onPlayerStateChange(event)
+			{
+				if (event.data === YT.PlayerState.ENDED)
+				{
+					if( !!!playerVars.listType || playerVars.listType !== "playlist" )
+					{
+						g_wasSkipNext = true;
+						skipNextYT();
+					}
+				}
+			}
+
+			function onPlayerReady(event)
+			{
+				event.target.playVideo();
+			}
+
+			var g_zIncrement = 0.01;
+			var g_zAmount = g_zIncrement;
+			var g_planeWidth = 1820;
+			var g_planeHeight = 1024;
+
+			var g_nextIsPreloaded = false;
+			var screenID = "gm_csgolake7";//gm_csgolake5";//cs_suburb_beta15a4"//de_inferno_go2"//";//";//panos[0];
+			var g_snapDatas = {
+				"left": null,
+				"right": null,
+				"top": null,
+				"bottom": null,
+				"front": null,
+				"back": null
+			};
+			var g_library = {};
+
+			var g_gridSides  =[];
+			var g_sides = [];
+			var g_panoSides = [];
+
+			function autoTextAnimate(e)
+			{
+				if( !!!this.userData.currentRot )
+					this.userData.currentRot = 0;
+
+				var deltaRot = e.deltaTime * 2.8;
+				var totalRot = this.userData.currentRot + deltaRot;
+				if( totalRot < Math.PI * 1.5 )
+				{
+					this.rotateY(deltaRot);
+					this.userData.currentRot = totalRot;
+				}
+
+				this.translateY(10.0 * e.deltaTime);
+			}
+
+			function autoTextOnEnterFOV()
+			{
+				return;
+				this.userData.oldPos = this.position.clone();
+				this.userData.oldRot = this.rotation.clone();
+				this.animate = autoTextAnimate;
+			}
+
+			function autoTextOnExitFOV()
+			{
+				return;
+				delete this.animate;
+				this.position.copy(this.userData.oldPos);
+				this.rotation.copy(this.userData.oldRot);
+				this.userData.currentRot = 0;
+			}
+
+			function createAutoText(options_in)
+			{
+				// default options
+				var options = {
+					url: "pano/aalogo.png",
+					width: 100,
+					height: 100,
+					zOffset: 200,
+					yOffset: -75,
+					angle: 0,
+					xRotation: 0,//-Math.PI/7.0,
+					yRotation: -Math.PI * 1.5,
+					opacity: 0.9
+				};
+
+				sceneManager.mergIntoObject(options, options_in);
+
+				var textMaterial = new THREE.MeshBasicMaterial({
+					color: 0xffffff,
+					map: sceneManager.getTexture(options.url),
+					transparent: true,
+					opacity: options.opacity
+				});
+
+				var text = new THREE.Mesh(new THREE.PlaneGeometry(options.width, options.height), textMaterial);
+				text.userData.blocksLOS = true;
+
+				// position at camera
+				//text.position.copy(camera.position);
+
+				// desired rotation
+				text.rotateY(options.angle);
+
+				// translate from camera to initial position
+				text.translateZ(options.zOffset);
+				text.translateY(options.yOffset);
+
+				// set initial rotation back towards the camera
+				text.rotateX(Math.PI);
+				text.rotateZ(Math.PI);
+
+				// adjust rotation
+				text.rotateX(options.xRotation);
+				text.rotateY(options.yRotation);
+
+				text.onenterfov = autoTextOnEnterFOV;
+				text.onexitfov = autoTextOnExitFOV;
+				return text;
+			}
+
+			var sceneManager = createSceneManager();
+			sceneManager.onReady = function()
+			{
+				var scene = sceneManager.getScene();
+				var domElement = sceneManager.getRendererDOMElement();
+
+				var cover = document.createElement("div");
+				cover.id = "cover";
+				cover.style.cssText = "background-color: rgb(20, 20, 20); text-align: center; width: 100%; height: 100%;";
+
+				var containerIsWindow = (sceneContainer === window);
+				if( !containerIsWindow )
+					sceneContainer.appendChild(cover);
+				else
+					document.body.appendChild(cover);
+
+				var logoSlate = document.createElement("div");
+				logoSlate.style.cssText = "display: flex; align-items: center; height: 100%;";
+				cover.appendChild(logoSlate);
+
+				var logoContainer = document.createElement("div");
+				logoContainer.style.cssText = "display: block; margin-left: auto; margin-right: auto;";
+				logoSlate.appendChild(logoContainer);
+
+				var logoText = document.createElement("div");
+				logoText.innerHTML = '<div class="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>';
+				logoContainer.appendChild(logoText);
+
+				var msgTextureBatch;
+				if(g_showTexts)
+				{
+					msgTextureBatch =[
+						{url: "pano/aalogo.png"},
+						{url: "web/realmedia.png"},
+						{url: "web/txt_movies.png"},
+						{url: "web/txt_music.png"},
+						{url: "web/txt_games.png"},
+						{url: "web/txt_pictures.png"},
+						{url: "web/txt_more.png"},
+						{url: "web/txt_quality.png"},
+						{url: "web/txt_lag.png"},
+						{url: "web/text_everyobject.png"},
+						{url: "web/txt_interactive.png"}
+					];
+				}
+				else
+					msgTextureBatch = [];
+
+				sceneManager.loadTextureBatch(msgTextureBatch, function()
+				{
+					var camera = sceneManager.getCamera();
+
+					if( g_showTexts )
+					{
+
+						var logoMaterial = new THREE.MeshBasicMaterial({
+							color: 0xffffff,
+							map: sceneManager.getTexture("pano/aalogo.png"),
+							transparent: true,
+							opacity: 0.9
+						});
+
+						var aaLogo = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), logoMaterial);
+						aaLogo.position.x = 0;
+						aaLogo.position.y = 0;
+						aaLogo.position.z = 200;
+						aaLogo.rotateX(Math.PI);// + (Math.PI / 3.0)); // <-- cool tilted effect if re-enabled
+						aaLogo.rotateZ(Math.PI);
+						aaLogo.userData.blocksLOS = true;
+						aaLogo.animate = function(e)
+						{
+							if( !!!this.userData.finishedPushing )
+							{
+								if( !!!this.userData.totalPushAmount )
+									this.userData.totalPushAmount = 0.0;
+
+								var deltaPush = e.deltaTime * -20.0;
+								if( this.userData.totalPushAmount + deltaPush > -30.0 )
+								{
+									this.translateZ(deltaPush);
+									this.userData.totalPushAmount += deltaPush;
+								}
+								else
+								{
+									this.userData.finishedPushing = true;
+								}
+							}
+						};
+						scene.add(aaLogo);
+
+						var mediaMaterial = new THREE.MeshBasicMaterial({
+							color: 0xffffff,
+							map: sceneManager.getTexture("web/realmedia.png"),
+							transparent: true,
+							opacity: 0.9
+						});
+
+						var realMedia = new THREE.Mesh(new THREE.PlaneGeometry(100, 50), mediaMaterial);
+						realMedia.position.x = 0;
+						realMedia.position.y = -75;
+						realMedia.position.z = 150;
+						realMedia.rotateX(Math.PI);// + (Math.PI / 3.0)); // <-- cool tilted effect if re-enabled
+						realMedia.rotateZ(Math.PI);
+						realMedia.userData.blocksLOS = true;
+						realMedia.animate = function(e)
+						{
+							if( !!!this.userData.finishedPushing )
+							{
+								if( !!!this.userData.totalPushAmount )
+									this.userData.totalPushAmount = 0.0;
+
+								var deltaPush = e.deltaTime * -20.0;
+								if( this.userData.totalPushAmount + deltaPush > -50.0 )
+								{
+									this.translateZ(deltaPush);
+									this.userData.totalPushAmount += deltaPush;
+								}
+								else
+									this.userData.finishedPushing = true;
+							}
+						};
+						scene.add(realMedia);
+
+						var baseAngle = -Math.PI/6.0;
+						var angleIncrement = -Math.PI/6.0;
+						var textMovies = createAutoText({url: "web/txt_movies.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 1.0});
+						scene.add(textMovies);
+
+						var textMusic = createAutoText({url: "web/txt_music.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 2.0});
+						scene.add(textMusic);
+
+						var textGames = createAutoText({url: "web/txt_games.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 3.0});
+						scene.add(textGames);
+
+						var textPictures = createAutoText({url: "web/txt_pictures.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 4.0});
+						scene.add(textPictures);
+
+						var textMore = createAutoText({url: "web/txt_more.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 5.0});
+						scene.add(textMore);
+
+						var textEvery = createAutoText({url: "web/text_everyobject.png", width: 100, height: 50, angle: baseAngle + angleIncrement * 7.0});
+						scene.add(textEvery);
+
+						var textQuality = createAutoText({url: "web/txt_quality.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 8.0});
+						scene.add(textQuality);
+
+						var textInteractive = createAutoText({url: "web/txt_interactive.png", width: 100, height: 50, angle: baseAngle + angleIncrement * 9.0});
+						scene.add(textInteractive);
+
+						var textLag = createAutoText({url: "web/txt_lag.png", width: 50, height: 10, angle: baseAngle + angleIncrement * 10.0});
+						scene.add(textLag);
+
+						var camera = sceneManager.getCamera();
+						camera.rotation.y = Math.PI;
+					}
+
+					spawnSkybox(function()
+					{
+						// now load in all of the JS files, one at a time.
+						var path = (g_isWeb) ? screenID + "/" : "";
+						loadAJavaScript(path + "left.js", function()
+						{
+							g_snapDatas.left = g_snapdata;
+
+							loadAJavaScript(path + "right.js", function()
+							{
+								g_snapDatas.right = g_snapdata;
+
+								loadAJavaScript(path + "top.js", function()
+								{
+									g_snapDatas.top = g_snapdata;
+
+									loadAJavaScript(path + "bottom.js", function()
+									{
+										g_snapDatas.bottom = g_snapdata;
+
+										loadAJavaScript(path + "front.js", function()
+										{
+											g_snapDatas.front = g_snapdata;
+
+											loadAJavaScript(path + "back.js", function()
+											{
+												g_snapDatas.back = g_snapdata;
+
+												processAllSnapData();
+
+												domElement.style.display = "block";
+												cover.style.display = "none";
+												sceneManager.start();
+												preloadNext();
+											});
+										});
+									});
+								});
+							});
+
+							domElement.style.display = "block";
+							cover.style.display = "none";
+							sceneManager.start();
+							preloadNext();
+						});
+					});
+				});
+			};
+
+			function isValueInteger(value)
+			{
+				var data = (typeof data === "number") ? value : parseInt(value);
+				var remainder = (data % 1);
+				if(remainder === 0)
+					return true;
+				else if(isNaN(remainder))
+					return false; // data is either: NaN, Infinity, or -Infinity
+				else
+					return false; // no, it is a float (still a number though)
+			}
+
+			function getBestLaunchUrl(item)
+			{
+				var fields = ["file", "preview", "reference", "screen", "marquee"];
+				var field, url, isSteamGame;
+				for( var i = 0; i < fields.length; i++ )
+				{
+					field = fields[i];
+					url = item[field];
+					isSteamGame = isValueInteger(url);
+
+					if( isSteamGame )
+						return "steam://run/" + url;
+					else if( url.toLowerCase().indexOf("http") === 0 || url.toLowerCase().indexOf("www") === 0 )
+						return url;
+				}
+
+				return "";
+			}
+
+			// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+			function getParameterByName(name, url) {
+			    if (!url) url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+
+			function ExtractYouTubePlaylistId(trailerURL)
+			{
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+			  
+			  var playlist = getParameterByName("list", trailerURL);
+			  return playlist;
+			}
+
+			function ExtractYouTubeId(trailerURL)
+			{
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+			  
+			  var youtubeid;
+			  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+			  {
+			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+			    var found = youtubeid.indexOf("&");
+			    if( found > -1 )
+			    {
+			      youtubeid = youtubeid.substring(0, found);
+			    }
+			  }
+			  else
+			  {
+			    var found = trailerURL.indexOf("youtu.be/");
+			    if( found != -1 )
+			    {
+			      youtubeid = trailerURL.substring(found+9);
+
+			      found = youtubeid.indexOf("&");
+			      if( found != -1 )
+			      {
+			        youtubeid = youtubeid.substring(0, found);
+			      }
+			    }
+			  }
+
+			  return youtubeid;
+			}
+
+			function ExtractTwitchId(trailerURL)
+			{
+			    if( typeof trailerURL === "undefined" )
+			      return trailerURL;
+
+			    var twitchid;
+			    var test = trailerURL;
+			    var found = test.indexOf("twitch.tv/");
+			    if( found >= 0 )
+			    {
+			      var testStuff = test.substring(0, found);
+			      if( testStuff.indexOf("clips.") === testStuff.length-6 )
+			        return twitchid;
+			      
+			      twitchid = test.substr(found + 10);
+
+			      found = twitchid.indexOf("/");
+			      if( found > 0 )
+			        twitchid = twitchid - twitchid.substring(0, found);
+			    }
+
+			    return twitchid;
+			}
+
+			function launchItem(item)
+			{
+				var url = getBestLaunchUrl(item);
+				if( !isValueInteger(url) )
+					window.open(url, "popup");
+				else
+					window.location = url;
+
+				showMenu();
+			}
+
+			function viewItem(e, item, object)
+			{
+				if( !!!item )
+					item = this.userData.item;
+
+				if( !!!object )
+					object = this.object;
+
+				var url = getBestLaunchUrl(item);
+
+				var youTubeId = ExtractYouTubeId(url);
+				var youTubePlaylist = ExtractYouTubePlaylistId(url);
+				if( !youTubePlaylist  && !youTubeId  )
+				{
+					showMenu();
+					showContent("item");
+
+					var rollerContainer = document.querySelector(".rollerContainer");
+
+					var titleElem = document.querySelector("#itemTitle");
+					titleElem.innerHTML = "";
+					titleElem.appendChild(document.createTextNode(item.title));
+					var imageElem = document.querySelector("#itemImage");
+					imageElem.style.maxHeight = parseInt(window.innerHeight / 2) + "px";
+
+					imageElem.item = item;
+					imageElem.fields = ["file", "preview", "marquee"];
+					if( !!!imageElem.hasListeners )
+					{
+						imageElem.hasListeners = true;
+
+						imageElem.addEventListener("error", function(e)
+						{
+							var nextField;
+							while( e.target.fields.length > 0 )
+							{
+								nextField = e.target.fields.pop();
+
+								e.target.src = e.target.item[nextField];
+								return;
+							}
+
+							rollerContainer.style.display = "none";
+						});
+
+						imageElem.addEventListener("load", function(e)
+						{
+							rollerContainer.style.display = "none";
+							e.target.style.display = "inline-block";
+						});
+					}
+
+					rollerContainer.style.display = "block";
+					imageElem.style.display = "none";
+					imageElem.src = item.screen;
+
+					document.querySelector(".youTubeView").style.display = "none";
+					document.querySelector(".itemView").style.display = "block";
+					closeViewerButton.style.display = "none";
+
+					if( !!ytAPIPlayer )
+					{
+						ytAPIPlayer.destroy();
+						ytAPIPlayer = null;
+					}
+
+					var masterContainer = document.querySelector(".content.item");
+					masterContainer.classList.remove("ytItemContainer");
+
+					var masterContainerParent = masterContainer.parentNode;
+					masterContainerParent.classList.remove("ytItemContainerParent");
+				}
+				else
+				{
+					if( menuContainer.style.display !== "block" )
+						showMenu();
+
+					showContent("item");
+
+					var needsLoad = (!!!ytAPIPlayer || ytAPIPlayer.getVideoData()['video_id'] !== youTubeId);
+
+					if( needsLoad )
+					{
+						var playerContainer = document.querySelector("#ytPlayerContainer");
+						playerContainer.innerHTML = "";
+					}
+
+					var masterContainer = document.querySelector(".content.item");
+					masterContainer.classList.add("ytItemContainer");
+
+					var masterContainerParent = masterContainer.parentNode;
+					masterContainerParent.classList.add("ytItemContainerParent");
+
+					if( needsLoad )
+					{
+						createPlayer(item, object);
+					}
+
+					document.querySelector(".itemView").style.display = "none";
+					document.querySelector(".youTubeView").style.display = "block";
+					closeViewerButton.style.display = "block";
+					skipBackButton.style.display = "inline-block";
+					skipNextButton.style.display = "inline-block";
+				}
+			}
+
+			function processSnapData(index, data)
+			{
+				var scene = sceneManager.getScene();
+
+				// merg Library
+				for( var x in data.library )
+				{
+					if( !!!g_library[x] )
+						g_library[x] = {};
+
+					for( var y in data.library[x] )
+						g_library[x][y] = data.library[x][y];
+				}
+
+				// create markers
+				var material = new THREE.MeshBasicMaterial( {color: 0xccccff, side: THREE.DoubleSide, transparent: true, opacity: 0} );
+
+				var marker;
+				for( var x in data.markers )
+				{
+					marker = data.markers[x];
+
+					if( !!!g_library.items[marker.object.item] )
+						continue;
+
+					g_objects[marker.object.id] = marker.object;
+					var rect = {
+						x: ((marker.min.x / 1920.0) * g_planeWidth),
+						y: ((marker.min.y / 1080.0) * g_planeHeight),
+						width: ((marker.max.x - marker.min.x) / 1920.0) * g_planeWidth,
+						height: ((marker.max.y - marker.min.y) / 1080.0) * g_planeHeight
+					};
+
+					rect.x += rect.width / 2.0;
+					rect.y += rect.height / 2.0;
+
+					rect.x -= (g_planeWidth / 2.0);
+					rect.y -= (g_planeHeight / 2.0);
+
+					var geometry = new THREE.PlaneGeometry(rect.width, rect.height);
+					var plane = new THREE.Mesh(geometry, material.clone());
+
+					plane.position.copy(g_panoSides[index].position);
+					plane.quaternion.copy(g_panoSides[index].quaternion);
+
+					plane.translateX(rect.x);
+					plane.translateY(-rect.y);
+					plane.translateZ(1 * g_zAmount);
+					g_zAmount += g_zIncrement;
+					plane.userData.item = g_library.items[marker.object.item];
+					plane.userData.blocksLOS = true;
+					plane.onhoverstart = itemHoverStart;
+					plane.onhoverend = itemHoverEnd;
+					plane.onclick = viewItem;
+					plane.object = marker.object;
+
+					scene.add( plane );
+				}
+			}
+
+			function itemHoverEnd(e)
+			{
+				var titleSlate = document.querySelector("#titleSlate");
+				titleSlate.innerHTML = "";
+				document.body.style.cursor = "auto";
+
+				if( g_showHoverBoxes )
+					this.material.opacity = 0;
+			}
+
+			function itemHoverStart(e, item)
+			{
+				if( !!!item )
+					item = this.userData.item;
+				var title = item.title;
+
+				g_lastHoveredItem = item;
+
+				var titleSlate = document.querySelector("#titleSlate");
+				titleSlate.innerHTML = "";
+				titleSlate.appendChild(document.createTextNode(title));
+				document.body.style.cursor = "pointer";
+
+				if( g_showHoverBoxes )
+					this.material.opacity = 0.2;
+			}
+
+			function processAllSnapData()
+			{
+				processSnapData(0, g_snapDatas.left);
+				processSnapData(1, g_snapDatas.right);
+				processSnapData(2, g_snapDatas.top);
+				processSnapData(3, g_snapDatas.bottom);
+				processSnapData(4, g_snapDatas.front);
+				processSnapData(5, g_snapDatas.back);
+			}
+
+			function loadAJavaScript(fileName, loadJavaScriptsCallback, errorJavaScriptsCallback)
+			{
+				var elem = document.createElement("script");
+				elem.type = "text/javascript";
+				elem.src = fileName;
+
+				elem.addEventListener("load", function()
+				{
+					loadJavaScriptsCallback();
+				});
+
+				elem.addEventListener("error", function()
+				{
+					errorJavaScriptsCallback();
+				});
+
+				// We are added to the head so loading will begin immediately & asynchronously
+				document.getElementsByTagName("head")[0].appendChild(elem);
+			}
+
+			function spawnLoadingGrid(callback)
+			{
+				var textureBatch = [{url: "loadinggrid.jpg"}];
+				sceneManager.loadTextureBatch(textureBatch, function()
+				{
+					// create the loading grid
+					var gridMaterial = new THREE.MeshBasicMaterial({
+							map: sceneManager.getTexture("loadinggrid.jpg")
+						});
+
+					for(var i = 0; i < g_sides.length; i++)
+					{
+						var side = g_sides[i];
+
+						// plane
+						var object = new THREE.Mesh(new THREE.PlaneGeometry(1820 * 0.9, 1024 * 0.9), gridMaterial);
+						object.position.fromArray( side.position ).multiplyScalar(0.9);
+						object.rotation.fromArray( side.rotation );
+						object.scale.set(0.0001, 0.0001, 0.0001);
+						scene.add(object);
+
+						g_gridSides.push(object);
+					}
+
+					if( typeof callback === "function" )
+						callback();
+				});
+			}
+
+			function spawnSkybox(callback)
+			{
+				var path = (g_isWeb) ? screenID + "/" : "";
+
+				// spawn in our skybox
+				g_sides = [
+					{
+						url: path + 'left.jpg',
+						position: [ -512, 0, 0 ],
+						rotation: [ 0, Math.PI / 2, 0 ]
+					},
+					{
+						url: path + 'right.jpg',
+						position: [ 512, 0, 0 ],
+						rotation: [ 0, -Math.PI / 2, 0 ]
+					},
+					{
+						url: path + 'top.jpg',
+						position: [ 0,  512, 0 ],
+						rotation: [ Math.PI / 2, 0, 0 ]
+					},
+					{
+						url: path + 'bottom.jpg',
+						position: [ 0, -512, 0 ],
+						rotation: [ - Math.PI / 2, 0, 0 ]
+					},
+					{
+						url: path + 'front.jpg',
+						position: [ 0, 0,  512 ],
+						rotation: [ 0, Math.PI, 0 ]
+					},
+					{
+						url: path + 'back.jpg',
+						position: [ 0, 0, -512 ],
+						rotation: [ 0, 0, 0 ]
+					}
+				];
+
+				var textureBatch = [];
+				for(var i = 0; i < g_sides.length; i++)
+					textureBatch.push({url: g_sides[i].url});
+
+				sceneManager.loadTextureBatch(textureBatch, function()
+				{
+					var scene = sceneManager.getScene();
+					if( g_panoSides.length === 0 )
+					{
+						for ( var i = 0; i < g_sides.length; i ++ )
+						{
+							var side = g_sides[i];
+							var texture = sceneManager.getTexture(side.url);
+
+							var panoMaterial = new THREE.MeshBasicMaterial({
+								map: texture
+							});
+
+							var object = new THREE.Mesh(new THREE.PlaneGeometry(g_planeWidth, g_planeHeight), panoMaterial);
+							object.side = side;
+							object.position.fromArray( side.position );
+							object.rotation.fromArray( side.rotation );
+							scene.add(object);
+							g_panoSides.push(object);
+						}
+					}
+					else
+					{
+						var sideObject;
+						var i;
+						var texture;
+						for( i = 0; i < g_panoSides.length; i++ )
+						{
+							sideObject = g_panoSides[i];
+							sideObject.side = g_sides[i];
+							texture = sceneManager.getTexture(sideObject.side.url);
+							sideObject.material.map = texture;
+						}
+					}
+
+					if( typeof callback === "function" )
+						callback();
+				});
+			}
+
+			function disposeMaterials(victimScreenID)
+			{
+				var victimTextureURLs = [];
+				victimTextureURLs.push(victimScreenID + '/3.jpg');
+				victimTextureURLs.push(victimScreenID + '/2.jpg');
+				victimTextureURLs.push(victimScreenID + '/5.jpg');
+				victimTextureURLs.push(victimScreenID + '/4.jpg');
+				victimTextureURLs.push(victimScreenID + '/0.jpg');
+				victimTextureURLs.push(victimScreenID + '/1.jpg');
+
+				for( var i = 0; i < victimTextureURLs.length; i++ )
+					sceneManager.disposeTexture(victimTextureURLs[i]);
+			}
+
+			function preloadNext()
+			{
+				return;
+				var direction = 1.0;
+				// preload the next scene, if we are in screensavermode still.
+				var nextIndex = panos.indexOf(screenID);
+				nextIndex += direction;
+				if( nextIndex >= panos.length )
+					nextIndex = 0;
+				else if( nextIndex < 0 )
+					nextIndex = panos.length-1;
+				nextScreenID = panos[nextIndex];
+
+				var nextTextures = [];
+				nextTextures.push({url: nextScreenID + '/left.jpg'});
+				nextTextures.push({url: nextScreenID + '/right.jpg'});
+				nextTextures.push({url: nextScreenID + '/top.jpg'});
+				nextTextures.push({url: nextScreenID + '/bottom.jpg'});
+				nextTextures.push({url: nextScreenID + '/front.jpg'});
+				nextTextures.push({url: nextScreenID + '/back.jpg'});
+				sceneManager.loadTextureBatch(nextTextures, function()
+				{
+					g_nextIsPreloaded = true;
+				});
+			}
+
+			function cycle(direction)
+			{
+				var oldNextIsPreloaded = g_nextIsPreloaded;
+				g_nextIsPreloaded = false;
+
+				var elems = document.querySelectorAll(".uiElement");
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].classList.add("uiElementInvisible");
+
+				sceneManager.pause();
+
+				var cover = document.querySelector("#cover");
+				var domElement = sceneManager.getRendererDOMElement();
+				var currentIndex = panos.indexOf(screenID);
+				var oldIndex = currentIndex;
+				currentIndex += direction;
+				if( currentIndex >= panos.length )
+					currentIndex = 0;
+				else if( currentIndex < 0 )
+					currentIndex = panos.length-1;
+
+				screenID = panos[currentIndex];
+				domElement.style.display = "none";
+				cover.style.display = "block";
+
+				spawnSkybox(function()
+				{
+					domElement.style.display = "block";
+					cover.style.display = "none";
+					sceneManager.resume();
+
+					// clean up the old textures
+					if( oldIndex !== currentIndex )
+						disposeMaterials(panos[oldIndex]);
+
+					if( direction < 0 && oldNextIsPreloaded )
+					{
+						var oldPreloadIndex = oldIndex;
+						oldPreloadIndex += 1.0;
+						if( oldPreloadIndex >= panos.length )
+							oldPreloadIndex = 0;
+						else if( oldPreloadIndex < 0 )
+							oldPreloadIndex = panos.length-1;
+
+						if( oldPreloadIndex !== currentIndex )
+							disposeMaterials(panos[oldPreloadIndex]);
+					}
+
+					if( !sceneManager.getScreenSaverMode() )
+					{
+						sceneManager.resetScreenSaverModeTimeout();
+						var elems = document.querySelectorAll(".uiElement");
+						for( var i = 0; i < elems.length; i++ )
+							elems[i].classList.remove("uiElementInvisible");
+					}
+					else
+						preloadNext();
+				});
+			}
+		</script>
+
+		<style>
+			.ytItemContainerParent
+			{
+				overflow: hidden !important;
+				height: 100%;
+			}
+
+			.ytItemContainer
+			{
+				padding: 0 !important;
+				height: 100%;
+			}
+
+			#trailerVideoLink
+			{
+				display: inline-block;
+				padding: 8px;
+				margin-bottom: 16px;
+				cursor: pointer;
+				letter-spacing: normal;
+				text-shadow: 2px 2px #000;
+				pointer-events: all;
+			}
+
+			#trailerVideoLink:hover
+			{
+				background-color: rgba(0, 0, 0, 0.6);
+				color: rgb(255, 255, 255);
+			}
+
+			#navContainer
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+				cursor: auto;
+			}
+
+			#previous, #next
+			{
+				padding: 10px;
+				height: 25px;
+				width: 25px;
+				border: 0px;
+				opacity: 0.6;
+			}
+
+			#previous:hover, #next:hover
+			{
+				opacity: 1.0;
+				cursor: pointer;
+			}
+
+			#menuButtonContainer
+			{
+				position: absolute;
+				top: 0;
+				right: 0;
+				padding: 6px;
+				vertical-align: middle;
+			}
+
+			#menuButton
+			{
+				font-size: 30px;
+				font-weight: 900;
+				opacity: 0.6;
+				color: #fff;
+			}
+
+			#menuButton:hover
+			{
+				opacity: 1.0;
+				cursor: pointer;
+			}
+
+			#headerBannerContainer
+			{
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				border: 0px;
+				text-align: center;
+				color: #ccc;
+				font-family: Arial;
+				font-weight: 900;
+				letter-spacing: 0.4em;
+				pointer-events: none;
+			}
+
+			#bottomStrip
+			{
+				background-color: rgba(0, 0, 0, 0.6);
+				width: 100%;
+				color: #ccc;
+				font-family: Arial;
+				font-weight: 900;
+				letter-spacing: 0.4em;
+				pointer-events: all;
+			}
+
+			#bottomStrip:hover
+			{
+				color: rgb(255, 255, 255);
+				cursor: pointer;
+			}
+
+			#bottomStrip:hover #aaLogo
+			{
+				opacity: 1.0;
+			}
+
+			#aaLogo
+			{
+				padding: 6px;
+				padding-left: 10px;
+				padding-right: 13px;
+				opacity: 0.6;
+				vertical-align: middle;
+			}
+
+			#menuContainer
+			{
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+				background-color: rgba(0, 0, 0, 0.95);
+			}
+
+			.closeMenuButtonContainer
+			{
+				position: absolute;
+				text-align: center;
+				left: 0;
+				right: 0;
+				bottom: 10px;
+				pointer-events: none;
+				font-size: 40px;
+				color: #ccc;
+				font-weight: normal;
+				font-family: Arial;
+			}
+
+			.closeMenuButtonX
+			{
+				background-color: rgb(30, 30, 30);
+				border: 2px solid #555;
+				opacity: 0.5;
+				display: inline-block;
+				padding: 12px;
+				border-radius: 50%;
+				pointer-events: all;
+				cursor: pointer;
+				opacity: 0.5;
+			}
+
+			.closeMenuButtonX:hover
+			{
+				opacity: 1.0;
+			}
+
+			#menuSlate
+			{
+				position: absolute;
+				border: 2px solid #555;
+				text-align: center;
+				left: 10%;
+				right: 10%;
+				transform: translate(0, -50%);
+				top: 50%;
+				background-color: rgba(0, 0, 0, 0.95);
+			}
+
+			.menuEntry
+			{
+				font-size: 40px;
+				font-weight: 900;
+				font-family: Arial;
+				text-align: center;
+				color: #ccc;
+				border-bottom: 2px solid #555;
+			}
+
+			.menuEntry:hover
+			{
+				color: #fff;
+				background-color: rgb(0, 0, 0);
+				cursor: pointer;
+			}
+
+			#closeMenuButton
+			{
+				position: absolute;
+				top: -15px;
+				right: -15px;
+				display: inline-block;
+				border: 2px solid #555;
+				color: #ccc;
+				background-color: rgb(0, 0, 0);
+				font-size: 20px;
+				font-weight: 900;
+				border-radius: 50%;
+				font-family: Arial;
+				width: 30px;
+				height: 30px;
+				cursor: pointer;
+			}
+
+			#closeMenuButton:hover
+			{
+				border: 2px solid #fff;
+				color: #fff;
+			}
+
+			.menu .menuEntry:last-of-type
+			{
+				border-bottom: 0;
+			}
+
+			.social img
+			{
+				border: 2px solid transparent;
+			}
+
+			.social img:hover
+			{
+				border: 2px solid #fff;
+				background-color: #fff;
+				cursor: pointer;
+			}
+
+			.person
+			{
+				font-family: monospace;
+				font-size: 24px;
+				font-weight: bold;
+				margin-bottom: 32px;
+				color: #fff;
+				transition: color 0.25s ease-in-out;
+			}
+
+			.personLit
+			{
+				color: #55ff55;
+			}
+
+			.rpgAnswer
+			{
+				border: 2px solid #555;
+				padding: 18px;
+				margin: 8px;
+			}
+
+			.rpgAnswer:hover
+			{
+				background-color: #111;
+				cursor: pointer;
+			}
+
+			.uiElement
+			{
+				opacity: 1.0;
+				transition: opacity 0.25s ease-in-out;
+			}
+
+			.uiElementInvisible
+			{
+				opacity: 0;
+			}
+
+			.uiElementInvisible *
+			{
+				pointer-events: none !important;
+			}
+		</style>
+
+	</head>
+	<body style="background-color: rgb(0, 0, 0);" onselectstart="return false;">
+		<style>
+			.markerBox
+			{
+				position: absolute;
+				border: none;
+			}
+
+			.markerBox:hover
+			{
+				background-color: rgba(255, 255, 255, 0.1);
+				border: 1px solid rgba(255, 255, 255, 0.5);
+			}
+
+			#titleSlate
+			{
+				font-family: Arial;
+				text-shadow: 2px 2px #000;
+				color: #fff;
+				font-family: Arial;
+				font-weight: 900;
+				position: fixed;
+				top: 40px;
+				left: 0;
+				right: 0;
+				text-align: center;
+				pointer-events: none;
+			}
+
+			#linkSlate
+			{
+				font-family: Arial;
+				text-shadow: 2px 2px #000;
+				color: #fff;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 16px;
+				margin-bottom: 20px;
+				text-align: center;
+				pointer-events: none;
+				z-index: 1000000;
+			}
+
+			#itemTitle
+			{
+				margin-bottom: 10px;
+			}
+
+			#itemCard
+			{
+				cursor: pointer;
+			}
+
+			#itemCard:hover #launchButton
+			{
+				background-color: rgb(40, 40, 40);
+			}
+
+			#launchText
+			{
+				color: #fff;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline;
+				font-size: 30px;
+				vertical-align: bottom;
+				letter-spacing: 0.1em;
+			}
+
+			#launchButton
+			{
+				margin-top: 10px;
+				background-color: rgb(30, 30, 30);
+				text-shadow: 2px 2px #000;
+			}
+
+			#ytPlayerContainer
+			{
+				width: 100%;
+				height: 100%;
+			}
+
+			#closeViewerButton
+			{
+				position: absolute;
+				top: 100px;
+				right: 6px;
+				font-weight: 900;
+				font-family: Arial;
+				font-size: 20px;
+				color: #fff;
+				padding: 0;
+				pointer-events: none;
+			}
+
+			#closeViewerButton img
+			{
+				pointer-events: all;
+				background-color: rgb(30, 30, 30);
+				padding: 8px;
+				cursor: pointer;
+			}
+
+			#closeViewerButton img:hover
+			{
+				background-color: rgb(50, 50, 50);
+			}
+		</style>
+
+		<div id="titleSlate"></div>
+
+		<div id="snapContainer" style="position: absolute; left: 0; top: 0; overflow: hidden;">
+			<img id="snapImage" src="" />
+		</div>
+
+		<!-- WEB
+		<div id="navContainer" class="uiElement uiElementInvisible">
+			<a href="javascript:cycle(-1);"><img src="web/previousicon.png" id="previous" /></a>
+			<a href="javascript:cycle(1);"><img src="web/nexticon.png" id="next" /></a>
+		</div>
+		-->
+
+		<div id="menuButtonContainer" class="uiElement uiElementInvisible">
+			<div id="menuButton" onmouseup="showMenu();">&#x2630;</div>
+		</div>
+
+		<div id="sceneContainer" style="position: absolute; top: 0; left: 0; width: 1280px; height: 720px;"></div>
+
+		<div id="headerBannerContainer" class="uiElement uiElementInvisible">
+			<!-- WEB
+			<div id="trailerVideoLink" onclick="viewItem(null, {title: 'AArcade Trailer Video', file: 'https://www.youtube.com/watch?v=GT_o_JFvRFc'});">
+				<img src="web/yticon.png" style="vertical-align: bottom; margin-right: 10px;" />Watch Trailer Video
+			</div>
+			-->
+			<div id="bottomStrip" onmouseup="showMenu();">
+				ANARCHY<img src="pano/aalogo.png" width="64" height="64" id="aaLogo" />ARCADE
+			</div>
+		</div>
+
+		<div id="menuContainer" style="display: none;">
+			<div id="menuSlate" style="max-height: 80%; overflow-y: auto;">
+				<div class="content" name="controls" style="display: none; color: #ccc; padding: 16px; font-family: Arial; font-size: 24px; font-weight: bold;">
+					<center>
+						Drag / Swipe<br />
+						<div style="padding: 4px; font-style: italic; font-weight: 900; color: #fff;">LOOK</div><br />
+						Wheel / Pinch<br />
+						<div style="padding: 4px; font-style: italic; font-weight: 900; color: #fff;">ZOOM</div><br />
+						Click / Tap<br />
+						<div style="padding: 4px; font-style: italic; font-weight: 900; color: #fff;">PLAY</div>
+					</center>
+				</div>
+				<!-- USER -->
+				<div class="content" name="about" style="display: none; color: #ccc; padding: 16px; font-family: Arial; font-size: 24px; font-weight: bold;">
+					Metaverse = All Things Real + Fiction + Simulation<br /><br />
+					Anarchy Arcade is a 3D metaverse browser.<br /><br />
+					Each world is an expression of the person who created it.<br /><br />
+					Explore the person through the media that helped shape them.
+				</div>
+				<div class="menu">
+					<div class="menuEntry" onclick="showContent('controls');">Controls</div>
+					<div class="menuEntry" onclick="showContent('about');">About</div>
+				</div>
+				<!-- -->
+				<!-- WEB
+				<div class="menu">
+					<div class="menuEntry" onclick="showContent('follow');">Follow</div>
+					<div class="menuEntry">Download</div>
+					<div class="menuEntry" onclick="showContent('details');">Details</div>
+				</div>
+				<div class="content" name="details" style="display: none; color: #fff; padding: 16px; font-family: Arial; font-size: 24px; font-weight: bold; ">
+					<div class="person">&gt; What kind of person are you?</div>
+					<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; flex-grow: 1; height: width: 100%;">
+						<div class="rpgAnswer">
+							I would like to explore other people's creations.
+						</div>
+						<div class="rpgAnswer">
+							I would like to be a creator myself.
+						</div>
+					</div>
+				</div>
+				<div class="content social" name="follow" style="display: none; color: #fff; padding: 16px;">
+					<div id="socialName" style="font-family: Arial; font-size: 24px; font-weight: bold; margin-bottom: 4px;">Social Media</div>
+					<div style="line-height: 0.7;">
+						<img src="web/twitter.png" alt="Twitter" /><img src="web/instagram.png" alt="Instagram" /><img src="web/gamejolt.png" alt="Game Jolt" /><img src="web/surveymonkey.png" alt="Survey Monkey" /><img src="web/facebook.png" alt="Facebook" /><img src="web/twitch.png" alt="Twitter" /><img src="web/steam.png" alt="Steam" /><img src="web/moddb.png" alt="ModDb" /><img src="web/youtube.png" alt="YouTube" /><img src="web/flickr.png" alt="Flickr" /><img src="web/yahoo.png" alt="Yahoo" /><img src="web/paypal.png" alt="PayPal" /><img src="web/google.png" alt="Google" /><img src="web/wordpress.png" alt="Wordpress" /><img src="web/tumblr.png" alt="Tumblr" /><img src="web/reddit.png" alt="Reddit" />
+					</div>
+				</div>
+				-->
+				<div class="content item" name="item" style="display: none; color: #fff; padding: 16px;">
+					<div class="itemView" style="display: none;">
+						<div id="itemCard">
+							<div id="itemTitle" style="font-family: Arial; font-size: 24px; font-weight: bold;">ITEM TITLE</div>
+							<div class="rollerContainer" style="display: block;">
+								<div class="lds-roller"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+							</div>
+							<img src="pano/aalogo.png" id="itemImage" style="max-width: 80%; max-height: 80%; display: inline-block;" />
+							<div id="launchButton">
+								<img src="pano/launchicon.png" /> <div id="launchText">LAUNCH</div>
+							</div>
+						</div>
+					</div>
+					<div class="youTubeView" style="width: 100%; height: 100%;">
+						<div id="ytPlayerContainer"></div>
+					</div>
+				</div>
+			</div>
+			<div class="closeMenuButtonContainer">
+				<div id="linkSlate"></div>
+				<div class="closeMenuButtonX skipBackButton" onclick="g_wasSkipNext = false; skipBackYT();" style="display: none;"><img src="pano/skipbackicon.png" style="text-align: bottom; display: block;" /></div>
+				<div class="closeMenuButtonX" onclick="showMenu();"><img src="pano/close.png" style="text-align: bottom; display: block;" /></div>
+				<div class="closeMenuButtonX skipNextButton" style="display: none;" onclick="g_wasSkipNext = true; skipNextYT();"><img src="pano/skipnexticon.png" style="text-align: bottom; display: block;" /></div>
+			</div>
+		</div>
+
+		<div id="closeViewerButton" class="uiElement uiElementInvisible" style=" display: none;"><img src="pano/eye.png" onclick="restoreVideo();" style="margin-right: 6px;" /><img src="pano/stopicon.png" onclick="closeVideo();" /></div>
+
+		<script>
+			function restoreVideo()
+			{
+				if( !!ytAPIPlayer && !!ytAPIPlayer.item )
+					viewItem(null, ytAPIPlayer.item, ytAPIPlayer.lastObject);
+			}
+			var closeViewerButton = document.querySelector("#closeViewerButton");
+			closeViewerButton.addEventListener("mouseover", function(e){
+				itemHoverStart(null, ytAPIPlayer.item);});
+			closeViewerButton.addEventListener("mouseout", function(e){
+				itemHoverEnd(null);});
+
+			function closeVideo()
+			{
+				closeViewerButton.style.display = "none";
+
+				if( !!ytAPIPlayer )
+				{
+					ytAPIPlayer.destroy();
+					ytAPIPlayer = null;
+				}
+			}
+
+			var g_lastHoveredItem;
+			var launchButton = document.querySelector("#launchButton");
+			var linkSlate = document.querySelector("#linkSlate");
+			launchButton.addEventListener("mouseover", function(e)
+			{
+				linkSlate.innerHTML = "";
+				linkSlate.appendChild(document.createTextNode(getBestLaunchUrl(g_lastHoveredItem)));
+			});
+			launchButton.addEventListener("mouseout", function(e)
+			{
+				linkSlate.innerHTML = "";
+			});
+			var itemCard = document.querySelector("#itemCard");
+			itemCard.addEventListener("click", function(e)
+			{
+				launchItem(g_lastHoveredItem);
+			});
+
+			if( g_isWeb )
+			{
+				var personElem = document.querySelector(".person");
+				var flasher = setInterval(function()
+				{
+					if( !personElem.classList.contains("personLit") )
+						personElem.classList.add("personLit");
+					else
+						personElem.classList.remove("personLit");
+				}, 1000);
+
+				var socialName = document.querySelector("#socialName");
+				var elems = document.querySelector(".content[name='follow']");
+				if( !!elems )
+				{
+					elems = elems.querySelectorAll("img");
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].addEventListener("mouseover", function(e)
+						{
+							socialName.innerHTML = e.target.getAttribute("alt");
+						});
+
+						elems[i].addEventListener("mouseout", function(e)
+						{
+							socialName.innerHTML = "Social Media";
+						});
+					}
+				}
+			}
+
+			sceneManager.init({autoRotate: false});
+
+			var sceneContainer = sceneManager.getSceneContainer();
+			var containerIsWindow = (sceneContainer === window);
+			if( !containerIsWindow )
+			{
+				sceneContainer.appendChild(document.querySelector("#headerBannerContainer"));
+				sceneContainer.appendChild(document.querySelector("#navContainer"));
+				sceneContainer.appendChild(document.querySelector("#menuContainer"));
+			}
+			else
+				document.querySelector("#sceneContainer").style.display = "none";
+
+			var menuContainer = document.querySelector("#menuContainer");
+			menuContainer.addEventListener("click", function(e)
+			{
+				if( e.target === this )
+					showMenu();
+			}.bind(menuContainer), false);
+			var parentElem = (containerIsWindow) ? document.body : sceneContainer;
+			parentElem.appendChild(menuContainer);
+
+			function showContent(menuName)
+			{
+				document.querySelector(".menu").style.display = "none";
+				document.querySelector(".content[name='" + menuName + "']").style.display = "block";
+			}
+
+			var skipBackButton = document.querySelector(".skipBackButton");
+			var skipNextButton = document.querySelector(".skipNextButton");
+			function showMenu()
+			{
+				skipBackButton.style.display = "none";
+				skipNextButton.style.display = "none";
+
+				if( menuContainer.style.display !== "block" )
+				{
+					sceneManager.pause();
+
+					var elems = document.querySelectorAll(".uiElement");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.add("uiElementInvisible");
+
+					menuContainer.style.display = "block";
+					sceneManager.unhoverAll();
+
+					var masterContainer = document.querySelector(".content.item");
+					masterContainer.classList.remove("ytItemContainer");
+
+					var masterContainerParent = masterContainer.parentNode;
+					masterContainerParent.classList.remove("ytItemContainerParent");
+				}
+				else
+				{
+					sceneManager.resume();
+					menuContainer.style.display = "none";					
+					var elems = document.querySelectorAll(".content");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].style.display = "none";
+
+					document.querySelector(".menu").style.display = "block";
+
+					var elems = document.querySelectorAll(".uiElement");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.remove("uiElementInvisible");
+				}
+			}
+		</script>
+	</body>
+</html>

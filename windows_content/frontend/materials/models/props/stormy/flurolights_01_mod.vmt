@@ -1,0 +1,41 @@
+
+	  "VertexlitGeneric"
+    {
+	$model
+	 $basetexture models/props/stormy/flurolights_01
+
+        // The base texture will be multiplied by this color
+        "$color2" "[1 1 1]"
+
+        "$offset" "0"
+		
+	 //$translucent 1
+	// $additive 1
+
+    	"Proxies"
+    	{
+            "EntityRandom"
+            {
+                "scale" "12"
+                "resultVar" "$offset"
+            }
+            "Sine"
+            {
+                "sineperiod" 4
+                "timeoffset" "$offset"
+                "resultVar" "$color[0]"
+            }
+            "Sine"
+            {
+                "sineperiod" 8
+                "timeoffset" "$offset"
+                "resultVar" "$color[1]"
+            }
+            "Sine"
+            {
+                "sineperiod" 12
+                "timeoffset" "$offset"
+                "resultVar" "$color[2]"
+            }
+    	}
+    }

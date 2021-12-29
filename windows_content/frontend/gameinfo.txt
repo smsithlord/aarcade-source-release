@@ -1,0 +1,39 @@
+"GameInfo"
+{
+	"game"			"AArcade: Source"
+	"title"			""
+	"title2"		""
+	"nomodels"		"1"
+	"nohimodel" 	"1"
+	"nocrosshair"	"1"
+	"hidden_maps"
+	{
+		"test_speakers"		"1"
+		"test_hardware"		"1"
+	}
+
+	"supportsvr"	"0"
+
+	"FileSystem"
+	{
+		"SteamAppId"	"266430"
+
+		"SearchPaths"
+		{
+			"game+default_write_path+game_write+mod+mod_write"		"|gameinfo_path|../aarcade_user"
+			"game+mod"				"|gameinfo_path|."
+			"gamebin"				"|gameinfo_path|bin"
+			"game+mod"				"|gameinfo_path|../aarcade_user/custom/*"
+			"platform"				"platform"
+			"platform"				"platform/platform_misc.vpk"
+			"game"					"hl2mp"
+			"game"					"hl2mp/hl2mp_pak.vpk"
+			"game"					"hl2/hl2_textures.vpk"
+			"game"					"hl2/hl2_sound_vo_english.vpk"
+			"game"					"hl2/hl2_sound_misc.vpk"
+			"game"					"hl2/hl2_misc.vpk"
+			"game"					"hl2"
+			"game+mod+download"		"|gameinfo_path|../aarcade_user/download"
+		}
+	}
+}

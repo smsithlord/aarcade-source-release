@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-L8sbSQI_sIcIz"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"ps"
+		"priority"		"1"
+		"fileformat"		"/(.iso|.bin|.img|.ccd|.mds|.pbp|.ecm|.cue)$/i"
+	}
+}

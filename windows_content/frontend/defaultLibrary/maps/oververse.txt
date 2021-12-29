@@ -1,0 +1,22 @@
+"map"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"id"		"45bd196e"
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+		}
+		"title"		"oververse"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"file"		"oververse.bsp"
+			}
+		}
+	}
+}

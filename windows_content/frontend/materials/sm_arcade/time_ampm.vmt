@@ -1,0 +1,17 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/time_ampm"
+	$frame "2"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "postfix"
+			"resultVar" "$frame"
+		}
+	}
+}

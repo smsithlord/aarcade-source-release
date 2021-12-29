@@ -1,0 +1,4646 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?buster=4b"></link>
+		<script src="asset://ui/hud.js?buster=79"></script>
+
+		<!-- CHAT BOX STUFF -->
+		<style>
+			#chatPanel
+			{
+				opacity: 0.9;
+			}
+
+			.chatEntryContainer
+			{
+				display: block;
+				font-family: Arial;
+			}
+
+			.chatEntryDisplayName
+			{
+				display: inline-block;
+				margin-right: 10px;
+			}
+
+			.chatEntryText
+			{
+				display: inline;
+			}
+
+			.chatLink
+			{
+				display: inline;
+			}
+
+			.chatLink:hover
+			{
+				text-decoration: underline;
+			}
+
+			.resetChatButton
+			{
+				display: none;
+			}
+		</style>
+		<!-- END CHAT BOX STUFF -->
+
+		<style>
+			.entryMarkerContainer
+			{
+				z-index: 100000;
+				position: absolute;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+				border-width: 2px;
+				border-style: solid;
+				border-radius: 16px;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				pointer-events: none;
+				background-color: rgba(0, 0, 0, 1.0);/*0.97);*/
+				color: #ccc;
+				/*border: 0;*/
+			}
+		</style>
+		<script>
+
+			var g_twitchConfig = aaapi.cmdEx('getTwitchConfig');
+			var g_shouldShowMenu = arcadeHud.getParameterByName("showmenu");
+
+			var g_librarySearchMax = localStorage.getItem("librarysearchmax");
+			if( !!!g_librarySearchMax )
+				g_librarySearchMax = "40";
+			g_librarySearchMax = parseInt(g_librarySearchMax);
+
+			var g_autoCloseTasks = (aaapi.cmdEx('getConVarValue', "auto_close_tasks") == "1");
+			var g_imageTilesOnly = (localStorage.getItem("imageTilesOnly") == "1");
+			var g_playerEyeOrigin;
+			var smallIconSize = 24;
+			var iconSize = 24;
+			var g_opts;
+
+			var g_hiddenWizards = localStorage.getItem("hiddenWizards");
+			if( !!g_hiddenWizards )
+				g_hiddenWizards = JSON.parse(g_hiddenWizards);
+			else
+				g_hiddenWizards = {};
+
+			var socialListener = {
+				"countUpdate": function(count)
+				{
+					document.querySelector("#onlineCount").innerHTML = " <b>(" + count + " ONLINE)</b>";
+				}
+			};
+
+			function getDist(in_posA, in_posB)
+			{
+				var bufPosA = in_posA.split(" ");
+				var posA = {
+					"x": parseFloat(bufPosA[0]),
+					"y": parseFloat(bufPosA[1]),
+					"z": parseFloat(bufPosA[2])
+				};
+
+				var bufPosB = in_posB.split(" ");
+				var posB = {
+					"x": parseFloat(bufPosB[0]),
+					"y": parseFloat(bufPosB[1]),
+					"z": parseFloat(bufPosB[2])
+				};
+//(x2 x1)2 + (y2 y1)2 + (z2 z1)2
+
+				return Math.sqrt(((posB.x - posA.x)*(posB.x - posA.x)) + ((posB.y - posA.y)*(posB.y - posA.y)) + ((posB.z - posA.z)*(posB.z - posA.z)));
+			}
+
+			//function aaOnActivateInputMode(opts)
+			//{
+			//	g_opts = opts;
+			//	showWindowsTaskBar();
+			//}
+
+			function showLibrary()
+			{
+				if( arcadeHud.oldIsMapLoaded )
+					window.location = 'asset://ui/libraryBrowser.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			function viewSession()
+			{
+				window.location = 'asset://ui/online.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+			
+			function showWindowsTaskBar()
+			{
+				if( !!!g_opts )
+					return;
+
+				if( g_opts.fullscreen && g_opts.embeddedInstanceType === "AwesomiumBrowser")
+					aaapi.cmdEx('consoleCommand', "show_windows_task_bar");
+			}
+
+			function clearOldMarker()
+			{
+				if( g_activeEntryMarker )
+				{
+					g_activeEntryMarker.parentNode.removeChild(g_activeEntryMarker);
+					g_activeEntryMarker = null;
+				}
+			}
+
+			function createEntryMarker(entry, pos)
+			{
+				if( !!!g_playerEyeOrigin )
+					g_playerEyeOrigin = aaapi.cmdEx('getPlayerEyeOrigin');
+				clearOldMarker();
+
+				var container = document.createElement("div");
+				container.className = "entryMarkerContainer aaTextSizeFontSize"; //aaThemeColorTwoShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				container.entry = entry;
+
+				var dist = getDist(entry.origin, g_playerEyeOrigin);
+				//console.log(dist);
+				var zoomFactor = 150 / dist;//0.3;
+				if( zoomFactor > 1.0 )
+					zoomFactor = 1.0;
+				else if( zoomFactor < 0.2 )
+					zoomFactor = 0.2;
+
+				container.style.zoom = 100 * zoomFactor + "%";
+				container.style.left = pos.x / zoomFactor;
+				container.style.top = pos.y / zoomFactor;
+				//container.style.webkitTransform = "scale(0.2)";
+
+				var item = aaapi.cmdEx('getLibraryItem',entry.item);
+				var model = aaapi.cmdEx('getLibraryModel', entry.model);
+				container.item = item;
+				container.model = model;
+				container.slaveEntry = undefined;
+				container.slaveItem = undefined;
+				container.slaveModel = undefined;
+
+				var title = document.createElement("div");
+				// NOTE: If this is a screen mirror & it's item is NOT active, then the DisplayTask's item info should be used instead, and even it's Object (in some cases.)
+
+				title.className = "entryMarkerTitle";
+
+				var goodTitle = "";
+				if( !!!item )
+					goodTitle = model.title;
+				else if( !entry.slave )
+					goodTitle = item.title;
+				else
+				{
+					var testTaskId = "auto" + entry.item;
+					var testTask = aaapi.cmdEx('getTaskInfo', testTaskId);
+					if( !!testTask )
+					{
+						goodTitle = item.title;
+					}
+					else
+					{
+						var displayTask = aaapi.cmdEx('getDisplayTaskInfo');
+						if( displayTask )
+						{
+							var displayObject = aaapi.cmdEx('getObject', displayTask.objectId);
+							container.slaveEntry = displayObject;
+							if( !!displayObject )
+							{
+								var displayItem = aaapi.cmdEx('getLibraryItem',displayObject.item);
+								container.slaveItem = displayItem;
+
+								var displayModel = aaapi.cmdEx('getLibraryModel', displayObject.model);
+								container.slaveModel = displayModel;
+
+								if( !!displayItem )
+									goodTitle = displayItem.title;
+							}
+						}
+
+						if( goodTitle === "" )
+							goodTitle = item.title;
+					}
+				}
+
+				//var goodTitle = (!!item) ? item.title : model.title;
+				title.appendChild(document.createTextNode(goodTitle));
+
+				container.appendChild(title);
+/*
+				container.addEventListener("mouseover", function(e)
+				{
+					aaapi.system.objectHover(this.entry.id);
+				}.bind(container), false);
+*/
+				document.body.appendChild(container);
+				g_activeEntryMarker = container;
+			}
+		</script>
+
+		<style>
+			#aaTaskBar
+			{
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				border-style: solid;
+				border-width: 0px;
+				border-top: 0;
+				border-left: 0;
+				border-right: 0;
+			}
+
+			#aaClock
+			{
+				font-family: Arial;
+				white-space: nowrap;
+				padding: 8px;
+				padding-top: 2px;
+				padding-bottom: 2px;
+			}
+
+			.aaTaskBarTask
+			{
+				display: inline-block;
+				font-family: Arial;
+				white-space: nowrap;
+				background-color: rgba(0, 0, 0, 0.95);
+				margin: 0;
+				padding: 0;
+			}
+
+			.aaTaskBarTask:hover, .arcadeButtonExpanded
+			{
+				background-color: rgba(110, 110, 110, 0.95);
+			}
+
+			.aaTaskBarTaskLabel
+			{
+				padding: 6px;
+				padding-left: 0;
+				max-width: 200px;
+				min-width: 50px;
+				white-space: nowrap;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.taskButton
+			{
+				padding: 8px;
+				padding-top: 6px;
+				padding-bottom: 6px;
+				/*border: 2px solid transparent;*/
+			}
+
+			.taskCloseButton
+			{
+				visibility: hidden;
+			}
+
+			.aaTaskBarTask:hover .taskCloseButton
+			{
+				visibility: visible;
+			}
+
+			.taskCloseButton:hover
+			{
+				/*border-color: #ccc;*/
+				background-color: rgba(180, 180, 180, 0.95);
+			}
+
+			#showDesktopCell
+			{
+				width: 8px;
+				background-color: rgba(0, 0, 0, 0.95);
+				border-left: 1px solid #555;
+			}
+
+			#showDesktopCell:hover
+			{
+				background-color: rgba(110, 110, 110, 0.95);
+			}
+
+			#mouseSlate
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+			}
+
+			.displayTask td
+			{
+				font-weight: 900;
+				/*text-decoration: underline;*/
+				font-style: italic;
+			}
+
+			#searchTermBox:focus
+			{
+				outline: none;
+			}
+
+			#arcadeMenu
+			{
+				/*width: 200px;*/
+				pointer-events: all;
+			}
+
+			#arcadeMenu td
+			{
+				background-color: rgba(40, 40, 40, 0.9);
+				-webkit-transition: background-color 0.2s linear;
+			}
+
+			.expandedAAMenu > table > tbody > tr > td:first-child
+			{
+				background-color: rgba(60, 60, 60, 1.0) !important;
+			}
+
+			.arcadeMenuButton
+			{
+				padding: 8px;
+				font-family: Arial;
+			}
+
+			.arcadeMenuButton:hover
+			{
+				background-color: rgb(110, 110, 110);
+			}
+
+			.buttonTitle
+			{
+				display: none;
+				padding-left: 8px;
+			}
+
+			.expandedAAMenu .buttonTitle
+			{
+				display: inline-block;
+			}
+
+			.showcaseContainer
+			{
+				pointer-events: none;
+				position: absolute;
+				top: 60px;
+				right: 0px;
+				/*right: -470px;*/
+				text-align: right;
+				-webkit-transition: all 1.0s ease-in-out;
+				/*-webkit-transition-delay: 1.0s;*/
+			}
+
+			.showcaseImageContainer
+			{
+				float: right;
+				min-width: 250px;
+			}
+
+			.showcaseTitle
+			{
+				pointer-events: all;
+				max-width: 420px;
+				min-width: 300px;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				font-family: Arial;
+				font-size: 24px;
+				border-top-left-radius: 12px;
+				border-bottom-left-radius: 12px;
+				background-color: rgba(0, 0, 0, 0.95);
+				padding: 16px;
+				text-align: left;
+				padding-left: 32px;
+			}
+
+			.showcaseImageContainer
+			{
+				pointer-events: all;
+			}
+
+			.VCRPlaylistLabel
+			{
+				color: #aaa;
+				font-family: Arial;
+				padding-bottom: 8px;
+				font-weight: 900;
+			}
+
+			.VCRPlaylistContainer
+			{
+				text-align: left;
+				max-height: 120px;
+				overflow-y: auto;
+				overflow-x: hidden;
+			}
+
+			.showcaseVCRContainer
+			{
+				background-color: rgba(0, 0, 0, 0.95);
+				padding: 16px;
+				padding-top: 0;
+				border-bottom-left-radius: 12px;
+				display: inline-block;
+			}
+
+			.VCRListEntry
+			{
+				font-family: Arial;
+				white-space: nowrap;
+				padding-right: 16px;
+			}
+
+			.VCRListEntry:hover, .activeVCRListEntry
+			{
+				background-color: rgba(110, 110, 110, 0.95);
+			}
+
+			.VCRListEntryNumber
+			{
+				display: inline-block;
+				padding-right: 8px;
+			}
+
+			.VCRListEntryTitle
+			{
+				display: inline-block;
+				max-width: 220px;
+				overflow-x: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+
+			.showcaseImage
+			{
+				width: 300px;
+				/*background-color: rgba(0, 0, 0, 0.95);
+				padding: 16px;
+				padding-top: 0;
+				padding-right: 0;
+				border-bottom-left-radius: 12px;*/
+			}
+
+			.showcaseImageWrapper
+			{
+				/*width: 300px;*/
+				background-color: rgba(0, 0, 0, 0.95);
+				padding: 16px;
+				padding-top: 0;
+				padding-right: 0;
+				border-bottom-left-radius: 12px;
+			}
+
+			.launchButtonLabel
+			{
+				font-family: Arial;
+				font-weight: bold;
+				font-size: 20px;
+				letter-spacing: 0.1em;
+				color: #000;
+				padding: 16px;
+				background-color: #fff;
+				display: inline-block;
+				border-radius: 16px;
+				border: 2px solid rgba(0, 0, 0, 0.5);
+			}
+
+			.showcaseImageButton
+			{
+				position: absolute;
+				right: 0;
+				left: 0;
+				height: 100%;
+				border-bottom-left-radius: 12px;
+				background-color: rgba(255, 255, 255, 0.4);
+				display: none;
+			}
+
+			.showcaseImageWrapper:hover .showcaseImageButton
+			{
+				display: block;
+			}
+		</style>
+		<script>
+			function doPause()
+			{
+				window.location='asset://ui/pause.html';
+			}
+		</script>
+	</head>
+	<body><!-- onload="setTimeout(function(){document.querySelector('#aaTaskBar').style.display = 'block';}, 10);">-->
+
+		<div id="mouseSlate"></div>
+
+		<!-- CHAT BOX STUFF -->
+
+		<div id="bigChatStuff" style="z-index: 100001; pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0; padding: 2px; padding-bottom: 32px;" onmouseover="unglowall();">
+
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="bottom" align="left">
+		<!--<div class="aaHelpContainer" style="padding: 16px;"></div>-->
+
+		<div align="left" class="aaTitleText aaTextColorOneColor aaTitleTextSizeFontSize" style=" padding: 16px; padding-bottom: 0; pointer-events: all; display: inline-block;" onclick="toggleChat()" id="chatTitle">Chat</div><br />
+
+		<div style="display: none; pointer-events: all; max-width: 800px;" id="chatPanel">
+
+
+		<script>
+			var g_isResetting = false;
+			var isTwitchEnabled = (aaapi.cmdEx('getConVarValue', "twitch_enabled") === "1");
+			var twitchChannelsExist = false;
+			if( isTwitchEnabled )
+			{
+				// grab our inter-tab memory
+				var twitchChannels = localStorage.getItem("twitchChannels");
+				if( !!twitchChannels )
+					twitchChannels = JSON.parse(twitchChannels);
+				else
+					twitchChannels = {};
+
+				for( var x in twitchChannels )
+				{
+					if( twitchChannels[x] >= 0 )
+					{
+						twitchChannelsExist = true;
+						break;
+					}
+				}
+
+				if( !twitchChannelsExist )
+					aaapi.cmdEx('openTwitchConnection');
+			}
+
+			var expression = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+			var regex = new RegExp(expression);
+			function isLink(t)
+			{
+				if (t.match(regex) && "abcdefghijklmnopqrstuvwxyz0123456789".indexOf(t[0]) >= 0 )
+					return true;
+				else
+					return false;
+			}
+
+			function fetchTwitchStream(channel)
+			{
+				// get the client's IP
+				var xmlHttp = new XMLHttpRequest();
+				xmlHttp.onreadystatechange = function()
+				{ 
+					if (xmlHttp.readyState == 4)
+					{
+						if(xmlHttp.status == 200)
+						{
+							//console.log(xmlHttp.responseText);
+							var twitchInfo = JSON.parse(xmlHttp.responseText);
+							console.log(JSON.stringify(twitchInfo));
+						}
+						else
+							console.log("Failed to fetch Twitch stream info.");
+					}
+				}
+				
+				xmlHttp.open("GET", "http://www.anarchyarcade.com/twitch/testlive.php?channel=" + channel, true);
+				xmlHttp.send(null);
+			}
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";
+
+			// use session storage
+			var tabId = sessionStorage.getItem("aaChatTab", tabId);
+			if( !!!tabId )
+				tabId = "";
+
+			var isSocial = aaapi.cmdEx('getSocialMode');
+
+			var tabs = [];
+			var universeInfo = aaapi.cmdEx('getConnectedSession');// : null;
+			if( universeInfo )
+			{
+				tabs.push({
+					"id": "session",
+					"title": "Lobby"
+				});
+			}
+
+			if( isSocial )
+			{
+				tabs.push({
+					"id": "social",
+					"title": "Social"
+				});
+			}
+
+
+			if( twitchChannelsExist )
+			{
+				// grab our inter-tab memory
+				var twitchChannels = localStorage.getItem("twitchChannels");
+				if( !!twitchChannels )
+					twitchChannels = JSON.parse(twitchChannels);
+				else
+					twitchChannels = {};
+
+				for( var x in twitchChannels )
+				{
+					if( twitchChannels[x] === -1 )
+						continue;
+
+					tabs.push({
+						"id": "twitch" + x.substring(1),
+						"title": "<div style='display: inline-block;' channel='" + x + "'><img src='hosticon.png' style='width: 16px; height: 16px; margin-right: 8px; display: none;' class='channelLiveButton helpNote' help='This Twitch channel is currently live!' channel='" + x + "' />" + x + "</div> <img src='xicon.png' style='width: 12px; height: 12px; margin-left: 8px;' class='channelCloseButton helpNote' help='Close this Twitch channel\'s chat tab.' />"
+					});
+				}
+			}
+
+			if( tabs.length > 0 )
+			{
+				var foundTab = false;
+				for( var i = 0; i < tabs.length; i++ )
+				{
+					if( tabs[i].id === tabId )
+					{
+						foundTab = true;
+						break;
+					}
+				}
+
+				if( !foundTab )
+				{
+					// if the tab we want is not visible, let's auto-select the 1st available tab.
+					tabId = tabs[0].id;
+				}
+			}
+
+			var selectTwitchIconHTML = arcadeHud.generateIconHTML("objecticon.png", 32, 32, "aaTextColorTwoColor");
+			var clearTwitchIconHTML = arcadeHud.generateIconHTML("eraseicon.png", 32, 32, "aaTextColorTwoColor");
+			var clearAllTwitchIconHTML = arcadeHud.generateIconHTML("eraseallicon.png", 32, 32, "aaTextColorTwoColor");
+			function onTwitchChannelDetected(twitchChannels, channel)
+			{
+				var tabElem = document.createElement('div');
+				tabElem.className = 'aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor';
+				var thisTabid = 'twitch' + channel.substring(1);
+				tabElem.setAttribute('tabid', thisTabid);
+
+				if( thisTabid === tabId )
+					tabElem.style.display = "block";
+				else
+					tabElem.style.display = "none";
+
+				var paneContentElem = document.createElement('div');
+				paneContentElem.className = 'aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor';
+				paneContentElem.style.cssText = 'max-height: 200px; max-width: 740px; padding: 10px; display: none; margin-bottom: 10px; overflow-x: hidden;';
+
+				var chatTableElem = document.createElement('table');
+				var chatTableRowElem = document.createElement('tr');
+				chatTableElem.appendChild(chatTableRowElem);
+
+				var chatTableCellAElem = document.createElement('td');
+				chatTableRowElem.appendChild(chatTableCellAElem);
+
+				var chatLogContainerElem = document.createElement('div');
+				chatLogContainerElem.id = 'twitchChatLogContainer' + channel.substring(1);
+
+				var chatFormElem = document.createElement('form');
+				chatFormElem.id = 'twitchChatForm' + channel.substring(1);
+				chatFormElem.style.cssText = 'margin: 0; padding: 0;';
+				chatFormElem.addEventListener("submit", function(e)
+				{
+					var twitchChatInputElem = document.querySelector("#twitchChatInput" + channel.substring(1));
+					var chatText = twitchChatInputElem.value;
+
+					if( chatText === "" )
+						return;
+
+					twitchChatInputElem.value = "";
+					aaapi.cmdEx('sendTwitchChat', channel, chatText);
+					e.preventDefault();
+					return true;
+				}.bind(channel), true);
+
+				var chatLabelElem = document.createElement('div');
+				chatLabelElem.className = 'aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize';
+				chatLabelElem.style.cssText = 'display: inline-block;';
+				chatLabelElem.innerHTML = 'Chat:';
+
+				var chatInputElem = document.createElement('input');
+				chatInputElem.id = 'twitchChatInput' + channel.substring(1);
+				chatInputElem.type = 'text';
+				chatInputElem.className = 'aaTitleTextSizeFontSize';
+				chatInputElem.style.cssText = 'display: inline-block; padding: 4px;';
+				chatInputElem.size = '49';
+				chatInputElem.value = '';
+				chatInputElem.placeholder = 'Enter chat text here...';
+
+				var chatTableCellBElem = document.createElement('td');
+				chatTableRowElem.appendChild(chatTableCellBElem);
+
+				var twitchButtonsContainer = document.createElement('div');
+				twitchButtonsContainer.channel = channel;
+				chatTableRowElem.appendChild(twitchButtonsContainer);
+
+				var clearTwitchElem = document.createElement('div');
+				clearTwitchElem.style.display = "block";
+				clearTwitchElem.className = "helpNote";
+				clearTwitchElem.setAttribute("help", "Clear your chat log for this channel.");
+				clearTwitchElem.innerHTML = clearTwitchIconHTML;
+				//clearTwitchElem.src = 'eraseicon.png';
+				clearTwitchElem.addEventListener('click', function(e)
+				{
+					// find the chat log for this channel
+					var twitchChatLog = localStorage.getItem('twitchChatLog' + this.channel);
+					if( !!twitchChatLog )
+					{
+						localStorage.removeItem('twitchChatLog' + this.channel);
+
+						var twitchChannels = localStorage.getItem("twitchChannels");
+						if( !!twitchChannels )
+							twitchChannels = JSON.parse(twitchChannels);
+						else
+							twitchChannels = {};
+
+						twitchChannels[this.channel] = (new Date()).getTime();
+						localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+					}
+				}.bind(twitchButtonsContainer));
+				twitchButtonsContainer.appendChild(clearTwitchElem);
+				arcadeHud.assignHelp(clearTwitchElem);
+
+				var clearAllTwitchElem = document.createElement('div');
+				clearAllTwitchElem.style.display = "block";
+				clearAllTwitchElem.className = "helpNote";
+				clearAllTwitchElem.setAttribute("help", "Clear ALL chat logs for ALL channels.");
+				clearAllTwitchElem.innerHTML = clearAllTwitchIconHTML;
+				//clearTwitchElem.src = 'eraseicon.png';
+				clearAllTwitchElem.addEventListener('click', function(e)
+				{
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+						twitchChannels = JSON.parse(twitchChannels);
+					else
+						twitchChannels = {};
+
+					if( isTwitchEnabled )
+					{
+						var twitchChannels = localStorage.getItem("twitchChannels");
+						if( !!twitchChannels )
+							twitchChannels = JSON.parse(twitchChannels);
+						else
+							twitchChannels = {};
+
+						for( var x in twitchChannels )
+						{
+							// find the chat log for this channel
+							var twitchChatLog = localStorage.getItem('twitchChatLog' + x);
+							if( !!twitchChatLog )
+							{
+								localStorage.removeItem('twitchChatLog' + x);
+								twitchChannels[x] = (new Date()).getTime();
+							}
+						}
+						localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+					}
+				}.bind(twitchButtonsContainer));
+				twitchButtonsContainer.appendChild(clearAllTwitchElem);
+				arcadeHud.assignHelp(clearAllTwitchElem);
+
+				if( arcadeHud.oldIsMapLoaded )
+				{
+					var selectTwitchElem = document.createElement('div');
+					selectTwitchElem.style.display = "block";
+					selectTwitchElem.className = "helpNote aaOnlyIfMapLoaded aaOnlyIfHost";
+					selectTwitchElem.setAttribute("help", "Spawn (or select) this Twitch stream into your arcade.");
+					selectTwitchElem.innerHTML = selectTwitchIconHTML;
+					//selectTwitchElem.src = 'objecticon.png';
+					selectTwitchElem.addEventListener('click', function(e)
+					{
+						var file = "twitch.tv/" + this.channel.substring(1);
+
+						var foundObject = false;
+						var objectId = aaapi.cmdEx('getObjectWithFile', file);
+						if( objectId !== "" )
+						{
+							var object = aaapi.cmdEx('getObject', objectId);
+							if( !!object && object.entity > -1)
+							{
+								foundObject = true;
+
+								aaapi.cmdEx('addToastMessage', "Object Selected");
+								aaapi.cmdEx('attemptSelectEntity', object.entity, false);
+								aaapi.cmdEx('deactivateInputMode');
+							}
+						}
+
+						if( !foundObject )
+						{
+							aaapi.cmdEx('setLibraryBrowserContext', "items", "", "", "");
+						//	aaapi.system.addToastMessage("Not found in arcade.");
+							document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent("http://www.twitch.tv/" + this.channel.substring(1));
+						}
+					}.bind(twitchButtonsContainer));
+					twitchButtonsContainer.appendChild(selectTwitchElem);
+					arcadeHud.assignHelp(selectTwitchElem);
+				}
+
+				var refreshTwitchElem = document.createElement('div');
+				refreshTwitchElem.style.cssText = "display: block; font-size: 32px; font-weight: 900;";
+				refreshTwitchElem.className = "helpNote aaTextColorTwoColor";
+				refreshTwitchElem.setAttribute("help", "Refresh & reconnect to Twitch if your connection has gone haywire.");
+				refreshTwitchElem.innerHTML = "&#x21bb;";
+				refreshTwitchElem.addEventListener('click', reset);
+				twitchButtonsContainer.appendChild(refreshTwitchElem);
+				arcadeHud.assignHelp(refreshTwitchElem);
+
+				var liveContainerElem = document.createElement('div');
+				liveContainerElem.channel = channel;
+				liveContainerElem.style.cssText = "display: none; margin-left: 16px;";
+				chatTableCellBElem.appendChild(liveContainerElem);
+
+				liveContainerElem.appendChild(document.createTextNode("Live Channel"));
+/*
+				var twitchPreviewImage = document.createElement('img');
+				twitchPreviewImage.style.cssText = "width: 200px; height: 100px;";
+				twitchPreviewImage.src = "http://static-cdn.jtvnw.net/previews-ttv/live_user_" + channel.substring(1) + "-200x100.jpg";
+				twitchPreviewImage.addEventListener("load", function(e)
+				{
+					var liveButton = document.querySelector(".channelLiveButton[channel='" + this.channel + "']");
+					if( !!liveButton )
+						liveButton.style.display = "inline-block";
+					//this.style.display = "block";
+					//var iTime = performance.getEntriesByName(e.target.src)[0];
+       				//console.log(iTime.transferSize); //or encodedBodySize, decodedBodySize
+				}.bind(liveContainerElem));
+				liveContainerElem.appendChild(twitchPreviewImage);
+*/
+				var xmlHttp = new XMLHttpRequest();
+				xmlHttp.onreadystatechange = function()
+				{ 
+					if (xmlHttp.readyState == 4)
+					{
+						if(xmlHttp.status == 200)
+						{
+							if( xmlHttp.responseText == 1 )
+							{
+								if( g_twitchConfig.channel === this.channel )
+									aaapi.cmdEx('setTwitchLiveStatus', true);
+
+								var liveButton = document.querySelector(".channelLiveButton[channel='" + this.channel + "']");
+								if( !!liveButton )
+									liveButton.style.display = "inline-block";
+							}
+							else
+							{
+								if( g_twitchConfig.channel === this.channel )
+									aaapi.cmdEx('setTwitchLiveStatus', false);
+							}
+						}
+					}
+				}.bind(liveContainerElem);
+				
+				xmlHttp.open("GET", "http://www.anarchyarcade.com/testlive.php?channel=" + channel.substring(1), true);
+				xmlHttp.send();
+
+				// compose
+				tabElem.appendChild(chatTableElem);
+				chatTableCellAElem.appendChild(paneContentElem);
+				paneContentElem.appendChild(chatLogContainerElem);
+				chatTableCellAElem.appendChild(chatFormElem);
+
+				//tabElem.appendChild(chatFormElem);
+				chatFormElem.appendChild(chatLabelElem);
+				chatFormElem.appendChild(chatInputElem);
+
+				// add tabElem to the DOM
+				document.querySelector("#tabContentsContainer").appendChild(tabElem);
+
+				if( thisTabid === tabId )
+					chatInputElem.focus();
+			}
+
+			function onNewSessionChatDetected()
+			{
+				// find the chat log for this channel
+				var sessionChatLog = localStorage.getItem('sessionChat');
+				if( !!sessionChatLog )
+					sessionChatLog = JSON.parse(sessionChatLog);
+				else
+					sessionChatLog = [];
+
+				updateSessionUserList();
+
+				// rebuild
+				var sessionChatLogContainerElem = document.querySelector("#chatLogContainer");
+				generateChatLog(sessionChatLog, sessionChatLogContainerElem);
+			}
+
+			function onNewSocialChatDetected()
+			{
+				// find the chat log for this channel
+				var socialChatLog = localStorage.getItem('socialChat');
+				if( !!socialChatLog )
+					socialChatLog = JSON.parse(socialChatLog);
+				else
+					socialChatLog = [];
+
+				updateSocialUserList();
+
+				// rebuild
+				var socialChatLogContainerElem = document.querySelector("#socialChatLogContainer");
+				generateChatLog(socialChatLog, socialChatLogContainerElem);
+			}
+
+			var g_secondaryTwitchDetect = false;
+			var g_initialTwitchDetect = true;
+			function twitchChatDetect()
+			{
+				if( g_isResetting )
+					return;
+
+				// grab our inter-tab memory
+				var twitchChannels = localStorage.getItem("twitchChannels");
+				if( !!twitchChannels )
+					twitchChannels = JSON.parse(twitchChannels);
+				else
+					twitchChannels = {};
+
+				if( !g_initialTwitchDetect )
+				{
+					var aaActiveTab = document.querySelector(".aaTabActive");
+					if( !!!aaActiveTab )
+						return;
+
+					var aaActiveTabId = aaActiveTab.getAttribute("tabid");
+
+					if( isTwitchEnabled )
+					{
+						for( var x in twitchChannels )
+						{
+							if( twitchChannels[x] === -1 )
+								continue;
+
+							if( !!!g_activeTwitchChannels[x] )
+							{
+								if( g_secondaryTwitchDetect )
+								{
+									if( twitchChannels[x] < 0 )
+										continue;
+
+									onTwitchChannelDetected(twitchChannels, x);
+									g_activeTwitchChannels[x] = true;
+								}
+								else
+								{
+									location.reload();
+									return;
+								}
+							}
+						}
+
+						for( var x in g_activeTwitchChannels )
+						{
+							if( !!!twitchChannels[x] )
+							{
+								delete g_activeTwitchChannels[x];
+								location.reload();
+								return;
+							}
+						}
+
+						for( var channel in twitchChannels )
+						{
+							if( twitchChannels[channel] > g_lastTwitchCheck )
+								onNewChatDetected(twitchChannels, channel);
+						}
+					}
+
+					// let's do some SOCIAL and SESSION stuff here...
+					var sessionTime = localStorage.getItem("sessionChatTime");
+					if( sessionTime > g_lastTwitchCheck )
+						onNewSessionChatDetected();
+
+					var socialTime = localStorage.getItem("socialChatTime");
+					if( socialTime > g_lastTwitchCheck )
+						onNewSocialChatDetected();
+
+					g_lastTwitchCheck = (new Date()).getTime();
+				}
+
+				if( g_initialTwitchDetect )
+				{
+					g_initialTwitchDetect = false;
+					g_secondaryTwitchDetect = true;
+				}
+				else if( g_secondaryTwitchDetect )
+					g_secondaryTwitchDetect = false;
+			}
+
+			var g_activeTwitchChannels = {};
+			var g_lastTwitchCheck = 0;
+
+
+
+			function onNewChatDetected(twitchChannels, channel)
+			{
+				if( g_isResetting )
+					return;
+
+				// find the chat log for this channel
+				var twitchChatLog = localStorage.getItem('twitchChatLog' + channel);
+				if( !!twitchChatLog )
+					twitchChatLog = JSON.parse(twitchChatLog);
+				else
+					twitchChatLog = [];
+
+				// rebuild
+				var twitchChatLogContainerElem = document.querySelector("#twitchChatLogContainer" + channel.substring(1));
+				generateChatLog(twitchChatLog, twitchChatLogContainerElem);
+			}
+
+
+			if( twitchChannelsExist )
+			{
+				twitchChatDetect();
+
+				tabs.push({
+					"id": "addNewTwitch",
+					"title": "<div class='helpNote' help='Add a new Twitch chat tab'>+</div>"
+				});
+			}
+
+			var tabsInfo = {
+				"tabs": tabs,
+				"activeTabId": tabId,
+				"onChangeCallbackName": "onChangeCallback"//,
+				//"onChangeHandlerName": "tabChangeHandler"
+			};
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML(tabsInfo);
+			document.write(windowTabsHeaderHTML);
+
+			var closeButtons = document.querySelectorAll(".channelCloseButton");
+			for( var i = 0; i < closeButtons.length; i++ )
+			{
+				closeButtons[i].addEventListener("click", function(e)
+				{
+					var channel = e.srcElement.parentNode.querySelector('div').getAttribute("channel");
+					setTimeout(function()
+					{
+						aaapi.cmdEx('leaveTwitchChannel', this.channel);
+					}.bind({channel: channel}), 100);
+				});
+			}
+
+			function extractLinks(text)
+			{
+				var re = /\b((?:[a-z][\w-]+:(?:\/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}\/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'"".,<>?«»“”‘’]))/i;
+				var links = [];
+				if( re.exec(text) )
+				{
+					for(var i = 0; i <= re.exec(text).length; i++)
+					{
+					  if(re.exec(text)[i])
+					  	links.push(re.exec(text)[i]);
+					}
+				}
+				return links;
+			}
+
+			function generateChatLog(sessionChatLog, chatLogContainerElem)
+			{
+				chatLogContainerElem.innerHTML = "";
+				if( sessionChatLog.length > 0 )
+				{
+					chatLogContainerElem.parentNode.style.display = "block";
+
+					var aaActiveTab = document.querySelector(".aaTabActive");
+					var aaActiveTabId = aaActiveTab.getAttribute("tabid");
+
+					var twitchLinks = [];
+					var chatEntryElem;
+					var chatDisplayNameElem;
+					var chatTextElem;
+					var chatEntry;
+					for( var i = 0; i < sessionChatLog.length; i++ )
+					{
+						chatEntry = sessionChatLog[i];
+						chatEntryElem = document.createElement("div");
+						chatEntryElem.className = "chatEntryContainer";
+
+						chatDisplayNameElem = document.createElement("div");
+						chatDisplayNameElem.className = "chatEntryDisplayName aaTitleText aaTextColorTwoColor aaTextSizeFontSize";
+						chatDisplayNameElem.style.cssText = "padding: 0;";
+						chatDisplayNameElem.appendChild(document.createTextNode(chatEntry.displayName + ":"));
+						chatEntryElem.appendChild(chatDisplayNameElem);
+
+						chatTextElem = document.createElement("div");
+						chatTextElem.className = "chatEntryText aaTextColorTwoColor aaTextSizeFontSize";
+
+						var someText = "";
+						var chattyText = chatEntry.text.split(' ');
+						for( var j = 0; j < chattyText.length; j++ )
+						{
+							if( arcadeHud.oldIsMapLoaded != 1 || !isLink(chattyText[j]) )
+							{
+								if( j > 0 )
+									someText += " ";
+
+								someText += chattyText[j];
+							}
+							else
+							{
+								if( j > 0 )
+									someText += " ";
+
+								if( someText !== "" )
+								{
+									chatTextElem.appendChild(document.createTextNode(someText));
+									someText = "";
+								}
+
+								var linkElem = document.createElement('div');
+								linkElem.className = "chatLink helpNote";
+								linkElem.setAttribute("help", chattyText[j]);
+								linkElem.url = chattyText[j];
+								linkElem.addEventListener("click", function(e)
+								{
+									aaapi.cmd('setLibraryBrowserContext', "items", "", "", "");
+									document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(this.url);
+								}.bind(linkElem));
+								linkElem.appendChild(document.createTextNode(chattyText[j]));
+								chatTextElem.appendChild(linkElem);
+								arcadeHud.assignHelp(linkElem);
+							}
+						}
+
+						if( someText !== "" )
+							chatTextElem.appendChild(document.createTextNode(someText));
+						chatEntryElem.appendChild(chatTextElem);
+						chatLogContainerElem.appendChild(chatEntryElem);
+					}
+
+					chatLogContainerElem.parentNode.scrollTop = chatLogContainerElem.parentNode.scrollHeight;
+				}
+			}
+
+			function onChangeCallback()
+			{
+				var aaTabs = document.querySelectorAll(".aaTab");
+				var aaActiveTab = document.querySelector(".aaTabActive");
+				if( !!!aaActiveTab )
+					return;
+
+				var aaActiveTabId = aaActiveTab.getAttribute("tabid");
+				sessionStorage.setItem("aaChatTab", aaActiveTabId);
+
+				var chatLogContainerElem = document.querySelector("#chatLogContainer");
+				var socialChatLogContainerElem = document.querySelector("#socialChatLogContainer");
+				//var twitchChatLogContainerElem = document.querySelector("#twitchChatLogContainer");
+				if( aaActiveTabId === "social" )
+				{
+					var socialChatInputElem = document.querySelector("#socialChatInput");
+					socialChatInputElem.value = document.querySelector("#chatInput").value;
+					socialChatInputElem.focus();
+
+					// fetch the chat log
+					var socialChatLog = localStorage.getItem("socialChat");
+					if( !!socialChatLog )
+						socialChatLog = JSON.parse(socialChatLog);
+					else
+						socialChatLog = [];
+
+					generateChatLog(socialChatLog, socialChatLogContainerElem);
+				}
+				else if( aaActiveTabId === "session" )
+				{
+					var chatInputElem = document.querySelector("#chatInput");
+					chatInputElem.value = document.querySelector("#socialChatInput").value;
+					chatInputElem.focus();
+
+					// fetch the chat log
+					var sessionChatLog = localStorage.getItem("sessionChat");
+					if( !!sessionChatLog )
+						sessionChatLog = JSON.parse(sessionChatLog);
+					else
+						sessionChatLog = [];
+
+					generateChatLog(sessionChatLog, chatLogContainerElem);
+				}
+				else if( aaActiveTabId.indexOf("twitch") === 0 )
+				{
+					var channel = aaActiveTabId.substring(6);
+					//fetchTwitchStream(channel);
+
+					var twitchChatInputElem = document.querySelector("#twitchChatInput" + channel);
+					if( !!twitchChatInputElem )
+						twitchChatInputElem.focus();
+
+					var twitchChatLogContainerElem = document.querySelector("#twitchChatLogContainer" + channel);
+					if( !!twitchChatLogContainerElem )
+					{
+						twitchChatLogContainerElem.parentNode.scrollTop = twitchChatLogContainerElem.parentNode.scrollHeight;
+					}
+				}
+				else if( aaActiveTabId === "addNewTwitch" )
+				{
+					var twitchChatInputElem = document.querySelector("#addNewTwitchInput");
+					twitchChatInputElem.focus();
+				}
+			}
+		</script>
+
+
+
+		<div id="tabContentsContainer">
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" tabid="session">
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 200px; padding: 10px; display: none; margin-bottom: 10px; max-width: 700px;">
+				<div id="chatLogContainer"></div>
+			</div>
+
+			<!--<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; padding: 20px;">-->
+				<form id="chatForm" style="margin: 0; padding: 0;">
+					<div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize" style="display: inline-block;">Chat:</div>
+					<input id="chatInput" type="text" class="aaTitleTextSizeFontSize" size="46" value="" onmouseup="return false;" style="display: inline-block; padding: 4px;" placeholder="Enter chat text here..." />
+				</form>
+				<br />
+				<div id="sessionNamesList"></div>
+			<!--</div>-->
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" tabid="social">
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 200px; padding: 10px; display: none; margin-bottom: 10px; max-width: 700px;">
+				<div id="socialChatLogContainer"></div>
+			</div>
+
+			<form id="socialChatForm" style="margin: 0; padding: 0;">
+				<div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize" style="display: inline-block;">Chat:</div>
+				<input id="socialChatInput" type="text" class="aaTitleTextSizeFontSize" size="46" value="" onmouseup="return false;" style="display: inline-block; padding: 4px;" placeholder="Enter chat text here..." />
+			</form>
+			<br />
+			<div id="socialNamesList"></div>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" tabid="addNewTwitch" style="display: none;">
+			<form id="addNewTwitchChatForm" style="margin: 0; padding: 0;">
+				<div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize" style="display: inline-block;">Twitch Channel:</div>
+				<input id="addNewTwitchInput" type="text" class="aaTitleTextSizeFontSize" size="49" value="" onmouseup="return false;" style="display: inline-block; padding: 4px;" placeholder="#" /><input type="submit" value="JOIN" style="display: inline-block; padding-left: 16px; padding-right: 16px; margin-left: 12px;" class="aaTitleTextSizeFontSize aaButton" />
+			</form>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" tabid="nothing" style="display: none;">
+			<input type="text" id="nothingBox" class="aaTitleTextSizeFontSize" size="46" value="" onmouseup="return false;" style="display: inline-block; padding: 4px;" placeholder="" /><input onclick="reset();" type="button" value="&#x21bb;" style="font-weight: 900;" class="aaTitleTextSizeFontSize resetChatButton" />
+		</div>
+
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			//var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			//document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+
+		<style>
+			#socialListContainer
+			{
+				position: absolute;
+				bottom: 0;
+				right: 0;
+				display: none;
+			}
+
+			#socialList
+			{
+				display: none;
+				max-height: 454px;
+				overflow-y: auto;
+			}
+
+			.socialCard
+			{
+				border-radius: 8px;
+				padding: 8px;
+				margin: 4px;
+				margin-left: 20px;
+				opacity: 0.9;
+			}
+
+			.socialCard:hover
+			{
+				opacity: 1.0;
+			}
+
+			.socialActionsCell
+			{
+				display: none;
+			}
+
+			.socialCard:hover .socialActionsCell
+			{
+				display: table-cell;
+			}
+
+			.joinButton
+			{
+				min-width: inherit;
+				margin-right: 4px;
+				padding: 4px;
+			}
+
+			.socialListAvatar
+			{
+				width: 64px;
+				height: 64px;
+			}
+
+			.socialListName
+			{
+				font-size: 20px;
+				font-family: Arial;
+				font-weight: bold;
+				margin-left: 4px;
+				white-space: nowrap;
+			}
+
+			.socialListMap
+			{
+				font-size: 12px;
+				font-family: Arial;
+				font-weight: bold;
+				margin-left: 4px;
+				white-space: nowrap;
+			}
+
+			.socialListArcade
+			{
+				font-size: 12px;
+				font-family: Arial;
+				font-weight: bold;
+				margin-left: 4px;
+				white-space: nowrap;
+			}
+		</style>
+
+		<div id="socialListContainer" style="padding-bottom: 34px;">
+			<div align="right" class="helpNote aaTitleText aaTextColorOneColor aaTitleTextSizeFontSize" style=" padding: 16px; padding-bottom: 0;" help="Social puts you in the global chat room where you can talk to other people who are using AArcade right now." onclick="toggleSocialList()" onmouseover="unglowall();" id="socialListTitle">Social</div>
+			<div id="socialList" class="aaScrollBars" align="right" onmouseover="unglowall();"></div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var g_socialUsers;
+			function fetchSocialUsers()
+			{
+				g_socialUsers = localStorage.getItem("socialUsers");
+
+				if( !!g_socialUsers )
+					g_socialUsers = JSON.parse(g_socialUsers);
+				else
+					g_socialUsers = {};
+			}
+
+			//if( isSocial )
+				document.querySelector("#socialListContainer").style.display = "block";
+
+			var socialListElem = document.querySelector("#socialList");
+			var chatElem = document.querySelector("#chatPanel");
+			var socialListTitleElem = document.querySelector("#socialListTitle");
+			function updateSocialUsersListCount()
+			{
+				if( isSocial )
+				{
+					fetchSocialUsers();
+
+					var numUsers = Object.keys(g_socialUsers).length;
+					socialListTitleElem.innerHTML = "Social (" + numUsers + ")";
+				}
+				else
+				{
+					socialListTitleElem.innerHTML = "Social";
+				}
+			}
+			updateSocialUsersListCount();	// this also fecths g_socialUsers for us.
+
+			function updateSocialUsersList()
+			{
+				if( isSocial )
+				{
+					updateSocialUsersListCount();	// this also fecths g_socialUsers for us.
+
+					socialListElem.innerHTML = "<input type='button' value='Leave' style='margin-right: 16px; margin-top: 4px;' class='helpNote aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor' help='Disconnect from the global chat room.' onclick='leaveSocial();' /><br />";
+
+					var socialUser, table, infoRow, actionCell, joinButton, avatarCell, avatarImg, nameCell, nameContainer, arcadeRow, arcadeCell, arcadeContainer, mapRow, mapCell, mapContainer, mapFile;
+					for( var x in g_socialUsers )
+					{
+						socialUser = g_socialUsers[x];
+
+						table = document.createElement("table");
+						table.className = "socialCard aaThemeColorTwoBackgroundColor";
+						infoRow = document.createElement("tr");
+						table.appendChild(infoRow);
+
+						actionCell = document.createElement("td");
+						if( socialUser.lobby !== "" && socialUser.instance !== "" && socialUser.instance !== "Private" && socialUser.universe !== "" && socialUser.universe !== "Private")
+							actionCell.className = "socialActionsCell";
+						else
+							actionCell.style.display = "none";
+						actionCell.rowSpan = "3";
+						actionCell.vAlign = "middle";
+						actionCell.align = "center";
+						infoRow.appendChild(actionCell);
+
+						joinButton = document.createElement("div");
+						joinButton.className = "joinButton helpNote aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+
+						if( !isInOurSession )
+							joinButton.setAttribute("help", "Join Server");
+						else
+							joinButton.setAttribute("help", "This user is in your current session with you!");
+
+						var isInOurSession = (!!universeInfo && universeInfo.lobby === socialUser.lobby && universeInfo.universe === socialUser.universe && universeInfo.instance === socialUser.instance );
+						joinButton.innerHTML = (!isInOurSession) ? arcadeHud.generateIconHTML("mpicon.png", 32, 32, "aaTextColorOneColor") : arcadeHud.generateIconHTML("checkicon.png", 32, 32, "aaTextColorOneColor");
+						joinButton.addEventListener("click", function(e)
+						{
+							if( !isInOurSession )
+							{
+								if( !!universeInfo && universeInfo.universe !== "" && universeInfo.instance !== "" )
+									aaapi.cmdEx('disconnectSession');
+								
+								aaapi.cmdEx('joinLobby', this.lobby);
+							}
+							else
+								aaapi.cmdEx('addToastMessage', "This user is in your current session with you!");
+						}.bind(socialUser));
+						actionCell.appendChild(joinButton);
+
+						avatarCell = document.createElement("td");
+						avatarCell.rowSpan = "3";
+						avatarCell.vAlign = "middle";
+						avatarCell.align = "center";
+						infoRow.appendChild(avatarCell);
+
+						avatarImg = document.createElement("img");
+						avatarImg.className = "socialListAvatar";
+						avatarImg.src = socialUser.avatar;
+						avatarCell.appendChild(avatarImg);
+
+						nameCell = document.createElement("td");
+						nameCell.vAlign = "middle";
+						infoRow.appendChild(nameCell);
+
+						nameContainer = document.createElement("div");
+						nameContainer.className = "socialListName aaTextColorTwoColor";
+						nameContainer.appendChild(document.createTextNode(socialUser.displayName));
+						nameCell.appendChild(nameContainer);
+
+						arcadeRow = document.createElement("tr");
+						table.appendChild(arcadeRow);
+
+						arcadeCell = document.createElement("td");
+						arcadeCell.vAlign = "middle";
+						arcadeRow.appendChild(arcadeCell);
+
+						arcadeContainer = document.createElement("div");
+						arcadeContainer.className = "socialListArcade aaTextColorTwoColor";
+						arcadeContainer.appendChild(document.createTextNode(socialUser.arcadeTitle));
+						arcadeCell.appendChild(arcadeContainer);
+
+						mapRow = document.createElement("tr");
+						table.appendChild(mapRow);
+
+						mapCell = document.createElement("td");
+						mapCell.vAlign = "middle";
+						mapRow.appendChild(mapCell);
+
+						mapContainer = document.createElement("div");
+						mapContainer.className = "socialListMap aaTextColorTwoColor";
+						mapFile = socialUser.mapFile;
+						if( !!mapFile )
+						{
+							if( mapFile.toLowerCase().indexOf(".bsp") === mapFile.length-4 )
+								mapFile = mapFile.substring(0, mapFile.length-4);
+							mapContainer.appendChild(document.createTextNode(mapFile));
+						}
+						mapCell.appendChild(mapContainer);
+
+						socialListElem.appendChild(table);
+						arcadeHud.assignHelp(joinButton);
+					}
+				}
+				else
+				{
+					socialListElem.innerHTML = "<input type='button' value='Join' style='margin-right: 16px; margin-top: 4px;' class='helpNote aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor' onclick='joinSocial();' /><br />";
+				}
+			}
+
+			function toggleSocialList()
+			{
+				if( socialListElem.style.display === "block" )
+					socialListElem.style.display = "none";
+				else
+				{
+					updateSocialUsersList();
+					socialListElem.style.display = "block";
+				}
+			}
+
+			function toggleChat()
+			{
+				if( chatElem.style.display === "inline-block" )
+					chatElem.style.display = "none";
+				else
+				{
+					//updateSocialUsersList();
+					//console.log("CHAT TOGGLED ON! Update & poll stuff meow?");
+					//setTimeout(twitchChatDetect, 1);
+					chatElem.style.display = "inline-block";
+					//twitchChatDetect();
+					onChangeCallback();
+				}
+			}
+
+			var addNewTwitchChatFormElem = document.querySelector('#addNewTwitchChatForm');
+			addNewTwitchChatFormElem.addEventListener('submit', function(e)
+			{
+				var channel = e.srcElement.querySelector('input').value;
+				e.srcElement.querySelector('input').value = '';
+
+				if( channel !== "" && channel.indexOf(" ") < 0 )
+				{
+					if( channel[0] !== '#' )
+						channel = '#' + channel;
+
+					var alreadyExists = false;
+					var testChannel = "twitch" + channel.substring(1);
+					for( var i = 0; i < tabs.length; i++ )
+					{
+						if( tabs[i].id === testChannel )
+						{
+							alreadyExists = true;
+							break;
+						}
+					}
+
+					if( !alreadyExists )
+					{
+						sessionStorage.setItem("aaChatTab", "twitch" + channel.substring(1));
+						aaapi.cmdEx('joinTwitchChannel', channel);
+					}
+					else
+						aaapi.cmdEx('addToastMessage', "You are already in " + channel);
+				}
+
+				e.preventDefault();
+				return false;
+			});
+
+			// fetch twitch chat log
+			function fetchTwitchChatLog(channel)
+			{
+			    var twitchChatLog = localStorage.getItem("twitchChatLog" + channel);
+			    if( !!twitchChatLog )
+			        twitchChatLog = JSON.parse(twitchChatLog);
+			    else
+			        twitchChatLog = [];
+			}
+
+			function playEmote(emoteId)
+			{
+				aaapi.cmdEx('sendTwitchChat', "!emote " + emoteId);
+			}
+
+			var sessionNamesListElem = document.querySelector("#sessionNamesList");
+			var sessionNameContainer;
+			var isFirstSessionName = true;
+
+			// session
+			function updateSessionUserList()
+			{
+				sessionNamesListElem.innerHTML = "Session Users: ";
+				var allUsers = aaapi.cmdEx('getAllUsers');
+				for( var x in allUsers )
+				{
+					if( isFirstSessionName )
+						isFirstSessionName = false;
+					else
+						sessionNameContainer.innerHTML += ", &nbsp;";
+
+					sessionNameContainer = document.createElement("div");
+					sessionNameContainer.style.cssText = "display: inline-block;";
+					sessionNameContainer.appendChild(document.createTextNode(allUsers[x].displayName));
+					sessionNamesListElem.appendChild(sessionNameContainer);
+				}
+			}
+			updateSessionUserList();
+
+			function updateSocialUserList()
+			{
+				fetchSocialUsers();
+
+				var socialNamesListElem = document.querySelector("#socialNamesList");
+				socialNamesListElem.innerHTML = "Online Users: ";
+				var socialNameContainer;
+				var isFirstSocialName = true;
+				
+				// social
+				for( var x in g_socialUsers )
+				{
+					if( isFirstSocialName )
+						isFirstSocialName = false;
+					else
+						socialNameContainer.innerHTML += ", &nbsp;";
+
+					socialNameContainer = document.createElement("div");
+					socialNameContainer.style.cssText = "display: inline-block;";
+					socialNameContainer.appendChild(document.createTextNode(g_socialUsers[x].displayName));
+					socialNamesListElem.appendChild(socialNameContainer);
+				}
+			}
+			updateSocialUserList();
+
+			var autoSelectAllElems = document.querySelectorAll(".autoSelectAll");
+			for( var i = 0; i < autoSelectAllElems.length; i++ )
+				autoSelectAllElems[i].addEventListener("focus", function(e)
+				{
+					this.select();
+					e.preventDefault();
+				}.bind(autoSelectAllElems[i]), true);
+
+			var chatInputElem = document.querySelector("#chatInput");
+
+			var chatForm = document.querySelector("#chatForm");
+			chatForm.addEventListener("submit", function(e)
+			{
+				var chatText = chatInputElem.value;
+				if( chatText === "" )
+					return;
+
+				chatInputElem.value = "";
+
+				aaapi.cmdEx('sendLocalChatMsg', chatText);
+
+				e.preventDefault();
+				return true;
+			}, true);
+
+			var socialChatForm = document.querySelector("#socialChatForm");
+			socialChatForm.addEventListener("submit", function(e)
+			{
+				var socialChatInputElem = document.querySelector("#socialChatInput");
+				var chatText = socialChatInputElem.value;
+				if( chatText === "" )
+					return;
+
+				socialChatInputElem.value = "";
+
+				aaapi.cmdEx('sendSocialChatMsg', chatText);
+
+				e.preventDefault();
+				return true;
+			}, true);
+
+			if( !universeInfo )
+			{
+				document.querySelector(".aaTabContent[tabid=\"session\"]").style.display = "none";
+			}
+
+			if( !isSocial )
+			{
+				document.querySelector(".aaTabContent[tabid=\"social\"]").style.display = "none";
+			}
+
+			if( isTwitchEnabled )
+			{
+				document.querySelector(".aaTabContent[tabid=\"addNewTwitch\"]").style.display = "none";
+			}
+
+			if( tabs.length === 0 )
+			{
+				document.querySelector(".aaTabContent[tabid=\"nothing\"]").style.display = "block";
+				document.querySelector("#nothingBox").focus();
+			}
+
+			//setTimeout(twitchChatDetect, 1);
+			//setInterval(twitchChatDetect, 500);
+
+			if( aaapi.cmdEx('getConVarValue', "twitch_enabled") === "1" )
+			{
+				var elems = document.querySelectorAll(".resetChatButton");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elems[i].style.display = "inline-block";
+				}
+			}
+
+			function reset()
+			{
+				g_isResetting = true;
+				localStorage.removeItem('twitchChannels');
+				aaapi.cmd('closeTwitchConnection');
+				aaapi.cmdEx('openTwitchConnection');
+				aaapi.cmdEx('deactivateInputMode');
+			}
+		</script>
+
+		<!-- END CHAT BOX STUFF -->
+
+		<div id="aaTaskBar" style="pointer-events: none;">
+			<table cellspacing="0" cellpadding="0">
+				<tbody>
+					<tr valign="middle" style="pointer-events: all;">
+						<td style="width: 1px;">
+							<div id="arcadeButton" class="aaTaskBarTask taskButton startButton aaThemeColorOneHoverBackgroundColor" onclick="aarcadeMenu();">
+								<script>
+									var iconHTML = arcadeHud.generateIconHTML("aaicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+									document.write(iconHTML);
+								</script>
+							</div>
+						</td>
+						<td style="width: 136px; white-space: nowrap;">
+							<div id="aaTaskBarTaskContainer"></div>
+						</td>
+						<td style="background-color: rgba(0, 0, 0, 0.95);" align="right"><!-- &nbsp; -->
+							<div style="padding-left: 2px; padding-right: 2px; margin-right: 40px; background: none;" class="aaTaskBarTask taskButton aaThemeColorOneHoverBackgroundColor">
+								<div class="aaOnlyIfUniverseConnected" onclick="window.location='asset://ui/hostSession.html?tab=online';" style="text-decoration: underline;">Server Info</div>
+								<div class="aaOnlyIfUniverseNotConnected" onclick="editInstance();" style="text-decoration: underline;">Instance Info</div>
+							</div>
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+							<div class="aaOnlyIfNoMapLoaded" style="display: none;">
+								<div style="padding-left: 2px; padding-right: 2px; height: 24px; width: 24px; background-color: rgba(0, 0, 0, 0.95); display: inline-block; font-family: Arial; white-space: nowrap; margin: 0; padding: 8px; padding-top: 6px; padding-bottom: 6px;" class="">&nbsp;</div></div><div class="aaOnlyIfMapLoaded"><div style="padding-left: 2px; padding-right: 2px;" class="aaTaskBarTask taskButton aaThemeColorOneHoverBackgroundColor aaOnlyIfHost" onclick="showLibrary();">
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("libraryicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+										document.write(iconHTML);
+									</script>
+								</div><div style="padding-left: 2px; padding-right: 2px;" class="aaTaskBarTask taskButton aaThemeColorOneHoverBackgroundColor aaOnlyIfHost" onclick="screenshotMenu();">
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("photoicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+										document.write(iconHTML);
+									</script>
+								</div><div style="padding-left: 2px; padding-right: 2px;" class="aaTaskBarTask taskButton aaThemeColorOneHoverBackgroundColor" onclick="commandsMenu();">
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("commandsicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+										document.write(iconHTML);
+									</script>
+								</div><div style="padding-left: 2px; padding-right: 2px;" class="aaTaskBarTask taskButton aaThemeColorOneHoverBackgroundColor aaOnlyIfHost" onclick="favoritesMenu();">
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("favoriteicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+										document.write(iconHTML);
+									</script>
+								</div>
+							</div>
+							<div class="aaOnlyIfNoMapLoaded">
+								<div style="padding-left: 2px; padding-right: 2px; height: 24px; width: 200px; background-color: rgba(0, 0, 0, 0.95); display: inline-block; font-family: Arial; white-space: nowrap; margin: 0; padding: 8px; padding-top: 6px; padding-bottom: 6px;" class="">&nbsp;</div></div>
+							</div>
+						</td>
+						<td style="width: 1%; background-color: rgba(0, 0, 0, 0.95); white-space: nowrap;" align="right">
+							<div style="display: inline-block;" id="aaClock" class="aaTitleSizeFontSize"></div>
+						</td>
+						<td id="showDesktopCell" onclick="minimizeAArcade();">
+						</td>
+					</tr>
+				</tbody>
+				<tbody>
+					<tr>
+						<td colspan="6">
+							<div id="arcadeMenu" style="display: none; pointer-events: all; height: 100%;">
+								<table cellspacing="0" cellpadding="0" style="height: 100%;" border=0>
+									<tr><td valign="top">
+
+									<!-- Tutorial -->
+									<!--<div id="tutorialNagButton" style="display: none;">-->
+										<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="window.location='asset://ui/welcome.html';" help="The atlas contains useful links & information.">
+											<div style="display: inline-block; vertical-align: middle;">
+												<script>
+													document.write(arcadeHud.generateIconHTML("atlasicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+												</script>
+											</div><div class="buttonTitle" style="vertical-align: middle;">Atlas</div>
+										</div>
+									<!--</div>-->
+
+									<div class="aaOnlyIfMapLoaded">
+										<!-- Steam Games -->
+										<div id="steamgamesNagButton" style="display: none;">
+											<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="getStarted();" help="Import your Steam games from your Steam profile to get started.">
+												<div style="display: inline-block; vertical-align: middle;">
+													<script>
+														document.write(arcadeHud.generateIconHTML("steamicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+													</script>
+												</div><div class="buttonTitle" style="vertical-align: middle;">Import Steam Games</div>
+											</div>
+										</div>
+
+										<!-- World Info, Leave -->
+										
+										
+
+										<!-- Favorites
+										<div class="aaOnlyIfMapLoaded aaOnlyIfUniverseNotConnected" style="display: none;">
+											<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="window.location='asset://ui/hostSession.html';" help="fdsfda.">
+												<div style="display: inline-block; vertical-align: middle;">
+													<script>
+														document.write(arcadeHud.generateIconHTML("favoriteicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+													</script>
+												</div><div class="buttonTitle" style="vertical-align: middle;">Favorites</div>
+											</div>
+										</div>-->
+
+										<!-- Library
+										<div class="aaOnlyIfMapLoaded aaOnlyIfUniverseNotConnected" style="display: none;">
+											<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="window.location='asset://ui/hostSession.html';" help="fdsfda.">
+												<div style="display: inline-block; vertical-align: middle;">
+													<script>
+														document.write(arcadeHud.generateIconHTML("libraryicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+													</script>
+												</div><div class="buttonTitle" style="vertical-align: middle;">Library</div>
+											</div>
+										</div> -->
+										
+										<!-- Session Info-->
+										<!--
+										<div class="aaOnlyIfMapLoaded aaOnlyIfUniverseConnected" style="display: none;">
+											<div class="arcadeMenuButton aaTextSizeFontSize aaOnlyIfHost helpNote" id="sessionButton" onclick="viewSession();" help="You are currently in an ONLINE session. Get your invite link here.">
+												<div style="display: inline-block; vertical-align: middle;">
+													<script>
+														document.write(arcadeHud.generateIconHTML("inviteicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+													</script>
+												</div><div class="buttonTitle" style="vertical-align: middle;">Invite</div>
+											</div>
+											<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="askDisconnectSession();" help="Disconnect from the online session & return to local singleplayer mode.">
+												<div style="display: inline-block; vertical-align: middle;">
+													<script>
+														document.write(arcadeHud.generateIconHTML("disconnecticon.png", iconSize, iconSize, "aaTextColorOneColor"));
+													</script>
+												</div><div class="buttonTitle" style="vertical-align: middle;">Disconnect</div>
+											</div>
+										</div>
+										-->
+									</div>
+
+									<!-- Host Session  aaOnlyIfUniverseNotConnected -->
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="window.location='asset://ui/hostSession.html';" help="Join multiplayer servers, or host your current arcade for others to join.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("mpicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="vertical-align: middle;">Multiplayer</div>
+									</div>
+
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote"  onclick="window.location='asset://ui/play.html';" help="Load a different world map.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("map.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="vertical-align: middle;">Maps</div>
+									</div>
+
+									<div class="aaOnlyIfMapLoaded">
+										<div class="arcadeMenuButton aaTextSizeFontSize helpNote"  onclick="window.location='asset://ui/export.html';" help="Export this arcade's meta data for use in other frontends.">
+											<div style="display: inline-block; vertical-align: middle;">
+												<script>
+													document.write(arcadeHud.generateIconHTML("exporticon.png", iconSize, iconSize, "aaTextColorOneColor"));
+												</script>
+											</div><div class="buttonTitle" style="vertical-align: middle;">Export</div>
+										</div>
+									</div>
+
+									<!-- Pause -->
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="doPause();" help="Pause AArcade so it doesn't hurt your performance in other games.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("pauseicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="vertical-align: middle;">Pause</div>
+									</div>
+
+									<!-- Options -->
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("cogicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="vertical-align: middle;">Settings</div>
+									</div>
+
+									<!-- Save -->
+									<div class="aaOnlyIfNeedsSave">
+										<div class="arcadeMenuButton aaTextSizeFontSize aaOnlyIfNotHost helpNote"  onclick="confirmSave();" help="Save this arcade and **ALL** the items & models used in it to your personal library.">
+											<div style="display: inline-block; vertical-align: middle;">
+												<script>
+													document.write(arcadeHud.generateIconHTML("saveicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+												</script>
+											</div><div class="buttonTitle" style="vertical-align: middle;">Save</div>
+										</div>
+									</div>
+
+									<!-- Quit -->
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote"  onclick="confirmQuit();" help="Shutdown Anarchy Arcade and return to Windows.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="vertical-align: middle;">Quit</div>
+									</div>
+								</td><td valign="top">
+								<style>
+									#searchModesContainer
+									{
+										display: inline-block;
+										border: 2px solid red;
+										width: 1px;
+									}
+
+									.modeButton
+									{
+										text-align: center;
+										display: inline-block;
+										vertical-align: middle;
+										padding: 6px;
+									}
+
+									.modeButton:hover, .activeModeButton
+									{
+										background-color: rgb(60, 60, 60);
+									}
+
+									#tilesContainer
+									{
+										max-height: 700px;
+										overflow-y: auto;
+										margin-right: -16px;
+										/*max-width: 336px;*/
+									}
+								</style>
+
+								<div style="font-family: Arial; font-size: 20px; font-weight: bold; text-align: right;" class="aaOnlyIfMapLoaded aaOnlyIfHost"><img src="previousicon.png" style="height: 16px; padding-right: 8px;" onclick="previousPropList();" /><div id="propListTitle" style="display: inline-block;"></div><img src="nexticon.png" style="height: 16px; padding-left: 8px;" onclick="nextPropList();" /></div>
+
+								<div id="tilesContainer" style="display: inline-block; vertical-align: top; max-width: 351px;" class="aaScrollbars aaOnlyIfHost aaOnlyIfMapLoaded"></div>
+
+								</div>
+								</td></tr>
+								<tr><td valign="bottom">
+
+
+									<!-- More -->
+									<div class="arcadeMenuButton aaTextSizeFontSize helpNote"  onclick="toggleMenuLabels();" help="Show/hide the menu labels.">
+										<div style="display: inline-block; vertical-align: middle;">
+											<script>
+												document.write(arcadeHud.generateIconHTML("moremenuicon.png", iconSize, iconSize, "aaTextColorOneColor"));
+											</script>
+										</div><div class="buttonTitle" style="font-size: 14px; letter-spacing: -0.1em; font-weight: bold;">ARCADE</div>
+									</div>
+								</td><td valign="bottom">
+									<table style="width: 336px;" cellspacing="0" cellpadding="0" class="aaOnlyIfHost aaOnlyIfMapLoaded">
+										<tr><td style="width: 99%;">
+											<form id="searchForm" style="margin: 0; display: inline-block; width: 100%;"><input id="searchTermBox" style="width: 100%; background-color: transparent; border: 0; color: #ccc; padding: 6px;" type="text" placeholder="Search library..." class="aaTextSizeFontSize" /></form>
+											
+											<div id="wizardButtons" style="display: none;"></div>
+										</td><td>
+											<div class="modeButton activeModeButton" modeName="items" onclick="setMode(this.getAttribute('modeName'));">
+											<script>
+												var modesHTML = "";
+												modesHTML += arcadeHud.generateIconHTML("itemicon.png", iconSize, iconSize, "aaTextColorOneColor");
+												document.write(modesHTML);
+											</script></div>
+										</td><td>
+											<div class="modeButton" modeName="models" onclick="setMode(this.getAttribute('modeName'));">
+											<script>
+												var modesHTML = "";
+												modesHTML += arcadeHud.generateIconHTML("objecticon.png", iconSize, iconSize, "aaTextColorOneColor");
+												document.write(modesHTML);
+											</script></div>
+										</td><td>
+											<div class="modeButton" modeName="wizards" onclick="toggleWizards();" style="height: 100%;">
+											<script>
+												var modesHTML = "";
+												modesHTML += arcadeHud.generateIconHTML("wizardicon.png", iconSize, iconSize, "aaTextColorOneColor");
+												document.write(modesHTML);
+											</script></div>
+										</td></tr>
+									</table>
+								</td></tr>
+							</table>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<div style="max-width: 376px;">
+				<div class="aaHelpContainer" style="padding: 8px; background-color: rgba(0, 0, 0, 0.9); display: none;"></div>
+			</div>
+		</div>
+
+		<script>
+			function editInstance()
+			{
+				//console.log(JSON.stringify());
+				window.location='asset://ui/editInstance.html?id=' + aaapi.cmdEx('getInstance').instance.id + "&uiback=" + encodeURIComponent("window.location='asset://ui/mouseEZ.html';");
+			}
+
+			var tilesContainer = document.querySelector("#tilesContainer");
+
+			var propListTitleElem = document.querySelector("#propListTitle");
+			//var favoriteItemsContainerElem = document.querySelector("#favoriteItemsContainer");
+			//var favoritePropsContainerElem = document.querySelector("#favoritePropsContainer");
+
+			var propLists = {
+				"NPCs": ["f1a7d6be", "bce27344", "60e34fe7", "29e1df46", "7146d903", "8fb118d9", "8558b212", "1479e19e", "f8f5ae94", "93bb1053", "74926ebb", "471fb75c", "5a482b8c", "6ffc8085", "693073ca", "4b8e5eaa"],
+				"Favorite Items": [],
+				"Favorite Props": [],
+				"Last Search": [],
+				"Alphabet": ["447d0768", "9f6aafff", "d667c872", "2d84e366", "648984eb", "bf9e2c7c", "f6934bf1", "4c9967e3", "0594006e", "de83a8f9", "978ecf74", "6c6de460", "256083ed", "fe772b7a", "b77a4cf7", "8ea26ee9", "c7af0964", "1cb8a1f3", "55b5c67e", "ae56ed6a", "e75b8ae7", "3c4c2270", "754145fd", "cf4b69ef", "86460e62", "5d51a6f5"]
+			};
+
+			var propListTileHandle;
+			function getNextFavoritePropTile()
+			{
+				var entry = arcadeHud.favorites[this.propListIndex];
+				if( !!!entry )
+				{
+					clearInterval(propListTileHandle);
+					propListTileHandle = null;
+					return false;
+				}
+
+				var needsEnd = false;
+				var usedModel = false;
+				if( !!entry.model && !!!entry.item )
+				{
+					if( !!!arcadeHud.hiddenItems[entry.model] )
+					{
+						var model = aaapi.cmdEx('getLibraryModel', entry.model);
+						if( !!model && model.dynamic != "1")
+						{
+							arcadeHud.createTile(model, tilesContainer, "models");
+							usedModel = true;
+							this.propCount++;
+
+							if( this.propCount > g_librarySearchMax )
+								needsEnd = true;
+						}
+					}
+				}
+				this.propListIndex++;
+
+				if( needsEnd )
+				{
+					clearInterval(propListTileHandle);
+					propListTileHandle = null;
+					return false;
+				}
+
+				if( !usedModel )
+					return getNextFavoritePropTile.call(this);
+				else
+					return true;
+			}
+
+			function showPropList(listName, direction)
+			{
+				//var doAnother = false;
+				tilesContainer.innerHTML = "";
+
+				if( !!propListTileHandle )
+				{
+					clearInterval(propListTileHandle);
+					propListTileHandle = null;
+				}
+
+				searchResponseCount = 0;
+				maxResultsFound = false;
+
+				if( !!searchHandle )
+				{
+					clearTimeout(searchHandle);
+					searchHandle = undefined;
+				}
+
+				if( listName === "Favorite Items" )
+				{
+					populateFavorites(tilesContainer);
+				}
+				else if( listName === "Last Search" )
+				{
+					var searchInfo = localStorage.getItem("lastSearchInfo");
+					if( !!searchInfo )
+					{
+						searchInfo = JSON.parse(searchInfo);
+						setMode(searchInfo.mode, true);
+						startNewSearch(searchInfo.term, searchInfo.filter, searchInfo.mode);
+					}
+					//else
+					//	doAnother = true;
+					/*
+					var searchInfo = {
+						mode: mode,
+						term: term,
+						filter: filter
+					};
+
+					localStorage.setItem("lastSearchInfo", JSON.stringify(searchInfo));
+					*/
+				}
+				else if( listName !== "Favorite Props" )
+				{
+					var propList = propLists[listName];
+					if( !!!propList )
+						return;
+
+					var payload = {
+						"propList": propList,
+						"propListIndex": 0,
+						"propCount": 0
+					};
+
+					propListTileHandle = setInterval(function()
+					{
+						var needsEnd = false;
+						var model = aaapi.cmdEx('getLibraryModel', this.propList[this.propListIndex]);
+						if( !!!model )
+							needsEnd = true;
+						else
+						{
+							if( !!!arcadeHud.hiddenItems[model.info.id] )
+							{
+								arcadeHud.createTile(model, tilesContainer, "models");
+								this.propCount++;
+							}
+							this.propListIndex++;
+						}
+
+						if( this.propCount >= g_librarySearchMax )
+						{
+							clearInterval(propListTileHandle);
+							propListTileHandle = null;
+						}
+					}.bind(payload), 100);
+				}
+				else
+				{
+					var payload = {
+						"propListIndex": 0,
+						"propCount": 0
+					};
+					
+					if( getNextFavoritePropTile.call(payload) )
+					{
+						payload.propCount++;
+						propListTileHandle = setInterval(getNextFavoritePropTile.bind(payload), 100);
+					}
+					else
+					{
+						var noResultsFound = document.createElement("div");
+						noResultsFound.style.cssText = "font-family: Arial; font-weight: bold; margin-left: 20px;";
+						noResultsFound.innerHTML = "No favorite props.";
+						tilesContainer.appendChild(noResultsFound);
+					}
+				}
+
+				propListTitleElem.innerText = listName;
+
+				//if( doAnother )
+				//{
+				//	if( direction < 0 )
+				//		previousPropList(listName, direction);
+				//	else
+				//		nextPropList(listName, direction);
+				//}
+
+				localStorage.setItem("arcadeMenuListName", listName);
+			}
+
+			function nextPropList()
+			{
+				var savedListName = localStorage.getItem("arcadeMenuListName");
+
+				var lists = Object.keys(propLists);
+				var currentListName = propListTitleElem.innerText;
+
+				var listIndex;
+				if( currentListName == "" && !!savedListName )
+					listIndex = lists.indexOf(savedListName);
+				else
+					listIndex = lists.indexOf(currentListName) + 1;
+
+				if( listIndex > lists.length-1 || listIndex < 0 )
+					listIndex = 0;
+				var propListName = lists[listIndex];
+				var propList = propLists[propListName];
+				if( !!!propList )
+					return;
+
+				showPropList(propListName, 1);
+			}
+
+			function previousPropList()
+			{
+				var savedListName = localStorage.getItem("arcadeMenuListName");
+
+				var lists = Object.keys(propLists);
+				var currentListName = propListTitleElem.innerText;
+				
+				var listIndex;
+				if( currentListName == "" && !!savedListName )
+					listIndex = lists.indexOf(savedListName);
+				else
+					listIndex = lists.indexOf(currentListName) - 1;
+
+				if( listIndex > lists.length-1 || listIndex < 0 )
+					listIndex = lists.length-1;
+
+				//var currentListName = propListTitleElem.innerText;
+				//var lists = Object.keys(propLists);
+				//var listIndex = lists.indexOf(currentListName) - 1;
+				//if( listIndex < 0 )
+				//	listIndex = lists.length-1;
+				var propListName = lists[listIndex];
+				var propList = propLists[propListName];
+				if( !!!propList )
+					return;
+
+				showPropList(propListName, -1);
+			}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			var searchHandle;
+			var searchQueryId;
+			var searchResponseCount = 0;
+			var arcadeMenu = document.querySelector("#arcadeMenu");
+			var arcadeButton = document.querySelector("#arcadeButton");
+
+			var searchTermBox = document.querySelector("#searchTermBox");
+			var searchForm = document.querySelector("#searchForm");
+			searchForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				startNewSearch(searchTermBox.value);
+				return false;
+			}, false);
+
+			var sortedScrapers = [];
+			var x;
+			for( x in arcadeHud.scrapers )
+			{
+				if( g_hiddenWizards[x] === "1" )
+					continue;
+
+				if( arcadeHud.scrapers[x].hasLogo !== true )
+					continue;
+				
+				sortedScrapers.push(arcadeHud.scrapers[x]);
+			}
+
+			sortedScrapers = sortedScrapers.sort(function(a, b)
+			{
+				var rankA = (a.hasOwnProperty("rank")) ? a.rank : Infinity;
+				var rankB = (b.hasOwnProperty("rank")) ? b.rank : Infinity;
+				if( rankA < rankB )
+					return -1;
+				else if( rankA > rankB )
+					return 1;
+				else
+					return 0;
+			});
+
+			var wizardsButtonsContainer = document.querySelector("#wizardButtons");
+			var scraper;
+			for( var i = 0; i < sortedScrapers.length; i++ )
+			{
+				scraper = sortedScrapers[i];
+				var wizardButton = document.createElement("div");
+				wizardButton.className = "modeButton";
+				wizardButton.style.cssText = "display: inline-block;";
+
+				var wizardHTML = "";
+				wizardHTML += arcadeHud.generateIconHTML("scrapers/" + scraper.id + ".png", iconSize, iconSize, "aaTextColorOneColor");
+				wizardButton.innerHTML = wizardHTML;
+				wizardButton.scraperId = scraper.id;
+				wizardButton.addEventListener("click", wizardSearch.bind(wizardButton), false);
+				wizardsButtonsContainer.appendChild(wizardButton);
+			}
+
+
+			//var favoriteItemsContainerElem = document.querySelector("#favoriteItemsContainer");
+			//var favoritePropsContainerElem = document.querySelector("#favoritePropsContainer");
+
+			// OBSOLETE & shiddy!  Try to phase this shit out! Bad function, bad bad bad bad!
+			function populateFavorites(favoriteItemsContainer, favoritePropsContainer)
+			{
+				if( !!favoriteItemsContainer )
+					favoriteItemsContainer.innerHTML = "";
+
+				if( !!favoritePropsContainer )
+					favoritePropsContainer.innerHTML = "";
+
+				if( !!!favoriteItemsContainer )
+				{
+					//propListTitleElem.previousSibling.style.display = "inline-block";
+					//propListTitleElem.nextSibling.style.display = "inline-block";
+					showPropList("NPCs", 1);
+					return;
+				}
+				else
+				{
+					propListTitleElem.innerText = "Favorite Items";
+					//propListTitleElem.previousSibling.style.display = "none";
+					//propListTitleElem.nextSibling.style.display = "none";
+				}
+				
+				var entry;
+				var item;
+				var model;
+				var numItems = 0;
+				var numModels = 0;
+				var timeo = 100;
+				for( var i = 0; i < arcadeHud.favorites.length; i++ )
+				{
+					entry = arcadeHud.favorites[i];
+					if( !!favoritePropsContainer && !!entry.model && !!!entry.item )
+					{
+						if( numModels < g_librarySearchMax && !!!arcadeHud.hiddenItems[entry.model] )
+						{
+							model = aaapi.cmdEx('getLibraryModel', entry.model);
+							//console.log(JSON.stringify(model));
+							if( !!model && model.dynamic != "1" )
+							{
+								setTimeout(function(){
+									arcadeHud.createTile(this.myModel, favoritePropsContainer, "models");
+								}.bind({"myModel": model}), numModels*timeo);
+								numModels++;
+							}
+						}
+					}
+					else if( !!favoriteItemsContainer && !!entry.item )
+					{
+						if( numItems < g_librarySearchMax && !!!arcadeHud.hiddenItems[entry.item] )
+						{
+							item = aaapi.cmdEx('getLibraryItem', entry.item);
+							if( !!item )
+							{
+								setTimeout(function(){
+									arcadeHud.createTile(this.myItem, favoriteItemsContainer, "items");
+								}.bind({"myItem": item}), numItems*timeo);
+								numItems++;
+							}
+						}
+					}
+				}
+
+				if( !!favoriteItemsContainer && numItems === 0 )
+				{
+					/*
+					var category = "items";
+					var response = aaapi.library.getFirstLibraryEntry(category);
+					var responseCount = 0;
+					var item;
+					while( response.success && numItems < 18 )
+					{
+						var libraryQueryId = response.queryId;
+						if( !!!arcadeHud.hiddenItems[response.entry.info.id] )
+						{
+							responseCount++;
+							if( category !== "models" || response.entry.dynamic != "1" )
+							{
+								arcadeHud.createTile(response.entry, favoriteItemsContainer, "items");
+								numItems++;
+							}
+						}
+
+						response = aaapi.library.getNextLibraryEntry(libraryQueryId, category);
+					}*/
+
+					var noResultsFound = document.createElement("div");
+					noResultsFound.style.cssText = "font-family: Arial; font-weight: bold; margin-left: 20px;";
+					noResultsFound.innerHTML = "No favorite items.";
+					tilesContainer.appendChild(noResultsFound);
+				}
+
+				if( !!favoritePropsContainer && numModels === 0 )
+				{
+					for( var i = 0; i < arcadeHud.defaultModels.length && numModels < 18; i++ )
+					{
+						if( !!!arcadeHud.hiddenItems[arcadeHud.defaultModels[i]] )
+						{
+							model = aaapi.cmdEx('getLibraryModel', arcadeHud.defaultModels[i]);
+
+							if( model.dynamic != "1" )
+							{
+								setTimeout(function(){
+									arcadeHud.createTile(this.myModel, favoritePropsContainer, "models");
+								}.bind({"myModel": model}), numModels*timeo);
+								numModels++;
+							}
+						}
+					}
+				}
+			}
+
+			//populateFavorites(favoriteItemsContainerElem, favoritePropsContainerElem);
+
+			function toggleWizards()
+			{
+				if( document.querySelector("#wizardButtons").style.display === "none" )
+				{
+					document.querySelector(".modeButton[modeName=items]").parentNode.style.display = "none";
+					document.querySelector(".modeButton[modeName=models]").parentNode.style.display = "none";
+					document.querySelector("#searchForm").style.display = "none";
+					document.querySelector("#wizardButtons").style.display = "inline-block";
+				}
+				else
+				{
+					document.querySelector("#wizardButtons").style.display = "none";
+					document.querySelector(".modeButton[modeName=items]").parentNode.style.display = "table-cell";
+					document.querySelector(".modeButton[modeName=models]").parentNode.style.display = "table-cell";
+					document.querySelector("#searchForm").style.display = "inline-block";
+				}
+			}
+
+			function wizardSearch(e)
+			{
+				var term = searchTermBox.value;
+				term = term.replace("&", "");
+
+				var field = "all";
+				var dummy = {"scraperId": this.scraperId, "term": term};
+				setTimeout(function()
+				{
+					arcadeHud.metaSearch("", "all", this.scraperId, this.term);
+				}.bind(dummy), 10);
+			}
+
+			function setMode(modeName, noSearch)
+			{
+				var oldActiveModeButton = document.querySelector(".activeModeButton");
+				oldActiveModeButton.classList.remove("activeModeButton");
+
+				var activeModeButton = document.querySelector(".modeButton[modeName='" + modeName + "']");
+				activeModeButton.classList.add("activeModeButton");
+				
+				if( noSearch !== true)
+				{
+					var term = document.querySelector("#searchTermBox").value;
+
+					if( term === "" )
+					{
+						//populateTilesContainer();
+						var mode = document.querySelector(".activeModeButton").getAttribute("modeName");
+						if( mode === "items")
+							populateFavorites(tilesContainer);
+						else
+							populateFavorites(null, tilesContainer);
+					}
+					else
+						startNewSearch(term);
+				}
+			}
+
+			var maxResultsFound = false;
+			function startNewSearch(term, filter, mode)
+			{
+				if( !!propListTileHandle )
+				{
+					clearInterval(propListTileHandle);
+					propListTileHandle = null;
+				}
+
+				if( !!!term )
+					term = document.querySelector("#searchTermBox").value;
+
+				if( !!!mode )
+					mode = document.querySelector(".activeModeButton").getAttribute("modeName");
+
+				var filterText = filter;
+				if( mode === "items" || mode === "models" )
+				{
+					if( mode !== "items" )	// disable filters for non-items for now.
+						filterText = "";
+					aaapi.cmd('setLibraryBrowserContext', mode, "", term, filterText);
+				}
+
+				var searchInfo = {
+					mode: mode,
+					term: term,
+					filter: filterText
+				};
+
+				localStorage.setItem("lastSearchInfo", JSON.stringify(searchInfo));
+
+				propListTitleElem.innerText = (mode === "items") ? "Item Search" : "Prop Search";
+
+				tilesContainer.innerHTML = "";
+				tilesContainer.searchInfo = searchInfo;
+				searchResponseCount = 0;
+				maxResultsFound = false;
+
+				if( !!searchHandle )
+				{
+					clearTimeout(searchHandle);
+					searchHandle = undefined;
+				}
+
+				if( !!!filter )
+					filter = "";
+
+				var category = mode;
+				var response;
+				if( filter === "" )
+					response = aaapi.cmdEx('findFirstLibraryEntry', category, "title", term);
+				else
+					response = aaapi.cmdEx('findFirstLibraryEntry', category, "title", term, "type", filter);
+
+				if( !!response && response.success )
+				{
+					searchQueryId = response.queryId;
+
+					var item = response.entry;
+
+					if( !!item && !!!arcadeHud.hiddenItems[item.info.id] && item.dynamic != "1" )
+					{
+						searchResponseCount++;
+						var tileMode = document.querySelector(".activeModeButton").getAttribute("modeName");
+						arcadeHud.createTile(item, tilesContainer, tileMode, term);
+					}
+					
+					searchHandle = setTimeout(nextSearch, 10);
+				}
+				else
+				{
+					var noResultsFound = document.createElement("div");
+					noResultsFound.style.cssText = "font-family: Arial; font-weight: bold; margin-left: 20px;";
+					noResultsFound.innerHTML = "No search results found.";
+					tilesContainer.appendChild(noResultsFound);
+				}
+			}
+
+			function nextSearch()
+			{
+				var mode = document.querySelector(".activeModeButton").getAttribute("modeName");
+
+				var category = mode;
+				var response = aaapi.cmdEx('findNextLibraryEntry', searchQueryId, category);
+
+				if( !!response )
+				{
+					var item = response.entry;
+					if( !!item && item.dynamic != "1" )
+					{
+						if( !!!arcadeHud.hiddenItems[item.info.id] )
+						{
+							searchResponseCount++;
+							var tileMode = document.querySelector(".activeModeButton").getAttribute("modeName");
+							arcadeHud.createTile(item, tilesContainer, tileMode, tilesContainer.searchInfo.term);
+						}
+					}
+				}
+
+				if( !!!response || searchResponseCount > 17 )
+					searchHandle = "undefined";
+				else
+					searchHandle = setTimeout(nextSearch, 10);
+
+				if( searchResponseCount > 17 )
+					maxResultsFound = true;
+				else if( !!!response )
+					maxResultsFound = false;
+			}
+
+			function confirmQuit()
+			{
+				//if( aaapi.system.getNeedsSave() )
+					//askSave(true);
+				//else
+					createModalPrompt("Are You Sure?", "", "Quit", "yesQuit();", "Cancel", "noQuit();");
+			}
+
+			function yesQuit()
+			{
+				var shouldAskSave = (aaapi.cmdEx('getNeedsSave') && (!!!universeInfo || universeInfo.isHost));
+				
+				if( shouldAskSave )
+					askSave(true);
+				else
+					aaapi.cmd('quit');
+			}
+
+			function noQuit()
+			{
+				//console.log("nope");
+			}
+
+			//var dashParentElem;
+			function aarcadeMenu()
+			{
+				//window.location='asset://ui/options.html';
+
+				if( arcadeMenu.style.display !== "inline-block" )
+				{
+					//if( !!!dashParentElem )
+					//	dashParentElem = document.querySelector("#dashParent");
+					//dashParentElem.style.display = "none";
+
+					arcadeMenu.style.display = "inline-block";
+					arcadeButton.classList.add("arcadeButtonExpanded");
+					searchTermBox.focus();
+				}
+				else
+					aarcadeMenuHide();
+			}
+
+			function aarcadeMenuHide()
+			{
+				arcadeMenu.style.display = "none";
+				arcadeButton.classList.remove("arcadeButtonExpanded");
+				searchTermBox.blur();
+
+				//if( !!!dashParentElem )
+				//	dashParentElem = document.querySelector("#dashParent");
+				//dashParentElem.style.display = "block";
+			}
+
+			function toggleMenuLabels()
+			{
+				if( !arcadeMenu.classList.contains("expandedAAMenu") )
+					arcadeMenu.classList.add("expandedAAMenu");
+				else
+					arcadeMenu.classList.remove("expandedAAMenu");
+			}
+
+			function screenshotMenu()
+			{
+				if( arcadeHud.oldIsMapLoaded )
+					window.location='asset://ui/tabMenu.html?tab=screenshots&uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			function commandsMenu()
+			{
+				if( arcadeHud.oldIsMapLoaded )
+					window.location='asset://ui/tabMenu.html?tab=commands&uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			function favoritesMenu()
+			{
+				window.location='asset://ui/tabMenu.html?tab=backpack&uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			function showSteamGrid()
+			{
+				aaapi.cmd('showSteamGrid');
+				//doPause();
+			}
+
+			function createShowcase(item, isInitial, task)
+			{
+				var showcaseContainer = document.createElement("div");
+				document.body.appendChild(showcaseContainer);
+				showcaseContainer.className = "showcaseContainer";
+				showcaseContainer.task = task;
+
+				if( !!!isInitial )
+					showcaseContainer.style.right = "-470px";
+
+				var showcaseTitle = document.createElement("div");
+				showcaseTitle.task = task;
+				showcaseTitle.addEventListener("mouseover", function(e)
+					{
+						var objectId = this.task.objectId;
+						if( g_glowingObjectId !== objectId )
+						{
+							g_glowingObjectId = objectId;
+							aaapi.cmd('objectHover', objectId);
+
+							var object = aaapi.cmdEx('getObject', objectId);
+							if( !!object )
+							{
+								var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+								if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+								{
+									createEntryMarker(object, posResponse);
+								}
+								else
+								{
+									clearOldMarker();
+								}
+							}
+						}
+					}.bind(showcaseTitle), false);
+				showcaseTitle.className = "showcaseTitle";
+				//showcaseTitle.addEventListener("mouseover", unglowall, false);
+				showcaseTitle.appendChild(document.createTextNode(item.title));
+				showcaseContainer.appendChild(showcaseTitle);
+
+				var showcaseImageContainer = document.createElement("div");
+				//showcaseImageContainer.style.cssText = "position: absolute;";
+				showcaseImageContainer.className = "showcaseImageContainer";
+				//showcaseImageContainer.addEventListener("mouseover", unglowall, false);
+
+				var showcaseImageButton = document.createElement("div");
+				showcaseImageButton.className = "showcaseImageButton";
+				showcaseImageButton.innerHTML = "<table style='width: 100%; height: 100%; text-align: center;'><tr><td><div class='launchButtonLabel'>LAUNCH</div></td></tr></table>";
+
+				var showcaseImageWrapper = document.createElement("div");
+				showcaseImageWrapper.task = task;
+				showcaseImageWrapper.item = item;
+				showcaseImageWrapper.style.cssText = "position: relative;";
+				showcaseImageWrapper.className = "showcaseImageWrapper";
+				showcaseImageWrapper.addEventListener("mouseover", unglowall, false);
+
+				var showcaseImage = document.createElement("img");
+				//showcaseImage.style.cssText = "display: inline-block;"
+				showcaseImage.task = task;
+				showcaseImageWrapper.addEventListener("mouseover", function(e)
+					{
+						var objectId = this.task.objectId;
+						if( g_glowingObjectId !== objectId )
+						{
+							g_glowingObjectId = objectId;
+							aaapi.cmdEx('objectHover', objectId);
+
+							var object = aaapi.cmdEx('getObject', objectId);
+							if( !!object )
+							{
+								var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+								if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+								{
+									createEntryMarker(object, posResponse);
+								}
+								else
+								{
+									clearOldMarker();
+								}
+							}
+						}
+						e.preventDefault();
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+						return false;
+					}.bind(showcaseImage), true);
+				showcaseImage.className = "showcaseImage";
+				showcaseImage.item = item;
+				showcaseImageWrapper.addEventListener("click", function(e)
+				{
+					arcadeHud.play(this.item.info.id);
+				}.bind(showcaseImage), false);
+				showcaseImage.style.display = "none";
+
+				showcaseImageWrapper.appendChild(showcaseImageButton);
+				showcaseImageWrapper.appendChild(showcaseImage);
+				showcaseImageContainer.appendChild(showcaseImageWrapper);
+				showcaseContainer.appendChild(showcaseImageContainer);
+
+				var ytEndBehavior = aaapi.cmdEx('getConVarValue', "youtube_end_behavior");
+				if( ytEndBehavior == 2 )
+				{
+					var isYouTubeItem = !!arcadeHud.extractYouTubeId(item.file) || !!arcadeHud.extractYouTubeId(item.preview) || !!arcadeHud.extractYouTubeId(item.stream);
+
+					var showcaseVCRContainer = document.createElement("div");
+					showcaseVCRContainer.className = "showcaseVCRContainer";
+					showcaseImageContainer.appendChild(showcaseVCRContainer);
+
+					var VCRPlaylistLabel = document.createElement("div");
+					VCRPlaylistLabel.className = "VCRPlaylistLabel";
+					VCRPlaylistLabel.innerHTML = "Nearby Videos";
+					showcaseVCRContainer.appendChild(VCRPlaylistLabel);
+
+					var ytAutoPlay = sessionStorage.getItem("ytAutoPlay");
+					if( !!!ytAutoPlay )
+						ytAutoPlay = {};
+					else
+						ytAutoPlay = JSON.parse(ytAutoPlay);
+
+					var ytObjectEntry = ytAutoPlay[task.objectId];
+
+					var VCRPlaylistContainer = document.createElement("div");
+					VCRPlaylistContainer.className = "VCRPlaylistContainer aaScrollBars";
+
+					// build the playlist
+					// back-build it to the original object
+					//var currentVCRObject;
+					var VCRPlaylist = [];
+
+					var currentVCRObject;
+					if(isYouTubeItem)
+					{
+						VCRPlaylist.push(task.objectId);
+						currentVCRObject = task.objectId;
+					}
+
+					if( !!ytObjectEntry && ytObjectEntry.originalId !== task.objectId )
+					{
+						//VCRPlaylist.push(task.objectId);
+						//currentVCRObject = task.objectId;
+
+						var previousVCRObject = aaapi.cmdEx('getNearestObjectToObject', "previous", ytObjectEntry.originalId, task.objectId, true, 300);
+						if( !!previousVCRObject )
+							VCRPlaylist.unshift(previousVCRObject);
+
+						var maxPrevious = 0;
+						while(!!previousVCRObject &&  previousVCRObject !== ytObjectEntry.originalId && maxPrevious < 10)
+						{
+							maxPrevious++;
+
+							previousVCRObject = aaapi.cmdEx('getNearestObjectToObject', "previous", ytObjectEntry.originalId, previousVCRObject, true, 300);
+
+							if( !!previousVCRObject )
+								VCRPlaylist.unshift(previousVCRObject);
+						}
+					}
+
+					var originalId = (!!ytObjectEntry) ? ytObjectEntry.originalId : task.objectId;
+					var otherId = (!!ytObjectEntry) ? task.objectId : "";
+					var nextVCRObject = aaapi.cmdEx('getNearestObjectToObject', "next", originalId, otherId, true, 300);
+					if( !!nextVCRObject )
+					{
+						VCRPlaylist.push(nextVCRObject);
+					}
+
+					var maxNext = 0;
+					while(!!nextVCRObject && nextVCRObject !== "" && maxNext < 10)
+					{
+						maxNext++;
+
+						nextVCRObject = aaapi.cmdEx('getNearestObjectToObject', "next", originalId, nextVCRObject, true, 300);
+
+						if( !!nextVCRObject )
+							VCRPlaylist.push(nextVCRObject);
+					}
+
+					var currentVCRListEntry;
+					var VCRObject;
+					var VCRListEntry, VCRListEntryNumber, VCRListEntryTitle;
+					for( var i = 0; i < VCRPlaylist.length; i++ )
+					{
+						VCRObject = aaapi.cmdEx('getObjectInfo', VCRPlaylist[i]);
+						//console.log(JSON.stringify(VCRObject));
+
+						VCRListEntry = document.createElement("div");
+						VCRListEntry.objectId = VCRPlaylist[i];
+						VCRListEntry.addEventListener("mouseover", function(e)
+						{
+							objectId = this.objectId;
+							if( g_glowingObjectId !== objectId )
+							{
+								g_glowingObjectId = objectId;
+								aaapi.cmd('objectHover', objectId);
+
+								var object = aaapi.cmdEx('getObject', objectId);
+								if( !!object )
+								{
+									var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+									if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+									{
+										createEntryMarker(object, posResponse);
+									}
+									else
+									{
+										clearOldMarker();
+									}
+								}
+							}
+							e.preventDefault();
+							e.stopPropagation();
+							e.stopImmediatePropagation();
+							return false;
+						}.bind(VCRListEntry), true);
+
+						if( VCRPlaylist[i] === currentVCRObject )
+						{
+							currentVCRListEntry = VCRListEntry;
+							VCRListEntry.className = "VCRListEntry activeVCRListEntry";
+						}
+						else
+						{
+							VCRListEntry.className = "VCRListEntry";
+							VCRListEntry.addEventListener("click", function(e)
+							{
+								//console.log(this);
+
+								arcadeHud.jumpToYouTube(this.objectId, this.taskId);
+							}.bind({"objectId": VCRPlaylist[i], "taskId": task.id}), false);
+						}
+						//VCRListEntry.setAttribute("objectId", VCRPlaylist[i]);
+
+						VCRListEntryNumber = document.createElement("div");
+						VCRListEntryNumber.className = "VCRListEntryNumber";
+						VCRListEntryNumber.innerHTML = "";//(i+1) + ".";
+						VCRListEntry.appendChild(VCRListEntryNumber);
+
+						VCRListEntryTitle = document.createElement("div");
+						VCRListEntryTitle.className = "VCRListEntryTitle";
+						VCRListEntryTitle.appendChild(document.createTextNode(VCRObject.item.title));
+						VCRListEntry.appendChild(VCRListEntryTitle);
+
+						VCRPlaylistContainer.appendChild(VCRListEntry);
+					}
+
+					showcaseVCRContainer.appendChild(VCRPlaylistContainer);
+
+					//showcaseVCRContainer.
+					//console.log(currentVCRListEntry.offsetTop - showcaseVCRContainer.offsetTop);
+					if( !!currentVCRListEntry )
+					{
+						var entryHeight = currentVCRListEntry.offsetHeight;
+						var scrollValue = (currentVCRListEntry.offsetTop - VCRPlaylistContainer.offsetTop) - entryHeight * 2;
+						//var scrollValue = (currentVCRListEntry.offsetTop);
+						VCRPlaylistContainer.scrollTop = scrollValue;
+					}
+
+					if( !!ytObjectEntry && ytObjectEntry.originalId !== task.objectId )
+					{
+						var backVCRButton = document.createElement("div");
+						backVCRButton.className = "aaTaskBarTask aaActualTask taskButton aaThemeColorOneHoverBackgroundColor";
+
+						backVCRButton.innerHTML = arcadeHud.generateIconHTML("skipbackicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+
+						backVCRButton.taskId = task.id;
+						backVCRButton.task = task;
+						backVCRButton.addEventListener("click", function(e)
+						{
+							//var taskInfo = this.task;
+							//arcadeHud.autoplayYouTubeTask(taskInfo, "previous");
+							arcadeHud.playNearestYouTube(this.taskId, "previous");
+						}.bind(backVCRButton), false);
+
+						showcaseVCRContainer.appendChild(backVCRButton);
+					}
+/*
+					var pauseVCRButton = document.createElement("div");
+					pauseVCRButton.className = "aaTaskBarTask aaActualTask taskButton aaThemeColorOneHoverBackgroundColor";
+
+					pauseVCRButton.innerHTML = arcadeHud.generateIconHTML("pauseicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+
+					showcaseVCRContainer.appendChild(pauseVCRButton);
+*/
+					var nextVCRButton = document.createElement("div");
+					nextVCRButton.className = "aaTaskBarTask aaActualTask taskButton aaThemeColorOneHoverBackgroundColor";
+					nextVCRButton.taskId = task.id;
+					nextVCRButton.addEventListener("click", function(e)
+					{
+						arcadeHud.playNearestYouTube(this.taskId, "next");
+					}.bind(nextVCRButton), false);
+
+					nextVCRButton.innerHTML = arcadeHud.generateIconHTML("skipnexticon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+
+					showcaseVCRContainer.appendChild(nextVCRButton);
+					//showcaseImageContainer.appendChild(showcaseVCRContainer);
+				}
+				//else
+				//{
+					//showcaseVCRContainer.style.display = "none";
+				//}
+
+				/*
+				VCRHTML += arcadeHud.generateIconHTML("pauseicon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+				VCRHTML += arcadeHud.generateIconHTML("skipnexticon.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+				showcaseVCRContainer.innerHTML = VCRHTML;*/
+
+				//document.body.appendChild(showcaseContainer);
+
+				showcaseImage.showcaseContainer = showcaseContainer;
+				arcadeHud.loadItemBestImage(showcaseImage, item, function()
+					{
+						this.style.display = "block";
+						//this.showcaseContainer.style.right = "0";
+					}.bind(showcaseImage));
+
+				showcaseImage.offsetWidth;
+				showcaseImage.showcaseContainer.style.right = "0";
+			}
+
+			document.addEventListener("keydown", function(e)
+			{
+				if( e.keyCode === 9 )
+				{
+					if( arcadeHud.oldIsMapLoaded )
+						window.location = "asset://ui/tabMenu.html?tab=tasks&freemouse=1";
+				}
+				else if( e.keyCode === 116 )
+				{
+					screenshotMenu();
+					//window.location = "asset://ui/tabMenu.html?tab=screenshots";
+				}
+			}, false);
+
+			function unglowall(e)
+			{
+				if( g_glowingObjectId !== -1 )
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}
+
+			function minimizeAArcade()
+			{
+				aaapi.cmd('minimizeAArcade');
+				window.location='asset://ui/pause.html';
+				//aaapi.system.deactivateInputMode(true);
+			}
+
+			var taskBarTaskContainer = document.querySelector("#aaTaskBarTaskContainer");
+			var taskBar = document.querySelector("#aaTaskBar");
+			taskBar.addEventListener("mouseover", unglowall, false);
+			taskBar.addEventListener("click", function(e)
+			{
+				showWindowsTaskBar();
+			}, false);
+			var g_glowingObjectId = "";
+			var g_activeEntryMarker = null;
+			var mouseSlate = document.querySelector("#mouseSlate");
+			mouseSlate.addEventListener("mousemove", function(e)
+			{
+				showWindowsTaskBar();
+
+				var x = e.clientX;
+				var y = e.clientY;
+				var objectId = aaapi.cmdEx('getObjectUnderCursor', x, y);
+				if( !!objectId )
+				{
+					if( g_glowingObjectId !== objectId )
+					{
+						g_glowingObjectId = objectId;
+						aaapi.cmd('objectHover', objectId);
+
+						var object = aaapi.cmdEx('getObject', objectId);
+						if( !!object )
+						{
+							var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+							if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+							{
+								createEntryMarker(object, posResponse);
+							}
+							else
+							{
+								clearOldMarker();
+							}
+						}
+					}
+				}
+				else
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}, false);
+
+			function lookListener(e)
+			{
+				//if( aaapi.system.getConVarValue("tempfreelook") == "0")
+				//{
+					aaapi.cmd('deactivateInputMode');
+					aaapi.cmd('consoleCommand', "tempfreelook 1");
+				//}
+			}
+
+			function removeLookListeners()
+			{
+				document.removeEventListener("mousemove", lookListener, false);
+				document.removeEventListener("mouseup", lookUpListener, false);
+			}
+
+			function lookUpListener(e)
+			{
+				removeLookListeners();
+			}
+
+			//var g_freeLookMode = false;
+			var g_buildTasksHandle;
+			//mouseSlate.addEventListener("contextmenu", function(e)
+			mouseSlate.addEventListener("mousedown", function(e)
+			{
+				var handled = false;
+				if( g_glowingObjectId !== -1 )
+				{
+					if( e.button !== 2 )
+					{
+						handled = true;
+						return;
+					}
+
+					var object = aaapi.cmdEx('getObject', g_glowingObjectId);
+					if( !!object )
+					{
+						var testTaskId = "auto" + object.item;
+						var testTask = aaapi.cmdEx('getTaskInfo', testTaskId);
+
+						if( !!testTask )
+						{
+							aaapi.cmd('tempSelectEntity', object.entity, true);
+							handled = true;
+						}
+						else if( object.slave )
+						{
+							var displayTask = aaapi.cmdEx('getDisplayTaskInfo');
+							if( displayTask )
+							{
+								var displayObject = aaapi.cmdEx('getObject', displayTask.objectId);
+								if( !!displayObject )
+								{
+									aaapi.cmdEx('tempSelectEntity', displayObject.entity, true);
+									handled = true;
+								}
+							}
+						}
+
+						aaapi.cmd('bringToFront');
+					}
+				}
+				
+				if( !handled && arcadeHud.oldIsMapLoaded && (e.button === 0 || e.button === 2))
+				{
+					document.addEventListener("mousemove", lookListener, false);
+					document.addEventListener("mouseup", lookUpListener, false);
+				}
+			}, false);
+
+			mouseSlate.addEventListener("click", function(e)
+			{
+				if( !!g_activeEntryMarker )
+				{
+					if( e.button === 0 || e.button === 2)
+					{
+						var entry = g_activeEntryMarker.entry;
+
+						if( !!entry.item )
+						{
+							var usedSlave = false;
+
+							// If we are also a task, fullscreen us instead.
+							var existingInstance = aaapi.cmdEx('getTaskInfo', "auto" + entry.item);
+							if( !!existingInstance )
+							{
+								console.log("here 1");
+								aaapi.cmd('attemptSelectEntity', existingInstance.entityIndex, true);
+							}
+							else if( entry.slave && g_activeEntryMarker.slaveEntry)
+							{
+								aaapi.cmd('attemptSelectEntity', g_activeEntryMarker.slaveEntry.entity, true);
+							}
+							else
+							{
+								// Otherwise, activate us.
+								//if( !g_autoCloseTasks )
+									aaapi.cmd('consoleCommand', "quick_remember " + entry.entity);
+								//else
+								//	aaapi.system.consoleCommand("select " + entry.entity);
+
+								if( !!g_buildTasksHandle )
+									clearTimeout(g_buildTasksHandle);
+
+								g_buildTasksHandle = setTimeout(function()
+								{
+									buildTasks();
+								}, 500);
+							}
+						}
+					}
+					else if(e.button === 1)
+					{
+						var stuff = "&uiback=" + encodeURIComponent("window.location='asset://ui/welcome.html';");
+						var entry = g_activeEntryMarker.entry;
+						window.location = "asset://ui/buildModeContext.html?entity=" + entry.entity + "" + stuff;
+					}
+				}
+				else if(e.button === 1)
+				{
+					showLibrary();
+				}
+			}, false);
+
+/*
+			document.body.addEventListener("dblclick", function(e)
+			{
+				if( !!g_activeEntryMarker )
+				{
+					var entry = g_activeEntryMarker.entry;
+					arcadeHud.play(entry.item);
+				}
+			}, false);
+*/
+		</script>
+
+		<script>
+			var g_hours = -1;
+			var g_minutes = -1;
+
+			// https://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
+			function pad(n, width, z)
+			{
+				z = z || '0';
+				n = n + '';
+				return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+			}
+
+			var useTwentryFourVal = localStorage.getItem("twentyFourClock");
+			if( !!!useTwentryFourVal )
+				useTwentryFourVal = "0";
+			var aaClockElem = document.querySelector("#aaClock");
+			function timeInterval()
+			{
+				var theTime = new Date();
+
+				var hours = theTime.getHours();
+				var minutes = theTime.getMinutes();
+
+				var changed = (minutes !== g_minutes);
+
+				if( !changed )
+					return;
+
+				g_hours = hours;
+				g_minutes = minutes;
+
+                var suffix = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+                if( useTwentryFourVal != 1 )
+                {
+	                if( hours >= 12 )
+	                {
+	                	suffix = " PM";
+
+	                	if( hours > 12 )
+	                		hours -= 12; 
+	                }
+	                else
+	                	suffix = " AM";
+	            }
+
+				var prettyTime;
+				if( useTwentryFourVal != 1 )
+					prettyTime = hours + ":" + pad(minutes, 2) + suffix;
+				else
+					prettyTime = pad(hours, 2) + ":" + pad(minutes, 2) + suffix;
+
+				aaClockElem.innerHTML = prettyTime;
+			}
+
+			function clearAllShowcases()
+			{
+				var allShowcaseContainers = document.querySelectorAll(".showcaseContainer");
+				for( var i = 0; i < allShowcaseContainers.length; i++ )
+				{
+					if( !!!allShowcaseContainers[i].removeHandle )
+					{
+						allShowcaseContainers[i].style.webkitTransitionDelay = "0";
+						allShowcaseContainers[i].style.right = "-470px";
+						allShowcaseContainers[i].removeHandle = setTimeout(function()
+						{
+							this.parentNode.removeChild(this);
+						}.bind(allShowcaseContainers[i]), 1000);
+					}
+				}
+			}
+
+			function buildTasks(isInitial)
+			{
+				taskBarTaskContainer.innerHTML = "";
+				clearAllShowcases();
+
+				var response = aaapi.cmdEx('getAllTasks', true);	// param is supposed to update thumbnails, doesn't work yet. No thumbnails for tasks yet.
+				var tasks = response.tasks;
+				var windowsTasks = response.windowsTasks;
+
+				var foundGoodTask = false;
+				var task;
+				for( var i = 0; i < tasks.length; i++ )
+				{
+					task = tasks[i];
+					if( task.isHiddenTask )
+						continue;
+
+					addTaskToTaskBar(task, isInitial);
+					foundGoodTask = true;
+				}
+
+				if( !foundGoodTask && document.querySelectorAll(".aaActualTask").length < 2 )
+					document.querySelector("#aaTaskBarTaskContainer").parentNode.style.backgroundColor = "rgba(0, 0, 0, 0.95)";
+				else
+					document.querySelector("#aaTaskBarTaskContainer").parentNode.style.backgroundColor = "initial";
+			}
+
+			function addTaskToTaskBar(task, isInitial)
+			{
+				var taskBarTask = document.createElement("div");
+				taskBarTask.setAttribute("taskId", task.id);
+				if( task.isDisplayTask )
+				{
+					taskBarTask.className = "aaActualTask aaTaskBarTask displayTask";
+					createShowcase(aaapi.cmdEx('getLibraryItem',task.itemId), isInitial, task);
+				}
+				else
+					taskBarTask.className = "aaActualTask aaTaskBarTask";
+
+				taskBarTask.task = task;
+				taskBarTask.addEventListener("mouseover", function(e)
+				{
+					var objectId = this.task.objectId;
+					if( g_glowingObjectId !== objectId )
+					{
+						g_glowingObjectId = objectId;
+						aaapi.system.objectHover(objectId);
+
+						var object = aaapi.cmdEx('getObject', objectId);
+						if( !!object )
+						{
+							var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+							if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+							{
+								createEntryMarker(object, posResponse);
+							}
+							else
+							{
+								clearOldMarker();
+							}
+						}
+					}
+					e.preventDefault();
+					e.stopPropagation();
+					e.stopImmediatePropagation();
+					return false;
+				}.bind(taskBarTask), true);
+
+				taskBarTask.addEventListener("click", function(e)
+				{
+					var old = document.querySelector(".displayTask");
+					if( old === this )
+						return;
+
+					aaapi.cmd('displayTask', this.task.id);
+					old.classList.remove("displayTask");
+					this.classList.add("displayTask");
+					clearAllShowcases();
+					createShowcase(aaapi.cmdEx('getLibraryItem',this.task.itemId), false, this.task);
+				}.bind(taskBarTask), false);
+
+				var taskTable = document.createElement("table");
+				taskTable.cellSpacing = "0";
+				taskTable.cellPadding = "0";
+				taskBarTask.appendChild(taskTable);
+
+				var taskRow = document.createElement("tr");
+				taskTable.appendChild(taskRow);
+
+				var taskIconCell = document.createElement("td");
+				taskRow.appendChild(taskIconCell);
+
+				var taskButton = document.createElement("div");
+				taskButton.className = "taskButton";
+
+				var iconFile = (task.embeddedType === "SteamworksBrowser") ? "webicon.png" : "libretroicon.png";
+				var iconHTML = arcadeHud.generateIconHTML(iconFile, smallIconSize, smallIconSize, "aaTextColorOneColor");
+				taskButton.innerHTML = iconHTML;
+				taskIconCell.appendChild(taskButton);
+
+				var taskLabelCell = document.createElement("td");
+				taskRow.appendChild(taskLabelCell);
+
+				var taskLabel = document.createElement("div");
+				taskLabel.className = "aaTaskBarTaskLabel aaTitleSizeFontSize";
+				taskLabelCell.appendChild(taskLabel);
+
+				var taskLabelText = document.createTextNode(task.title);
+				taskLabel.appendChild(taskLabelText);
+
+				var taskCloseCell = document.createElement("td");
+				taskRow.appendChild(taskCloseCell);
+
+				var taskCloseButton = document.createElement("div");
+				taskCloseButton.className = "taskButton taskCloseButton";
+				taskCloseButton.task = task;
+				taskCloseButton.parentTaskBarTask = taskBarTask;
+				taskCloseButton.addEventListener("click", function(e)
+				{
+					//console.log(this.task.id);
+					aaapi.cmd('closeTask', this.task.id);
+
+					if( this.parentTaskBarTask.classList.contains("displayTask") )
+						clearAllShowcases();
+
+					this.parentTaskBarTask.parentNode.removeChild(this.parentTaskBarTask);
+
+					/*
+					g_buildTasksHandle = setTimeout(function()
+					{
+						buildTasks();
+					}, 500);*/
+
+					//location.reload();
+
+
+					if( document.querySelectorAll(".aaActualTask").length < 2 )
+						document.querySelector("#aaTaskBarTaskContainer").parentNode.style.backgroundColor = "rgba(0, 0, 0, 0.95)";
+					else
+						document.querySelector("#aaTaskBarTaskContainer").parentNode.style.backgroundColor = "initial";
+
+					if( !!g_buildTasksHandle )
+						clearTimeout(g_buildTasksHandle);
+
+					g_buildTasksHandle = setTimeout(function()
+					{
+						buildTasks();
+					}, 500);
+
+					e.preventDefault();
+					e.stopPropagation();
+					return false;
+				}.bind(taskCloseButton), false);
+				taskCloseCell.appendChild(taskCloseButton);
+
+				var iconHTML = arcadeHud.generateIconHTML("close.png", smallIconSize, smallIconSize, "aaTextColorOneColor");
+				taskCloseButton.innerHTML = iconHTML;
+				taskCloseCell.appendChild(taskCloseButton);
+
+				taskBarTaskContainer.appendChild(taskBarTask);
+			}
+
+			setInterval(timeInterval, 1000);
+			timeInterval();
+			buildTasks(true);
+			//document.querySelector('#aaTaskBar').style.display = 'block';
+		</script>
+
+		<a href="javascript:location.reload();" class="devReload" style="z-index: 1000000;">&bull;&nbsp;</a>
+
+		<script>
+			
+			function disconnectSession()
+			{
+				var connectedSessionInfo = aaapi.cmdEx('getConnectedSession');
+				if( !!connectedSessionInfo && !connectedSessionInfo.isHost )
+				{
+					setTimeout(function()
+					{
+						aaapi.cmd('disconnectSession');
+						aaapi.cmd('restartNetwork');
+						aaapi.cmd('deactivateInputMode');
+						aaapi.cmd('disconnect');
+					}, 100);
+				}
+				else
+				{
+					aaapi.cmd('restartNetwork');
+					setTimeout(function()
+					{
+						window.location.reload();
+					}, 100);
+				}
+			}
+
+			function yesDisconnectSession()
+			{
+				disconnectSession();
+			}
+
+			function noDisconnectSession()
+			{
+				console.log("nope");
+			}
+
+			function askDisconnectSession()
+			{
+				createModalPrompt("Are You Sure?", "This will end your online session & return you to singleplayer mode.", "Disconnect", "yesDisconnectSession();", "Cancel", "noDisconnectSession();");
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesTitle, yesAction, noTitle, noAction, validateFunc)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var styleText = (text !== "") ? "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;" : "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 300px;";
+
+				// header
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, styleText, true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				if( text !== "" )
+				{
+					// body
+					modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+					//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+					/*
+					modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+					modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+					modalHTML += text;
+					//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+					modalHTML += "</div>";
+
+					//modalHTML += "</td></tr></table>";
+					modalHTML += "</div>";
+				}
+
+				if( text !== "" )	// simple hax to get 2 different behaviors out of this prompt
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Disconnect" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+				else
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Quit" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].value = yesTitle;
+				buttons[0].addEventListener("click", function(e)
+				{
+					if( !!validateFunc && typeof window[validateFunc] === "function" )
+					{
+						if( !window[validateFunc]() )
+							return;
+					}
+
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].value = noTitle;
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+		</script>
+
+		<script>
+			// https://www.htmlgoodies.com/html5/javascript/calculating-the-difference-between-two-dates-in-javascript.html
+			function daysBetween( date1, date2 ) {
+			  //Get 1 day in milliseconds
+			  var one_day=1000*60*60*24;
+
+			  // Convert both dates to milliseconds
+			  var date1_ms = date1;//.getTime();
+			  var date2_ms = date2;//.getTime();
+
+			  // Calculate the difference in milliseconds
+			  var difference_ms = date2_ms - date1_ms;
+			    
+			  // Convert back to days and return
+			  return difference_ms/one_day; 
+			}
+
+			var tutorialNag = (localStorage.getItem("tutorial_nag") != 0);
+			if( tutorialNag && document.querySelector("#tutorialNagButton") )
+				document.querySelector("#tutorialNagButton").style.display = "block";
+
+			var steamgamesNag = localStorage.getItem("steamgames_nag");
+			if( steamgamesNag != "0" )
+			{
+				if( !!!steamgamesNag )
+					steamgamesNag = 0;
+				else
+					steamgamesNag = parseInt(steamgamesNag);
+
+				// now check when the last nag was
+				var lastSteamgamesNag = localStorage.getItem("last_steamgames_nag");
+
+				var shouldSteamgamesNag = false;
+				if( !!!lastSteamgamesNag )
+					shouldSteamgamesNag = true;
+				else
+				{
+					var dateA = new Date(parseInt(lastSteamgamesNag));
+					var dateB = new Date();
+					var dif = daysBetween(dateA.getTime(), dateB.getTime());
+					
+					if( dif >= steamgamesNag )
+						shouldSteamgamesNag = true;
+				}
+
+				if(shouldSteamgamesNag)
+					document.querySelector("#steamgamesNagButton").style.display = "block";
+			}
+
+			if( g_shouldShowMenu == 1 )
+			{
+				aarcadeMenu();
+				if( arcadeHud.getParameterByName("showlabels") )
+					toggleMenuLabels();
+			}
+
+			function onYouTubeEnded()
+			{
+				setTimeout(function()
+				{
+					buildTasks();
+				}, 500);
+			}
+
+			function getStarted()
+			{
+				window.location='asset://ui/importSteamGames.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+
+			var favoriteIconHTML = arcadeHud.generateIconHTML("favoriteicon.png", 24, 24, "aaThemeColorOneColor");
+			var unfavoriteIconHTML = arcadeHud.generateIconHTML("unfavoriteicon.png", 24, 24, "aaThemeColorOneColor");
+			var hideIconHTML = arcadeHud.generateIconHTML("eye.png", 24, 24, "aaThemeColorOneColor");
+/*
+			function populateTilesContainer()
+			{
+				var mode = document.querySelector(".activeModeButton").getAttribute("modeName");
+
+				if( mode === "items" || mode === "models" )
+				{
+					var filterText = "";
+					if( mode !== "items" )	// disable filters for non-items for now.
+						filterText = "";
+					aaapi.system.setLibraryBrowserContext(mode, "", "", filterText);
+				}
+
+				tilesContainer.innerHTML = "";
+				searchResponseCount = 0;
+				maxResultsFound = false;
+
+				if( !!searchHandle )
+				{
+					clearTimeout(searchHandle);
+					searchHandle = undefined;
+				}
+
+				var itemId;
+				var item;
+				var count = 0;
+				for( var i = 0; count < 15 && i < arcadeHud.favorites.length; i++ )
+				{
+					itemId = (mode === "items") ? arcadeHud.favorites[i].item : arcadeHud.favorites[i].model;
+
+					if( !!!itemId )
+						continue;
+
+					if( mode === "items" )
+						item = aaapi.cmdEx('getLibraryItem',itemId);
+					else
+						item = aaapi.cmdEx('getLibraryModel', itemId);
+					if( !!!item )
+						continue;
+
+					var tileMode = document.querySelector(".activeModeButton").getAttribute("modeName");
+					arcadeHud.createTile(item, tilesContainer, tileMode);
+					count++;
+				}
+
+				//if( count === 0 )
+				//	tilesContainer.style.display = "none";
+			}
+
+			populateTilesContainer();
+*/
+
+			//populateFavorites(tilesContainer);
+			nextPropList();
+
+			function spawnItem(itemId)
+			{
+				var oldTransform = localStorage.getItem("trans" + itemId);
+
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				var modelId = oldTransform.modelId;
+				if( typeof modelId === 'undefined' )
+					modelId = "";
+
+				var scale = oldTransform.scale;
+				if( typeof scale === 'undefined' )
+					scale = "1.0";
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+
+				//if(!givenTabId || givenTabId === "tasks")
+				//	aaapi.system.consoleCommand("ignore_next_tab_up 1");
+
+				var mode = document.querySelector(".activeModeButton").getAttribute("modeName");
+
+				if( mode === "models" )
+					modelId = "";
+
+				if( mode === "items" )
+				{
+					aaapi.cmd('setLibraryBrowserContext', "items", itemId, "", "");
+					aaapi.cmd('spawnEntry', mode, itemId, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ);
+				}
+				else if( mode === "models" )
+				{
+					var searchText = document.querySelector("#searchTermBox").value;
+/*
+					var searchInfo = localStorage.getItem("lastSearchInfo");
+					if( !!searchInfo )
+					{
+						console.log(mode + ", " + searchInfo.term + ", " + searchInfo.filter);
+						aaapi.system.setLibraryBrowserContext(mode, "", searchInfo.term, searchInfo.filter);
+					}
+					else*/
+						aaapi.cmd('setLibraryBrowserContext', mode, itemId, "", "");
+
+					aaapi.cmd('spawnEntry', mode, itemId, searchText, "", "", scale, pitch, yaw, roll, offX, offY, offZ);
+				}
+			}
+
+			function aaOnActivateInputMode(opts)
+			{
+				g_opts = opts;
+				showWindowsTaskBar();
+				twitchChatDetect();
+				setInterval(twitchChatDetect, 500);
+
+				if( g_opts.mapLoaded === true )
+				{
+					arcadeMenu.classList.add("expandedAAMenu");
+					if( arcadeMenu.style.display !== "inline-block" )
+						aarcadeMenu();
+
+					var elems = arcadeMenu.querySelectorAll("table tr td:nth-of-type(2)");
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = "none";
+					}
+				}
+			}
+
+			function confirmSave()
+			{
+				askSave(false);
+			}
+/*
+			function yesSave()
+			{
+				aaapi.system.performAutoSave("SAVEMODE_SAVE", true);
+				window.location.reload();
+			}
+
+			function noSave()
+			{
+				aaapi.system.performAutoSave("SAVEMODE_DISCARD");
+				window.location.reload();
+			}
+*/
+			function askSave(showDiscard)
+			{
+				var victims = [];
+				var volatileCount = aaapi.cmdEx('getVolatileCounts');
+
+				// TODO: Try to detect & prevent saving over one of your arcade instances that existed in singleplayer!!
+//console.log(JSON.stringify(universeInfo));
+				//var instanceInfo = aaapi.system.getInstance(universeInfo.instance);
+				//if( !!instanceInfo )
+				//	console.log(JSON.stringify(instanceInfo.instance.));
+				var showBackupButton = (!!universeInfo && !universeInfo.isHost);
+				var volatileCountText = "";
+				if( showBackupButton )
+					volatileCountText += "Instance ID: " + universeInfo.instance + "<br />";
+
+
+				var htmlBuf = "Changed: ";
+				var isFirstEntry = true;
+				for( var x in volatileCount.changed )
+				{
+					if( x === "instances" || volatileCount.changed[x] - volatileCount.remote[x] == 0 )
+						continue;
+
+					if( !isFirstEntry )
+						htmlBuf += ", ";
+					else
+						isFirstEntry = false;
+
+					htmlBuf += (volatileCount.changed[x] - volatileCount.remote[x]) + " " + x;
+				}
+
+				if( !isFirstEntry )
+					volatileCountText += htmlBuf;
+
+				if( showBackupButton && Object.keys(volatileCount.remote).length > 1 )
+				{
+					htmlBuf = "<br />New: ";
+
+					isFirstEntry = true;
+					for( var x in volatileCount.remote )
+					{
+						if( x === "instances" || volatileCount.remote[x] == 0 )
+							continue;
+
+						if( !isFirstEntry )
+							htmlBuf += ", ";
+						else
+							isFirstEntry = false;
+
+						htmlBuf += volatileCount.remote[x] + " " + x;
+					}
+
+					if( !isFirstEntry )
+						volatileCountText += htmlBuf;
+
+					createSaveModalPrompt(showDiscard, "Save Changes", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br /><label><input type='radio' name='savewhat' value='all' checked /> Save ALL Entries & Instance</label><br /><label><input type='radio' name='savewhat' value='onlynew' /> New Entries Only & Instance</label><br /><br />" + volatileCountText, "yesSave();", "noSave();");
+				}
+				else
+					createSaveModalPrompt(showDiscard, "Save Changes", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br />" + volatileCountText, "yesSave();", "noSave();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+			//Backup Library (' + formatBytes(aaapi.system.getDbSize()) + ')
+
+			var aaSaveModalPromptMenu;
+			function createSaveModalPrompt(showDiscard, title, text, yesAction, noAction)
+			{
+				if( !!aaSaveModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaSaveModalPromptMenu.flashInterval )
+						{
+							aaSaveModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaSaveModalPromptMenu), 100);
+
+							aaSaveModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				/*
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+				//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+				//modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Backup Library & Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Discard" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaSaveModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+						aaSaveModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				var showBackupButton = (!!universeInfo && !universeInfo.isHost);
+				if( showBackupButton )
+				{
+					buttons[1].className = "aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+
+					buttons[0].addEventListener("click", function(e)
+					{
+						var elems = document.querySelectorAll("input[name='savewhat']");
+						var saveWhat = "all";
+						if( elems.length > 0 )
+						{
+							for( var i = 0; i < elems.length; i++ )
+							{
+								if( elems[i].checked )
+									saveWhat = elems[i].value;
+							}
+
+							if( aaapi.cmd('createDbBackup') )
+							{
+								aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+								aaSaveModalPromptMenu = undefined;
+
+								aaapi.cmd('performAutoSave', "SAVEMODE_SAVE", true, (saveWhat === "onlynew"));
+								window.location.reload();
+							}
+							else
+							{
+								console.log("Failed to create backup.");
+							}
+						}
+					}, true);
+
+					buttons[0].value = "Backup Library (" + formatBytes(aaapi.cmdEx('getDbSize')) + ") & Save";
+				}
+				else
+					buttons[0].style.display = "none";
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+
+					var elems = document.querySelectorAll("input[name='savewhat']");
+					var saveWhat = "all";
+					if( elems.length > 0 )
+					{
+						for( var i = 0; i < elems.length; i++ )
+						{
+							if( elems[i].checked )
+								saveWhat = elems[i].value;
+						}
+					}
+
+					aaapi.cmd('performAutoSave', ("SAVEMODE_SAVE", true, (saveWhat === "onlynew"));
+					if( showDiscard )
+						aaapi.cmd('quit');
+						//confirmQuit();
+					else
+						window.location.reload();
+
+					//eval(yesAction);
+				}, true);
+
+				if( !showDiscard )
+					buttons[2].style.display = "none";
+
+				buttons[2].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					aaapi.cmd('performAutoSave', "SAVEMODE_DISCARD");
+					if( showDiscard )
+					{
+						aaapi.cmd('quit');
+						/*
+						setTimeout(function()
+						{
+							confirmQuit();
+						}, 100);
+*/
+					}
+					else
+						window.location.reload();
+
+					//eval(noAction);
+				}.bind(buttons[2]), true);
+
+				buttons[3].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					aaapi.cmdEx('setSaveMode', "SAVEMODE_NONE");
+					//window.location = "welcome.html";
+				}, true);
+			}
+		</script>
+
+		<div id="currentProjectSlate" style="position: absolute; bottom: 60px; right: 30px; background-color: rgba(0, 0, 0, 0.95); padding: 10px; text-align: center; display: none;">
+			<div class="aaTextSizeFontSize" style="font-family: Arial; font-weight: 900;">Current Project</div>
+			<div class="aaTitleTextSizeFontSize aaTitleText" style="" id="projectTitle"></div>
+			<div>
+				<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Reload" onclick="reloadMap();" />
+				<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Dismiss" onclick="dismissHammer();" />
+			</div>
+		</div>
+
+		<script>
+			var currentProjectSlate = document.querySelector("#currentProjectSlate");
+
+			var currentProjectVal = aaapi.cmdEx('getConVarValue', "current_project");
+			if( !!currentProjectVal && currentProjectVal !== "" )
+				currentProjectSlate.style.display = "block";
+			{
+				document.querySelector("#projectTitle").innerHTML = currentProjectVal;
+			}
+
+			function reloadMap()
+			{
+				var instanceInfo = aaapi.cmdEx('getInstance');
+				if( !!!instanceInfo )
+					return;
+
+				if( !!currentProjectVal && currentProjectVal !== "" )
+					aaapi.cmd('consoleCommand', "last_opened_project \"" + currentProjectVal + "\"");
+				
+				playNow(instanceInfo.instance.mapId);
+			}
+
+			function dismissHammer()
+			{
+				aaapi.cmd('consoleCommand', "current_project \"\"");
+				window.location.reload();
+			}
+
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			function playNow(mapId)
+			{
+				var hasInstanceToLoad = false;
+				var mapHistoryEntry = mapHistory[mapId];
+				var mapInstances;
+				if( !!mapHistoryEntry )
+				{
+					if( mapHistoryEntry.instanceId === "" )
+					{
+						mapInstances = aaapi.cmdEx('getMapInstances', mapId);
+						
+						if( mapInstances.length > 0 )
+							mapHistoryEntry.instanceId = mapInstances[0].id;
+					}
+
+					if( mapHistoryEntry.instanceId !== "" )
+					{
+						mapHistoryEntry.timestamp = new Date().getTime();
+
+						// save the mapHistory out
+						localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+						hasInstanceToLoad = true;
+					}
+				}
+
+				if( hasInstanceToLoad )
+				{
+					window.location = "asset://ui/loading.html?map=" + mapHistoryEntry.mapId + "&instance=" + mapHistoryEntry.instanceId + "&pos=" + mapHistoryEntry.position + "&rot=" + mapHistoryEntry.rotation + "&screenshot=" + mapHistoryEntry.screenshotId;
+				}
+				else
+				{
+					// are there any instances at all?
+					if( !!!mapInstances )
+						mapInstances = aaapi.cmdEx('getMapInstances', mapId);
+
+					if( mapInstances.length > 0 )
+						window.location = "asset://ui/playInstance.html?id=" + mapId;
+					else
+					{
+						// create our mapHistory entry
+						var mapHistoryEntry = {
+							"mapId": mapId,
+							"instanceId": "",
+							"position": "",
+							"rotation": "",
+							"screenshotId": "",
+							"timestamp": new Date().getTime()
+						};
+
+						// add our entry to the mapHistory
+						mapHistory[mapId] = mapHistoryEntry;
+
+						// save the mapHistory out
+						localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+						window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + "" + "&pos=" + "" + "&rot=" + "" + "&screenshot=" + "";
+					}
+				}
+			}
+			
+			var lastProjectVal = aaapi.cmdEx('getConVarValue', "last_opened_project");
+			if( !!lastProjectVal && lastProjectVal !== "" )
+			{
+				aaapi.cmd('consoleCommand', "last_opened_project \"\"");
+
+				var projectMapId = aaapi.cmdEx('getHammerProjectMapID', lastProjectVal);//"2564a1b5";//482182db";
+				if( projectMapId !== "" )
+				{
+					createModalPrompt("Level Design Project", "You recently opened your <i><b>" + lastProjectVal + "</b></i> project in Hammer.<br /><br />Do you want to load the map in-game now?", "Load My Map", "loadMyMap(\"" + projectMapId + "\");", "Dismiss", "dismissMyMap();");
+				}
+			}
+
+			function loadMyMap(projectMapId)
+			{
+				aaapi.cmdEx('consoleCommand', "last_opened_project \"" + lastProjectVal + "\"");
+				playNow(projectMapId);
+			}
+
+			function dismissMyMap()
+			{
+				// do nothing
+			}
+/*
+var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+var mapHistoryKeys = Object.keys(mapHistory);
+console.log(JSON.stringify(mapHistory[mapHistoryKeys[0]]));
+
+var map = aaapi.system.getMap(mapHistory[mapHistoryKeys[0]].mapId);
+console.log(JSON.stringify(map));
+*/
+/*
+			function socialChange(elem)
+			{
+				aaapi.system.setSocialMode(elem.checked);
+				if(elem.checked)
+				{
+					setTimeout(function(){aaapi.network.fetchOnlineCount();}, 1000);
+				}
+				else
+					document.querySelector("#onlineCount").innerHTML = "";
+			}
+*/
+			function tester()
+			{
+				var url = "https://www.thetvdb.com/?tab=episode&seriesid=71906&seasonid=3191&id=67443&lid=7";
+				var seriesId = arcadeHud.getParameterByName("seriesid", url);
+				var seasonId = arcadeHud.getParameterByName("seasonid", url);
+				var episodeId = arcadeHud.getParameterByName("id", url);
+				console.log("Series ID: " + seriesId + " and Season ID: " + seasonId + " and Episode ID: " + episodeId);
+			}
+
+			function huh()
+			{
+				var model = aaapi.cmdEx('getLibraryModel', "f935bc22");
+				console.log(JSON.stringify(model));
+				var item = aaapi.cmdEx('getLibraryItem',"f935bc22");
+				console.log(JSON.stringify(item));
+				//var instance = aaapi.system.getInstance("-q0NAMh8P0hjUBUfE7ry");
+				//console.log(JSON.stringify(instance));
+			}
+
+			var npcs = {
+				"f1a7d6be": false,
+				"bce27344": false,
+				"60e34fe7": false,
+				"29e1df46": false,
+				"7146d903": false,
+				"8fb118d9": false,
+				"8558b212": false,
+				"1479e19e": false,
+				"f8f5ae94": false,
+				"93bb1053": false,
+				"74926ebb": false,
+				"471fb75c": false,
+				"5a482b8c": false,
+				"6ffc8085": false,
+				"693073ca": false,
+				"4b8e5eaa": false
+			};
+			function CheckNPCs()
+			{
+				var goodEntries = [];
+				var response = aaapi.cmdEx('getNearestObjectToPlayerLook');
+				while(response.success)
+				{
+					if( !!response.entry && !!response.entry.itemId && response.entry.itemId !== "" )
+						goodEntries.push(response.entry);
+
+					response = aaapi.cmdEx('getNextNearestObjectToPlayerLook');
+				}
+
+				var object;
+				var model;
+				var instanceObject;
+				for( var i = 0; i < goodEntries.length; i++ )
+				{
+					instanceObject = aaapi.cmdEx('getObject', goodEntries[i].id);
+					//console.log(instanceObject.item === instanceObject.model);
+					if( !!!instanceObject )// && instanceObject.item !== instanceObject.model )
+						continue;
+
+					if( npcs.hasOwnProperty(instanceObject.model) )
+						delete npcs[instanceObject.model];
+
+					//var npcIndex = npcs.indexOf(instanceObject.model);
+					//if( npcIndex >= 0 )
+					//{
+					//	npcs.splice(npcIndex.
+
+						/*
+						model = aaapi.cmdEx('getLibraryModel', instanceObject.model);
+						if( !!model && !!model.platforms && !!model.platforms[arcadeHud.platformId] && !!model.platforms[arcadeHud.platformId].file )
+						{
+							var stuff = model.platforms[arcadeHud.platformId].file.toLowerCase();
+
+							if( stuff.indexOf("models/cabinets") >= 0  || stuff.indexOf("models\\cabinets") >= 0 || stuff.indexOf("models/icons") >= 0 || stuff.indexOf("models\\icons") >= 0 )
+								continue;
+
+							console.log(instanceObject.item + ": " + model.title);
+						}
+						*/
+					//}
+				}
+
+				for( var x in npcs )
+				{
+					model = aaapi.cmdEx('getLibraryModel', x);
+					if( !!model )
+					{
+						//console.log(model.title);
+						arcadeHud.createTile(model, npcRemainerContainer, "models");
+					}
+				}
+
+				if( Object.keys(npcs).length === 0 )
+				{
+					npcRemainerContainer.style.cssText += " font-family: arial; font-size: 62px; font-weight: 900;"
+					npcRemainerContainer.innerHTML = "VICTORY!  All NPC's have been placed!";
+				}
+			}
+		</script>
+
+<!--
+<div id="npcRemainerContainer" style="position: absolute; left: 500px; bottom: 40px; width: 100%;"></div>
+
+		<input type="button" value="Check NPCs" onclick="CheckNPCs();"  style="position: absolute; left: 500px; bottom: 160px; font-size: 20px;" />
+-->
+
+<!--
+		<input type="button" value="Export Stuff" onclick="huh();" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+		<input type="button" value="Export Stuff" onclick="window.location='export.html';" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+		<input type="button" value="file browse test" onclick="window.location='filetest.html';" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+		<input type="button" value="restart network" onclick="aaapi.network.restartNetwork();" style="position: absolute; top: 150px; left: 300px; font-size: 20px;" />
+		<input type="button" value="ArcadeSnap" onclick="window.location='chatbot.html';" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+		<input type="button" value="Test Scrap" onclick="tester();" style="position: absolute; top: 150px; left: 300px; font-size: 20px;" />
+		<input type="button" value="ArcadeSnap" onclick="window.location='arcadesnap.html';" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+		<input type="button" value="Refresh Network Module" onclick="aaapi.network.restartNetwork();" style="position: absolute; top: 150px; left: 300px; font-size: 20px;" />
+		<input type="button" value="Reload Connect Page" onclick="aaapi.network.joinLobby('sith');" style="position: absolute; top: 180px; left: 300px; font-size: 20px;" />
+<input type="button" value="Teabags" onclick="window.location='pause.html';" style="position: absolute; top: 700px; left: 300px; font-size: 20px;" />
+<input type="button" value="Teabags" onclick="window.location='mapTransition.html';" style="position: absolute; top: 700px; left: 300px; font-size: 20px;" />
+		<input type="button" value="Hidden Stuff" onclick="window.location='viewhidden.html';" style="position: absolute; top: 100px; left: 300px; font-size: 20px;" />
+-->
+
+	<script>
+		// originally from: https://stackoverflow.com/questions/2234979/how-to-check-in-javascript-if-one-element-is-contained-within-another
+		function isDescendant(parent, child)
+		{
+			var node = child.parentNode;
+			while (node != null)
+			{
+				if (node == parent)
+					return true;
+
+				node = node.parentNode;
+			}
+			return false;
+		}
+
+		function leaveSocial()
+		{
+			aaapi.cmd('setSocialMode', false);
+			document.location.reload();
+		}
+
+		function joinSocial()
+		{
+			isSocial = true;
+			aaapi.cmd('setSocialMode', true);
+			updateSocialUsersList();
+			if( !arcadeHud.oldIsMapLoaded )
+			{
+				setTimeout(function()
+				{
+					document.location.reload();
+					//updateSocialUsersList();
+				}, 1000);
+			}
+			else
+				aaapi.cmd('deactivateInputMode');
+		}
+
+		//var arcadeMenuElem = document.querySelector("#arcadeMenu");
+		document.body.addEventListener("click", function(e)
+		{
+			// determine if the clicked element is a child of the aarcade menu or not...
+			if( arcadeMenu.style.display === "inline-block" && !isDescendant(arcadeMenu, e.srcElement) && !isDescendant(arcadeButton, e.srcElement) )
+			{
+				aarcadeMenuHide();
+			}
+		}, false);
+
+
+		var g_hideChatSocial = localStorage.getItem("hideChatSocial");
+		var shouldHideChatSocial = (g_hideChatSocial == "1");
+
+		if( arcadeHud.getParameterByName("showmenu") != 1 )
+		{
+			if( arcadeHud.getParameterByName("showchat") == 1 )
+			{
+				shouldHideChatSocial = false;
+				toggleChat();
+			}
+		}
+
+		if( shouldHideChatSocial)
+		{
+			document.querySelector("#socialListContainer").style.display = "none";
+			document.querySelector("#bigChatStuff").style.display = "none";
+		}
+	</script>
+	</body>
+</html>

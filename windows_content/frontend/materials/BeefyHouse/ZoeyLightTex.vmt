@@ -1,0 +1,5 @@
+UnlitGeneric
+{
+	"$basetexture" "beefyhouse/zoeylighttex"
+	"$surfaceprop" "tile" // Not sure if this should be glass or not...
+}

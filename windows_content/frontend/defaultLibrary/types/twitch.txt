@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-LcLOH6Posyg8X"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"twitch"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

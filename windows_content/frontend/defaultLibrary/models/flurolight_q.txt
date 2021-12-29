@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"c7af0964"
+		}
+		"title"		"Flurolight Q"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\stormy\neon_alphabet\flurolight_q.mdl"
+			}
+		}
+	}
+}

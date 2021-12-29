@@ -1,0 +1,56 @@
+"UnlitGeneric"
+{
+	"$model" 1
+
+	"$sineval" 0.5
+	"$fullscale" 1.5
+	"$scale" 1.0
+	"$angle" 0.0
+	"$translate" "[0.0 0.0]"
+	"$center" "[0.5 0.5]"
+	"$offset" 0
+
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	"$additive" 1
+	"$selfillum" 1
+	//"$texture2" "dev/dev_scanline"
+	"$surfaceprop" "glass"
+	"%compileNoLight" 1
+	"%compilepassbullets" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+
+		"Sine"
+		{
+			"sineperiod" 4
+			"sinemin" 0
+			"sinemax" 0.5
+			"timeoffset" "$offset"
+			"resultVar" "$sineval"
+		}
+
+		"Subtract"
+		{
+			"srcVar1" "$fullscale"
+			"srcVar2" "$sineval"
+			"resultVar" "$scale"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"scaleVar" "$scale"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$basetexturetransform"
+		}
+	}
+}

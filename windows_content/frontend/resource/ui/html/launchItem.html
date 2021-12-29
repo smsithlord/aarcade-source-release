@@ -1,0 +1,102 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+	</head>
+	<body style="background-color: rgba(0, 0, 0, 0.5);">
+		<div id="content" style="margin-left: auto; margin-right: auto; background-color: rgba(0, 0, 0, 0.95); font-size: 100px; font-weight: 900; font-family: Arial; bottom: 0; right: -300px; position: fixed; width: 50%; text-shadow: 5px 5px 2px rgba(0, 0, 0, 0.7); -webkit-transform: rotate(-45deg); padding: 40px; color: rgba(200, 200, 200, 0.7);">
+			<center>
+				<div style="-webkit-transform: rotate(45deg) translateY(-50px);">
+					<img src="aalogo.png" style="width: 250px; opacity: 0.5;" /><br />
+					<font style="text-shadow: none; font-size: 20px; font-weight: 900;">PAUSED<br />PRESS ESCAPE TO RESUME</font>
+					<!--
+					<i style="color: #999;">PAUSED</i><br />
+					PRESS ESCAPE TO RESUME
+					-->
+				</div>
+			</center>
+		</div>
+		
+		<div style="margin-left: auto; margin-right: auto; background-color: rgba(0, 0, 0, 0.9); font-size: 50px; font-weight: 900; font-family: Arial; top: 50%; position: fixed; width: 100%; text-shadow: 5px 5px 2px #000;">
+			<center>
+				<div id="failed" style="display: none;">
+					AArcade couldn't launch that shortcut.
+					<div style="font-size: 22px;">
+						ERROR: <div id="failedReason" style="display: inline; color: #ff6666;"></div><br /><br />
+						<div class="mainButton helpNote" help="Try again if after you're able to fix the error." onclick="window.location='asset://ui/overlay.html';" style="width: 150px;">OK</div>
+					</div>
+				</div>
+			</center>
+		</div>
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		<script>
+			// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+			function getParameterByName(name, url) {
+			    if (!url) url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+			
+			var id = getParameterByName("id");
+
+			function launchFailed(errorType)
+			{
+				console.log("LAUNCH FAIIIILED!");
+				console.log(errorType);
+
+				var contentElem = document.querySelector("#content");
+				contentElem.style.display = "none";
+
+				var failedElem = document.querySelector("#failed");
+				failedReasonElem = document.querySelector("#failedReason");
+				failedReasonElem.innerHTML = errorType;
+				failedElem.style.display = "block";
+
+				window.location = 'asset://ui/error.html?id=' + encodeURIComponent(id) + '&errorType=' + encodeURIComponent(errorType);
+			}
+
+			var kodiListener = {
+				"play": function(kodiInfo, file)
+				{
+					var kodiRequest = {
+						"jsonrpc": "2.0",
+						"id": "1",
+						"method": "Player.Open",
+						"params":
+						{
+							"item":
+							{
+								"file": file
+							}
+						}
+					};
+
+					var kodiUri = "http://" + kodiInfo + "/jsonrpc?request=" + encodeURIComponent(JSON.stringify(kodiRequest));
+
+					var iframe = document.createElement("iframe");
+					iframe.src = kodiUri;
+					document.body.appendChild(iframe);
+				}
+			};
+
+		//console.log(kodiListener);
+
+
+		//PRESS ESCAPE TO RESUME
+ 			aaapi.cmd("forceInputMode");
+
+ 			var volume = parseFloat(aaapi.cmdEx("getConVarValue", "volume"));
+ 			var delay = (getParameterByName("insta") == "1") ? 100 : 500;
+			var launchDelay = (localStorage.getItem("coinDrop") !== "no" && volume > 0) ? 2250 : delay;
+			setTimeout(function()
+			{
+				aaapi.cmd("launchItem", id);
+			}, launchDelay);
+		</script>
+	</body>
+</html>

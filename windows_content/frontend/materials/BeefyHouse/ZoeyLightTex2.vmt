@@ -1,0 +1,5 @@
+LightmappedGeneric
+{
+	"$basetexture" "beefyhouse/zoeylighttex2"
+	"$surfaceprop" "tile" // Not sure if this should be glass or not...
+}

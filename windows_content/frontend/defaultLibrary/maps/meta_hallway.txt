@@ -1,0 +1,22 @@
+"map"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"id"		"affca943"
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+		}
+		"title"		"Meta Hallway"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"file"		"meta_hallway.bsp"
+			}
+		}
+	}
+}

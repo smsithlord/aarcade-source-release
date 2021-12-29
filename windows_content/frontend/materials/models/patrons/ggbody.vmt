@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/ggbody"
+	"$bumpmap" "models\patrons/ggbody_normal"
+	"$model" "1"
+}

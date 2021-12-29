@@ -1,0 +1,5 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "booster_pak/wood"
+	"$bumpmap" "booster_pak/wood_normal"
+}

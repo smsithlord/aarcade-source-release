@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/zombiejoebeard"
+	"$bumpmap" "models\patrons/zombiejoebeard_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

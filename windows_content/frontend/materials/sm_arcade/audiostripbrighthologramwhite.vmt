@@ -1,0 +1,32 @@
+"Unlittwotexture"
+{
+	"$model" 1
+	"$basetexture" "sm_arcade/audiostrip"
+   "$additive" 1
+   "$selfillum" 1
+   "$texture2" "dev/dev_scanline"
+   "$surfaceprop" "glass"
+   "%compileNoLight" 1
+   "%compilepassbullets" 1
+
+	$color2 "{ 255 255 255 }"
+
+	"Proxies"
+	{
+      "TextureScroll"
+      {
+         "texturescrollvar" "$texture2transform"
+         "texturescrollrate" .10
+         "texturescrollangle" 270
+      }
+      
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "1"
+			"audioPeakVar" "$color2"
+			"audioPeakMin" "0.2"
+			"audioPeakMax" "1"
+			"audioPeakAmp" "1"
+		}
+	}
+}

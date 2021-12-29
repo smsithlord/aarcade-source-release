@@ -1,0 +1,5 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "sm_arcade/audioedgeboxcover"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+}

@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\heads/ninjanancy_body_diffuse"
+	"$bumpmap" "models\players\heads/ninjanancy_Body_normal"
+	"$model" "1"
+	//"$translucent" "1"
+	"$alphatest" "1"
+}

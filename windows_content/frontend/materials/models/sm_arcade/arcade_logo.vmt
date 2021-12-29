@@ -1,0 +1,6 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models/sm_arcade/arcade_logo"
+	"$translucent" "1"
+	"$additive" "1"
+}

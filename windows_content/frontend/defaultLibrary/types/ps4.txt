@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-KexTn7fUiwP8NI1-gXf"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"ps4"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

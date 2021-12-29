@@ -1,0 +1,5 @@
+LightmappedGeneric
+{
+	"$basetexture" "beefyhouse/zoeyhardwood"
+	"$surfaceprop" "tile" // PLACEHOLDER
+}

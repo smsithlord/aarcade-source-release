@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/topmat"
+	"$bumpmap" "models\patrons/topmat_normal"
+	"$model" "1"
+}

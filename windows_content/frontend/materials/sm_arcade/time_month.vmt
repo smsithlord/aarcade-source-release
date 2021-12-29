@@ -1,0 +1,17 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/time_month"
+	$frame "11"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "months"
+			"resultVar" "$frame"
+		}
+	}
+}

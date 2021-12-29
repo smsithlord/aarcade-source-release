@@ -1,0 +1,39 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/audiohex"
+	"$bumpmap" "sm_arcade/audiohex_norm"
+	"$envmap" "env_cubemap"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+
+	"$detail" "sm_arcade/audiohex_illum"
+    "$detailscale" 1
+    "$detailblendfactor" 1
+    "$detailblendmode" 1
+    "$detailtint" "[1.0 0 0]"
+
+    "$offset" "0"
+
+	"Proxies"
+	{
+		"Sine"
+		{
+			"sineperiod" 4
+			"timeoffset" "$offset"
+			"resultVar" "$detailtint[0]"
+		}
+
+		"Sine"
+		{
+			"sineperiod" 8
+			"timeoffset" "$offset"
+			"resultVar" "$detailtint[1]"
+		}
+
+		"Sine"
+		{
+			"sineperiod" 12
+			"timeoffset" "$offset"
+			"resultVar" "$detailtint[2]"
+		}
+	}
+}

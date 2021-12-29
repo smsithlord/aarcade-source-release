@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-L9wmu1tR2MHc0"
+		}
+		"title"		"ePSXe"
+		"file"		"X:\Emulators\ePSXe\ePSXe.exe"
+		"commandformat"		"-nogui -loadbin $QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-L8sbSQI_sIcIz"
+		"download"		"http://www.ePSXe.com/"
+		"reference"		"http://www.ePSXe.com/"
+		"filepaths"
+		{
+			"-om88gxLHlYfYtcSDGO6"
+			{
+				"id"		"-om88gxLHlYfYtcSDGO6"
+				"path"		"X:\Emulators\PS\roms\"
+			}
+		}
+	}
+}

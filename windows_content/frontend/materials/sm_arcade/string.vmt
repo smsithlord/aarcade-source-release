@@ -1,0 +1,6 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/string"
+	"$translucent" 1
+	"$nocull" 1
+}

@@ -1,0 +1,25 @@
+"Refract"
+{
+	"$model" 1
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	//"$refractamount" "0.26"
+	"$bluramount" "0"
+	//"$scale" "[1 1]"
+	//"$dudvmap" "models/effects/portal_camera_dudv"
+	//"$normalmap" "models/effects/portalrift_normal"
+	//"$bumpframe" 0
+	//"$translucent" 1
+	//"$refracttinttexture" "models/effects/portalrift"
+
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+	}
+}

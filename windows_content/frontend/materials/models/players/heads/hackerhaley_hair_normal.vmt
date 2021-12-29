@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\heads/hackerhaley_hair_normal"
+	"$bumpmap" "models\players\heads/hackerhaley_Hair_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

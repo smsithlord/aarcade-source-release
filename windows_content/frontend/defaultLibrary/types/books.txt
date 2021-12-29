@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MVsmUdoiO3S2b"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"books"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

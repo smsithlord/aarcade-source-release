@@ -1,0 +1,13 @@
+vertexlitgeneric
+{
+$basetexture models/cabinets/dance
+$bumpmap models/cabinets/dance_nor
+
+$envmap env_cubemap
+$normalmapalphaenvmapmask 1
+$envmaptint "[.25 .25 .25]"
+
+$phong 1
+$phongboost 5
+$phongfresnelranges "[.25 .5 1.5]"
+}

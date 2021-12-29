@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-L6LbtjwDwfmL-"
+		}
+		"title"		"MAME"
+		"file"		"X:\Emulators\MAME\mameuifx64.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE -autosave"
+		"type"		"-ohTuY-L6iUsEGOn2jn4"
+		"download"		"http://mamedev.org/"
+		"reference"		"http://mamedev.org/"
+		"filepaths"
+		{
+			"-om88gxLOI0pTw6XTNq9"
+			{
+				"id"		"-om88gxLOI0pTw6XTNq9"
+				"path"		"X:\Emulators\Arcade\roms\"
+			}
+		}
+	}
+}

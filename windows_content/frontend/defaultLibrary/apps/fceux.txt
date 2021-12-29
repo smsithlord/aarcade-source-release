@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-Ma4m0VecqsOqg"
+		}
+		"title"		"FCEUX"
+		"file"		"X:\Emulators\FCEUX\fceux.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-LScXMqyrHlddq"
+		"download"		"http://www.fceux.com/"
+		"reference"		"http://www.fceux.com/"
+		"filepaths"
+		{
+			"-om88gxKj-fW2Z4_DMWS"
+			{
+				"id"		"-om88gxKj-fW2Z4_DMWS"
+				"path"		"X:\Emulators\NES\Roms\"
+			}
+		}
+	}
+}

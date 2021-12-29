@@ -1,0 +1,99 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\sithlord/holoclock_hours"
+	"$model" "1"
+	"$additive" 1
+	"$selfillum" 1
+
+	"$angle" 0.0
+	"$translate" "[0.0 0.0]"
+	"$center" "[0.5 0.5]"
+
+	"$timeminutes" 0
+	"$maxminutes" 60
+	"$minutesscalar" 0
+
+	"$timeseconds" 0
+	"$maxseconds" 60
+	"$secondsscalar" 0
+
+	"$timehours" 0
+	"$maxhours" 12
+	"$timescalar" 0
+
+	"$maxrot" "-360"
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "hours"
+			"digit" "-1"
+			"resultVar" "$timehours"
+		}
+
+		"AASystemTime"
+		{
+			"type" "minutes"
+			"digit" "-1"
+			"resultVar" "$timeminutes"
+		}
+
+		"AASystemTime"
+		{
+			"type" "seconds"
+			"digit" "-1"
+			"resultVar" "$timeseconds"
+		}
+
+		"Divide"
+		{
+			"srcVar1"	"$timeseconds"
+			"srcVar2"	"$maxseconds"
+			"resultVar"	"$secondsscalar"
+		}
+
+		"Add"
+		{
+			"srcVar1" "$secondsscalar"
+			"srcVar2" "$timeminutes"
+			"resultVar" "$timeminutes"
+		}
+
+		"Divide"
+		{
+			"srcVar1"	"$timeminutes"
+			"srcVar2"	"$maxminutes"
+			"resultVar"	"$minutesscalar"
+		}
+
+		"Add"
+		{
+			"srcVar1" "$minutesscalar"
+			"srcVar2" "$timehours"
+			"resultVar" "$timehours"
+		}
+
+		"Divide"
+		{
+			"srcVar1"	"$timehours"
+			"srcVar2"	"$maxhours"
+			"resultVar"	"$timescalar"
+		}
+
+		"Multiply"
+		{
+			"srcVar1"	"$timescalar"
+			"srcVar2"	"$maxrot"
+			"resultVar"	"$angle"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$basetexturetransform"
+		}
+	}
+}

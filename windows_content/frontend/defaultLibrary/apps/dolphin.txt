@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-NhhAvrgIXcS8Q"
+		}
+		"title"		"Dolphin"
+		"file"		"X:\Emulators\Dolphin\Dolphin.exe"
+		"commandformat"		"/e $QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-K1TlLlKit3VFv"
+		"download"		"http://www.dolphin-emulator.com/"
+		"reference"		"http://www.dolphin-emulator.com/"
+		"filepaths"
+		{
+			"-om88gxJU4dfALS9OFko"
+			{
+				"id"		"-om88gxJU4dfALS9OFko"
+				"path"		"X:\Emulators\Wii\Roms\"
+			}
+		}
+	}
+}

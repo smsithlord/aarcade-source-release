@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-KtCXxiB-yIQVg"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"n64"
+		"priority"		"1"
+		"fileformat"		"/(.zip|.n64)$/i"
+	}
+}

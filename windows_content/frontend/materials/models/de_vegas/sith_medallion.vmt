@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\de_vegas/sith_medallion"
+	"$surfaceprop" "metal"
+	"$bumpmap" "models\de_vegas/sith_medallion_normal"
+	"$envmap" "env_cubemap"
+	"$normalmapalphaenvmapmask" 1
+}

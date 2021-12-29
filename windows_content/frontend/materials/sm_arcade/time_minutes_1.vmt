@@ -1,0 +1,18 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "minutes"
+			"digit" "1"
+			"resultVar" "$frame"
+		}
+	}
+}

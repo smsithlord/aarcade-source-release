@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/coffee_cabinet"
+	"$model" "1"
+}

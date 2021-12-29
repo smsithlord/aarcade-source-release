@@ -1,0 +1,304 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			.hiddenContainer
+			{
+				font-family: Arial;
+				padding-bottom: 20px;
+			}
+
+			.hiddenContainer tr td:nth-of-type(2):hover
+			{
+				text-decoration: underline;
+			}
+
+			.entryTitleContainer
+			{
+				white-space: nowrap;
+				max-width: 500px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Hidden Library Entries", "", true, true, "window.location='asset://ui/options.html?tab=ui';", "window.location='asset://ui/welcome.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; overflow-x: hidden;">
+			<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Maps <div class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="display: inline-block; padding: 4px; padding-left: 8px; padding-right: 8px;" onclick="unhideAll('maps');" />Unhide ALL Maps</div></div>
+			<table id="hiddenMapsContainer" class="hiddenContainer aaTextSizeFontSize aaTextColorTwoColor"></table>
+
+			<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Items <div class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="display: inline-block; padding: 4px; padding-left: 8px; padding-right: 8px;" onclick="unhideAll('items');" />Unhide ALL Items</div></div>
+			<table id="hiddenItemsContainer" class="hiddenContainer aaTextSizeFontSize aaTextColorTwoColor"></table>
+
+			<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Models <div class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="display: inline-block; padding: 4px; padding-left: 8px; padding-right: 8px;" onclick="unhideAll('models');" />Unhide ALL Models</div></div>
+			<table id="hiddenModelsContainer" class="hiddenContainer aaTextSizeFontSize aaTextColorTwoColor"></table>
+
+			<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Wizards <div class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="display: inline-block; padding: 4px; padding-left: 8px; padding-right: 8px;" onclick="unhideAll('wizards');" />Unhide ALL Wizards</div></div>
+			<table id="hiddenWizardsContainer" class="hiddenContainer aaTextSizeFontSize aaTextColorTwoColor"></table>
+
+			<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Sequence Names <div class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="display: inline-block; padding: 4px; padding-left: 8px; padding-right: 8px;" onclick="unhideAll('sequenceNames');" />Unhide ALL Sequence Names</div></div>
+			<table id="hiddenSequenceNamesContainer" class="hiddenContainer aaTextSizeFontSize aaTextColorTwoColor"></table>
+		</div>
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var g_hiddenItems = localStorage.getItem("hiddenItems");
+			if( !!g_hiddenItems )
+				g_hiddenItems = JSON.parse(g_hiddenItems);
+			else
+				g_hiddenItems = {};
+
+			var g_hiddenMaps = localStorage.getItem("hiddenMaps");
+			if( !!g_hiddenMaps )
+				g_hiddenMaps = JSON.parse(g_hiddenMaps);
+			else
+				g_hiddenMaps = {};
+
+			var g_hiddenWizards = localStorage.getItem("hiddenWizards");
+			if( !!g_hiddenWizards )
+				g_hiddenWizards = JSON.parse(g_hiddenWizards);
+			else
+				g_hiddenWizards = {};
+
+			var g_hiddenSequenceNames = localStorage.getItem("hiddenSequenceNames");
+			if( !!g_hiddenSequenceNames )
+				g_hiddenSequenceNames = JSON.parse(g_hiddenSequenceNames);
+			else
+				g_hiddenSequenceNames = [];
+
+			var entry;
+			var hiddenMaps = {};
+			var hiddenItems = {};
+			var hiddenModels = {};
+			var hiddenWizards = {};
+			var hiddenSequenceNames = {};
+
+			for( var x in g_hiddenMaps )
+			{
+				entry = aaapi.cmdEx("getMap", x);
+
+				if( !!entry )
+					hiddenMaps[x] = entry.map;
+			}
+
+			for( var x in g_hiddenWizards )
+			{
+				entry = arcadeHud.scrapers[x];
+
+				if( !!entry )
+					hiddenWizards[x] = entry;
+			}
+
+			//for( var x in g_hiddenSequenceNames )
+			for( var i = 0; i < g_hiddenSequenceNames.length; i++ )
+			{
+				hiddenSequenceNames[g_hiddenSequenceNames[i]] = g_hiddenSequenceNames[i];
+			}
+
+			for( var x in g_hiddenItems )
+			{
+				entry = aaapi.cmdEx("getLibraryItem", x);
+
+				if( !!entry )
+					hiddenItems[x] = entry;
+				else
+				{
+					entry = aaapi.cmdEx("getLibraryModel", x);
+					if( !!entry )
+						hiddenModels[x] = entry;
+				}
+			}
+
+			//console.log("Items: " + Object.keys(hiddenItems).length + ", Props: " + Object.keys(hiddenModels).length + ", Maps: " + Object.keys(hiddenMaps).length);
+
+			var unhideIconHTML = arcadeHud.generateIconHTML("noeye.png", 24, 24, "aaThemeColorOneColor");
+
+			function unhideAll(type)
+			{
+				if( type === "models" )
+				{
+					for( var x in hiddenModels )
+						delete g_hiddenItems[x];
+
+					localStorage.setItem("hiddenItems", JSON.stringify(g_hiddenItems));
+					window.location.reload();
+				}
+				else if( type === "items" )
+				{
+					for( var x in hiddenItems )
+						delete g_hiddenItems[x];
+
+					localStorage.setItem("hiddenItems", JSON.stringify(g_hiddenItems));
+					window.location.reload();
+				}
+				else if( type === "maps" )
+				{
+					localStorage.removeItem("hiddenMaps");
+					window.location.reload();
+				}
+				else if( type === "wizards" )
+				{
+					localStorage.removeItem("hiddenWizards");
+					window.location.reload();
+				}
+				else if( type === "sequenceNames" )
+				{
+					localStorage.removeItem("hiddenSequenceNames");
+					window.location.reload();
+				}
+			}
+
+			function addEmptyRow(entryType, container)
+			{
+				var tr = document.createElement("tr");
+				var td = document.createElement("td");
+				td.colSpan = 2;
+				td.innerHTML = "You have no hidden " + entryType + ".";
+				container.appendChild(tr);
+				tr.appendChild(td);
+			}
+
+			function addHiddenEntryRow(entryType, entryId, entry, container)
+			{
+				if( !!!entry )
+					return;
+
+				var tr, buttontd, unhideButton, titletd, entryTitle, entryTitleText;
+				tr = document.createElement("tr");
+				tr.entry = entry;
+				tr.entryId = entryId;
+				tr.entryType = entryType;
+				tr.addEventListener("click", function(e)
+				{
+					this.parentNode.removeChild(this);
+
+					if( this.entryType === "items" )
+					{
+						delete g_hiddenItems[this.entryId];
+						delete hiddenItems[this.entryId];
+						localStorage.setItem("hiddenItems", JSON.stringify(g_hiddenItems));
+
+						if( Object.keys(hiddenItems).length === 0 )
+							addEmptyRow("items", document.querySelector("#hiddenItemsContainer"));
+					}
+					else if( this.entryType === "maps" )
+					{
+						delete g_hiddenMaps[this.entryId];
+						delete hiddenMaps[this.entryId];
+						localStorage.setItem("hiddenMaps", JSON.stringify(g_hiddenMaps));
+
+						if( Object.keys(hiddenMaps).length === 0 )
+							addEmptyRow("maps", document.querySelector("#hiddenMapsContainer"));
+					}
+					else if( this.entryType === "wizards" )
+					{
+						delete g_hiddenWizards[this.entryId];
+						delete hiddenWizards[this.entryId];
+						localStorage.setItem("hiddenWizards", JSON.stringify(g_hiddenWizards));
+
+						if( Object.keys(hiddenWizards).length === 0 )
+							addEmptyRow("wizards", document.querySelector("#hiddenWizardsContainer"));
+					}
+					else if( this.entryType === "sequenceNames" )
+					{
+						//delete g_hiddenSequenceNames[this.entryId];
+						var index = g_hiddenSequenceNames.indexOf(this.entryId);
+						g_hiddenSequenceNames.splice(index, 1);
+
+						delete hiddenSequenceNames[this.entryId];
+						localStorage.setItem("hiddenSequenceNames", JSON.stringify(g_hiddenSequenceNames));
+
+						if( Object.keys(hiddenSequenceNames).length === 0 )
+							addEmptyRow("sequenceNames", document.querySelector("#hiddenSequenceNamesContainer"));
+					}
+					else if( this.entryType === "models" )
+					{
+						delete g_hiddenItems[this.entryId];
+						delete hiddenModels[this.entryId];
+						localStorage.setItem("hiddenItems", JSON.stringify(g_hiddenItems));
+
+						if( Object.keys(hiddenModels).length === 0 )
+							addEmptyRow("models", document.querySelector("#hiddenModelsContainer"));
+					}
+				}.bind(tr), false);
+
+				buttontd = document.createElement("td");
+				unhideButton = document.createElement("div");
+				unhideButton.innerHTML = unhideIconHTML;
+
+				titletd = document.createElement("td");
+				entryTitle = document.createElement("div");
+				entryTitle.className = "entryTitleContainer";
+				if(entryType === "sequenceNames")
+					entryTitleText = document.createTextNode(entryId);
+				else
+					entryTitleText = document.createTextNode(entry.title);
+
+				// compose
+				container.appendChild(tr);
+				tr.appendChild(buttontd);
+				buttontd.appendChild(unhideButton);
+				tr.appendChild(titletd);
+				titletd.appendChild(entryTitle);
+				entryTitle.appendChild(entryTitleText);
+			}
+
+			var hiddenContainer = document.querySelector("#hiddenMapsContainer");
+			for( var x in hiddenMaps )
+				addHiddenEntryRow("maps", x, hiddenMaps[x], hiddenContainer);
+			if( Object.keys(hiddenMaps).length === 0 )
+				addEmptyRow("maps", hiddenContainer);
+
+			hiddenContainer = document.querySelector("#hiddenItemsContainer");
+			for( var x in hiddenItems )
+				addHiddenEntryRow("items", x, hiddenItems[x], hiddenContainer);
+			if( Object.keys(hiddenItems).length === 0 )
+				addEmptyRow("items", hiddenContainer);
+
+			hiddenContainer = document.querySelector("#hiddenModelsContainer");
+			for( var x in hiddenModels )
+				addHiddenEntryRow("models", x, hiddenModels[x], hiddenContainer);
+			if( Object.keys(hiddenModels).length === 0 )
+				addEmptyRow("models", hiddenContainer);
+
+			hiddenContainer = document.querySelector("#hiddenWizardsContainer");
+			for( var x in hiddenWizards )
+				addHiddenEntryRow("wizards", x, hiddenWizards[x], hiddenContainer);
+			if( Object.keys(hiddenWizards).length === 0 )
+				addEmptyRow("wizards", hiddenContainer);
+
+			hiddenContainer = document.querySelector("#hiddenSequenceNamesContainer");
+			for( var x in hiddenSequenceNames )
+				addHiddenEntryRow("sequenceNames", x, hiddenSequenceNames[x], hiddenContainer);
+			if( Object.keys(hiddenSequenceNames).length === 0 )
+				addEmptyRow("sequenceNames", hiddenContainer);
+		</script>
+	</body>
+</html>

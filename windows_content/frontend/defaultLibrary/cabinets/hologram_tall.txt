@@ -1,0 +1,25 @@
+"model"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+			"id"		"e1796400"
+		}
+		"title"		"Hologram Tall"
+		"keywords"		"Screens"
+		"dynamic"		"1"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\hologram_tall.mdl"
+			}
+		}
+	}
+}

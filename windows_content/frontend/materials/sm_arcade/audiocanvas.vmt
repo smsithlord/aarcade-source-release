@@ -1,0 +1,45 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/audiocanvas"
+	//"$envmapmask" "sm_arcade/audiohex_spec"
+	"$color" "[1.0 0 0]"
+
+	//"$selfillum" 1
+	//"$selfillummaskscale" 1.0
+
+	"$detail" "sm_arcade/audiocanvas_detail"
+    "$detailscale" 1
+    "$detailblendfactor" 0.9
+    "$detailblendmode" 1
+    "$detailtint" "[1.0 0 0]"
+
+	"Proxies"
+	{
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "1"
+			"audioPeakVar" "$detailtint"
+			"audioPeakMin" "0.2"
+			"audioPeakMax" "1"
+			"audioPeakAmp" "1"
+		}
+
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "1"
+			"audioPeakVar" "$color"
+			"audioPeakMin" "0.2"
+			"audioPeakMax" "1"
+			"audioPeakAmp" "1"
+		}
+		
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "0"
+			"audioPeakVar" "$detailblendfactor"
+			"audioPeakMin" "0.2"
+			"audioPeakMax" "1"
+			"audioPeakAmp" "1"
+		}
+	}
+}

@@ -1,0 +1,6 @@
+exec autoexec.cfg
+r_hunkalloclightmaps 0
+mp_flashlight 1
+sv_cheats 1
+stuffcmds
+anarchymanager

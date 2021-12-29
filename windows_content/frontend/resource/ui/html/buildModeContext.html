@@ -1,0 +1,1367 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var universeInfo = aaapi.cmdEx("getConnectedSession");// : null;
+
+			function doClose()
+			{
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var entityIndex = arcadeHud.getParameterByName("entity");
+			if( entityIndex === null )
+				entityIndex = -1;
+			
+			var entityInfo;
+			if( entityIndex !== -1 )
+				entityInfo = aaapi.cmdEx("getEntityInfo", parseInt(entityIndex));
+
+			//if( !!entityInfo )
+			//	console.log(JSON.stringify(entityInfo));
+
+			var g_editEZMode = localStorage.getItem("ezmode");
+			if( !!!g_editEZMode )
+				g_editEZMode = "1";
+
+			g_editEZMode = (g_editEZMode == "1");
+			var extraStuff = (!!uiBack && uiBack != "") ? "&uiback=" + uiBack : "";
+			if( g_editEZMode )// && entityInfo.item )
+				//window.location = 'tabMenu.html?tab=backpack&entity=' + entityIndex + extraStuff;
+				window.location = "libraryBrowserEZ.html?entity=" + entityIndex + "" + extraStuff;
+
+			var backpackEntries = arcadeHud.favorites;//localStorage.getItem("myBackpack");
+			if( !!backpackEntries )
+				backpackEntries = JSON.parse(backpackEntries);
+			else
+				backpackEntries = [];
+		</script>
+	</head>
+	<body style="background-color: transparent;">
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+<div id="test"></div>
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Context Menu", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			var bigIconSize = arcadeHud.themeSizes.BigIconSize;
+
+			function searchWizards()
+			{
+				if( entityInfo.item )
+					arcadeHud.metaSearchEasy(entityInfo.item.id, "");
+			}
+		</script>
+
+		<center>
+			<div class="aaThemeColorOneHighColor aaTextColorTwoColor aaTextSizeFontSize aaTitleText" style="max-width: 300px; margin-left: auto; margin-right: auto; display: inline-block; padding: 0;">
+				<div>
+					<div id='itemTitle' style="display: block; overflow: hidden; text-overflow: ellipsis; padding: 4px;"></div>
+					<div id='existsItemButtonContainer' class="aaOnlyIfUniverseConnected"></div>
+					<img id='marqueeImage' class="aaThemeColorTwoInverseShadedBorderColor" style="max-width: 300px; max-height: 300px; margin-left: auto; margin-right: auto; display: none; border-style: solid; border-width: 2px;" />
+				</div>
+			</div>
+			<br /><br />
+			<div class="notMore">
+				<div class="onlyIfItem">
+					<!--
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editObject();" help="Edit this object to make it a slave screen or physics-enabled.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("objecticon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Object
+					</div>-->
+					<div id="unmirrorButton" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="doMirror();" help="Edit this object to make it a slave screen or physics-enabled.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("unscreenmirror.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Unmirror
+					</div>
+					<div id="mirrorButton" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="doMirror();" help="Edit this object to make it a slave screen or physics-enabled.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("screenmirror.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Mirror
+					</div>
+				</div>
+				<div class="onlyIfItem">
+					<table style="width: 100%;" cellspacing="0" cellpadding="0">
+						<tr>
+							<td style="width: 99%;">
+								<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editItem();" help="Manage the item used by this object.">
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("itemicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+										document.write(iconHTML);
+									</script>
+									Item
+								</div>
+							</td><td>&nbsp;</td><td>
+								<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 0px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: center; margin-bottom: 4px;" onclick="searchWizards();" help="Use wizards to apply images & meta info to this item.">
+									&nbsp;
+									<script>
+										var iconHTML = arcadeHud.generateIconHTML("wizardicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+										document.write(iconHTML);
+									</script>
+									&nbsp;
+								</div>
+							</td>
+						</tr>
+					</table>
+					<!--
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="deleteObject();" help="Remove this object from the world.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("libraryicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Swap
+					</div>
+					-->
+				</div>
+				<!--
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Model" onclick="editModel();" help="Manage the model used by this object." />
+				-->
+
+				<!--<br />
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move this object." />
+				-->
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="moveObject();" help="Select & move this object.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("moveicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Move
+				</div>
+				<!--<div class="onlyIfModel">-->
+					<div class="aaButton aaOnlyIfHost aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="cloneObject();" help="Manage the item used by this object.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("cloneicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Clone
+					</div>
+				<!--</div>-->
+				<!--
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Delete" onclick="deleteObject();" help="Remove this object from the world." /><br />
+				-->
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="deleteObject();" help="Remove this object from the world.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("eraseicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Delete
+				</div>
+				<!--
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn." /><br />
+				-->
+				<div class="onlyIfModel">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="libraryBrowser();" help="Browse your personal library for something new to spawn.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("libraryicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Library
+					</div>
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="addToBackpack();" help="Add this object to your backpack so you can easily spawn it agian later." id="favorite">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("favoriteicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Favorite
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="removeFromBackpack();" help="Remove this item from your favorites." id="unfavorite">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("unfavoriteicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Unfavorite
+				</div>
+				<div class="onlyIfModel">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="saveModelToLibrary();" help="Save the models's changes to your personal library." id="saveModelButtonContainer">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("saveicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Save Changes
+					</div>
+				</div>
+				<div class="onlyIfItem">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="saveItemToLibrary();" help="Save the item's changes to your personal library." id="saveItemButtonContainer">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("saveicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Save Changes
+					</div>
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="arcadeHud.play(entityInfo.item.id);" help="Launch this shortcut in Windows.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("launchicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Launch
+					</div>
+				</div>
+				<div class="aaOnlyIfUniverseConnected aaOnlyIfHost">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="cloudUploadObject();" help="Launch this shortcut in Windows.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("collapse.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Cloud Upload Object
+					</div>
+				</div>
+				<div class="aaOnlyIfUniverseConnected aaOnlyIfHost">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="cloudUploadMap();" help="Launch this shortcut in Windows.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("collapse.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Cloud Upload Map
+					</div>
+				</div>
+				
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="document.querySelector('.notMore').style.display = 'none'; document.querySelector('.moreOnly').style.display = 'block';" help="View additional commands.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("ellipsis.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Advanced
+				</div>
+			</div>
+			<div class="moreOnly" style="display: none;">
+				<!--div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="generateThumbnail();" help="Browse your personal library for something new to spawn.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("libraryicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Thumbnail
+				</div-->
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="document.querySelector('.notMore').style.display = 'block'; document.querySelector('.moreOnly').style.display = 'none';" help="View normal commands.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("ellipsis_off.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Normal
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="select();" help="Select this object.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("objecticon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Select
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="makeSlideshow();" id="makeSlideshowButton" help="Transform this item from a regular image into a slideshow of all images from the same folder.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("slideshowicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Slideshow
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="lookAtMe();" help="Make this object look at you.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("shadesicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Look
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editModel();" help="Manage the model used by this object.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("3dmodelicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Model
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="togglePhysics();" help="Toggle physics on this object.  Note that this is only a temporary effect and is not saved.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("physicsicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Physics
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor onlyIfItem helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="refreshImages();" onmousedown="refreshImagesMouseDown();" help="Reloads this entry's textures from cache. If you click & hold, it will instead clear the cached version and reload it from the original source.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("refreshicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Refresh
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor onlyIfModel helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="adoptModel();" help="Copy all of the asset files associated with this model into your aarcade_user/custom/adopted folder.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("adopticon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Adopt
+				</div>
+				<div class="onlyIfItem">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="autoplayObject();" help="Mark as the autoplay object." id="autoplayOnButton">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("autoplayonicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Autoplay
+					</div>
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="unautoplayObject();" help="Un-mark as the autoplay object." id="autoplayOffButton">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("autoplayofficon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Un-Autoplay
+					</div>
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="exportObject();" help="Export this object's meta data for use somewhere else.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("exporticon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Export
+					</div>
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="showQuestBuilder();" help="Create a quest that uses this object or model.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("questsicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Quest
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="hideEntry();" help="Hide this entry so that it doesn't show up on AArcade menus." id="hideEntryButton">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("noeye.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Hide
+				</div>
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="unhideEntry();" help="Unhide this entry so that it shows up on AArcade menus again." id="unhideEntryButton">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("eye.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Unhide
+				</div>
+				<div class="onlyIfModel">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor aaOnlyIfHost helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="flagVehicleEntry();" help="Unflag this model as one that potentially get spawned by the spawn_junk console command or !cheer Twitch command." id="flagVehicleEntryButton">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("vehicleplusicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Vehicle
+					</div>
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="unflagVehicleEntry();" help="Remove this entry from your Vehicle tab." id="unflagVehicleEntryButton">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("vehicleminusicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Un-Vehicle
+					</div>
+				</div>
+				<div id="junkStuff" style="display: none;">
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" id="junk" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="addToJunk();" help="Flag this model as one that potentially get spawned by the spawn_junk console command or !cheer Twitch command.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("addjunkicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Junk
+					</div>
+					<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" id="unjunk" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: none; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="removeFromJunk();" help="Remove this model from the list of models that potentially get spawned by the spawn_junk console command.">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("removejunkicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+							document.write(iconHTML);
+						</script>
+						Un-Junk
+					</div>
+				</div>
+			</div>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>			
+			function showQuestBuilder()
+			{
+				var modelId = '';
+				var itemId = '';
+				if( !!entityInfo )
+				{
+					if( !!entityInfo.model )
+						modelId = entityInfo.model.id;
+					
+					if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+						itemId = entityInfo.item.id;
+
+					window.location = "questBuilderObject.html?objectId=" + encodeURIComponent(entityInfo.object.id);
+				}
+			}
+
+			function exportObject()
+			{
+				window.location = "asset://ui/export.html?entity=" + entityIndex + "&uiback=" + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			var entry;
+			if( !!!entityInfo.item )
+			{
+				document.querySelector("#aaSwitchButtonEZ").style.display = "block";
+				entry = aaapi.cmdEx("getLibraryModel", entityInfo.model.id);
+
+				var onlyIfItemElems = document.querySelectorAll(".onlyIfItem");
+				for( var i = 0; i < onlyIfItemElems.length; i++ )
+					onlyIfItemElems[i].style.display = "none";
+
+				var onlyIfModelElems = document.querySelectorAll(".onlyIfModel");
+				for( var i = 0; i < onlyIfModelElems.length; i++ )
+					onlyIfModelElems[i].style.display = "block";
+			}
+			else
+			{
+				document.querySelector("#aaSwitchButtonEZ").style.display = "block";
+
+				entry = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+
+				var onlyIfModelElems = document.querySelectorAll(".onlyIfModel");
+				for( var i = 0; i < onlyIfModelElems.length; i++ )
+					onlyIfModelElems[i].style.display = "none";
+
+				if(entityInfo.object.slave == 1)
+				{
+					document.querySelector("#mirrorButton").style.display = "none";
+				}
+				else
+					document.querySelector("#unmirrorButton").style.display = "none";
+			}
+
+			if( !!entry )
+			{
+				var itemTitle = document.querySelector("#itemTitle");
+				itemTitle.innerText = entry.title;
+
+				var marqueeImageElem = document.querySelector("#marqueeImage");
+				arcadeHud.loadItemBestImage(marqueeImageElem, entry);
+			}
+
+
+			var isItem = (!!entityInfo.item && entityInfo.item !== "") ? true : false;
+			var matchId = (isItem) ? entityInfo.item.id : entityInfo.model.id;
+			var typeName = (isItem) ? "item" : "model";
+			var alreadyExists = false;
+			for( var i = 0; i < backpackEntries.length; i++ )
+			{
+				if( backpackEntries[i][typeName] === matchId )
+				{
+					alreadyExists = true;
+					break;
+				}
+			}
+
+			if(alreadyExists)
+				document.querySelector("#favorite").style.display = "none";
+			else
+				document.querySelector("#unfavorite").style.display = "none";
+
+			function cloudUploadObject()
+			{
+				aaapi.cmd("addSingleObjectToUploadBatch", entityInfo.object.id);
+			}
+
+			function cloudUploadMap()
+			{
+				var worldInfo = aaapi.cmdEx("getWorldInfo");
+				if( !!worldInfo.map )
+					aaapi.cmd("addSingleMapToUploadBatch", worldInfo.map.info.id);
+			}
+
+			function viewObjectInfo()
+			{
+				aaapi.cmd("viewObjectInfo", entityIndex);
+			}
+
+			function moveObject()
+			{
+				var oldId = (!!entityInfo.item) ? entityInfo.item.id : entityInfo.model.id;
+				var oldTransform = localStorage.getItem("trans" + oldId);
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				//var modelId = oldTransform.modelId;
+				//if( typeof modelId === 'undefined' )
+				//	modelId = "";
+
+				var scale = oldTransform.scale;
+				if( typeof scale === 'undefined' )
+					scale = "1.0";
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+				
+				aaapi.cmd("moveObject", entityIndex, scale, pitch, yaw, roll, offX, offY, offZ);
+			}
+
+			function select()
+			{
+				aaapi.cmd("consoleCommand", "select " + entityIndex);
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			function removeFromJunk()
+			{
+				if( !!!entityInfo )
+					return;
+
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+					entryId = entityInfo.model.id;
+
+				var model = aaapi.cmdEx('getLibraryModel', entryId);
+				if( !!model )
+				{
+					var modelFile = model.platforms[arcadeHud.platformId].file;
+					var modelFileLow = modelFile.toLowerCase();
+
+					var junkModelsRaw = aaapi.cmdEx('getConVarValue', 'junkmodel');
+					var junkModels = junkModelsRaw.split('::');
+					var junkModelsLow = junkModelsRaw.toLowerCase().split('::');
+
+					// first find the match without caring about case
+					var index = junkModelsLow.indexOf(modelFileLow);
+					if( index < 0 )
+						return;
+
+					junkModels.splice(index, 1);
+					aaapi.cmd("consoleCommand", "junkmodel \"" + junkModels.join("::") + "\";");
+					aaapi.cmd("addToastMessage", "Removed From Junk List");
+					aaapi.cmd("deactivateInputMode");
+				}
+			}
+
+			function addToJunk()
+			{
+				if( !!!entityInfo )
+					return;
+
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+					entryId = entityInfo.model.id;
+
+				var model = aaapi.cmdEx('getLibraryModel', entryId);
+				if( !!model )
+				{
+					var modelFile = model.platforms[arcadeHud.platformId].file;
+
+					var junkModels = aaapi.cmdEx('getConVarValue', 'junkmodel');
+					junkModels = junkModels.split('::');
+
+					if( junkModels.indexOf(modelFile) < 0 )
+					{
+						junkModels.unshift(modelFile);
+						aaapi.cmd("consoleCommand", "junkmodel \"" + junkModels.join("::") + "\";");
+						aaapi.cmd("addToastMessage", "Added To Junk List");
+						aaapi.cmd("deactivateInputMode");
+					}
+				}
+			}
+
+			var makeSlideshowButtonElem = document.querySelector("#makeSlideshowButton");
+
+			if( !!entityInfo )
+			{
+				var item;
+				if( !!entityInfo.item )
+					item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+
+				if( !!item &&  item.file[1] == ':' )
+				{
+					makeSlideshowButtonElem.item = item;
+					var imageExtensions = ['jpg', 'gif', 'jpeg', 'png'];
+					var lowerFile = item.file.toLowerCase();
+					var foundMatch = false;
+					for( var i = 0; i < imageExtensions.length; i++ )
+					{
+						if( lowerFile.indexOf('.' + imageExtensions[i]) == lowerFile.length - imageExtensions[i].length - 1 )
+						{
+							foundMatch = true;
+							break;
+						}
+					}
+
+					if( foundMatch )
+						makeSlideshowButtonElem.style.display = "block";
+				}
+			}
+
+			function makeSlideshow()
+			{
+				var item = makeSlideshowButtonElem.item;
+				if( !!item &&  item.file[1] == ':' )
+				{
+					var imageExtensions = ['jpg', 'gif', 'jpeg', 'png'];
+					var lowerFile = item.file.toLowerCase();
+					var foundMatch = false;
+					for( var i = 0; i < imageExtensions.length; i++ )
+					{
+						if( lowerFile.indexOf('.' + imageExtensions[i]) == lowerFile.length - imageExtensions[i].length - 1 )
+						{
+							foundMatch = true;
+							break;
+						}
+					}
+
+					if( foundMatch )
+					{
+						var path = item.file;
+						var pathFound = path.lastIndexOf('/');
+						if( pathFound < 0 )
+							pathFound = path.lastIndexOf('\\');
+						if( pathFound > 0 )
+							path = path.substring(0, pathFound + 1);
+
+						// Now edit the item to use item.file as item.screen, and then set item.file to slideshow.html?s=1&f=item.file.
+						var title = "Slideshow: " + path;
+						var file = 'slideshow.html?s=1&f=' + path;
+						var screen = item.file;
+						var success = aaapi.cmdEx("updateItem", item.info.id, ['title', title, 'file', file, 'screen', screen]);
+						if( success )
+						{
+							item.title = title;
+							item.file = file;
+							item.screen = screen;
+							aaapi.cmd("addToastMessage", "Slideshow Created");
+							aaapi.cmd("deactivateInputMode");
+						}
+					}
+				}
+			}
+
+			function lookAtMe()
+			{
+				aaapi.cmd("consoleCommand", "look_at_me " + entityIndex + ";");//" select " + entityIndex);
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			function deleteObject()
+			{
+				aaapi.cmd("deleteObject", entityIndex);
+			}
+
+			function editItem()
+			{
+				window.location='asset://ui/editItem.html?id=' + entityInfo.item.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function editObject()
+			{
+				//console.log(entityInfo.object.id);
+				window.location='asset://ui/editObject.html?id=' + entityInfo.object.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+				//window.location = 'asset://ui/editObject.html?objectId=' + entityInfo.object.id;
+			}
+
+			function editModel()
+			{
+				window.location='asset://ui/editModel.html?id=' + entityInfo.model.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function libraryBrowser()
+			{
+				window.location='asset://ui/libraryBrowser.html?category=items' + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function doMirror()
+			{
+				var value = (entityInfo.object.slave == 1) ? false : true;
+				aaapi.cmd("setSlaveScreen", entityInfo.object.id, value);
+
+				if( value )
+				{
+					aaapi.cmd("addToastMessage", "Screen Mirrored Object");
+					document.querySelector("#mirrorButton").style.display = "none";
+					document.querySelector("#unmirrorButton").style.display = "block";
+				}
+				else
+				{
+					aaapi.cmd("addToastMessage", "Un-Screen Mirrored Object");
+					document.querySelector("#mirrorButton").style.display = "block";
+					document.querySelector("#unmirrorButton").style.display = "none";
+				}
+			}
+
+			function addToBackpack()
+			{
+				var isItem = (!!entityInfo.item && entityInfo.item !== "") ? true : false;
+				var matchId = (isItem) ? entityInfo.item.id : entityInfo.model.id;
+				var typeName = (isItem) ? "item" : "model";
+				var alreadyExists = false;
+				for( var i = 0; i < backpackEntries.length; i++ )
+				{
+					if( backpackEntries[i][typeName] === matchId )
+					{
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var backpackEntry = {};
+					backpackEntry[typeName] = matchId;
+					//backpackEntries.push(backpackEntry);
+					backpackEntries.unshift(backpackEntry);
+					//localStorage.setItem("myBackpack", JSON.stringify(backpackEntries));
+					arcadeHud.saveFavoritesLists();
+					aaapi.cmd("addToastMessage", "Added To Favorites");
+
+					if( !!universeInfo && !!universeInfo.lobby && universeInfo.lobby !== "" )
+					{
+						if( isItem )
+							aaapi.cmd("saveRemoteItemChanges", matchId);
+						else
+							aaapi.cmd("saveRemoteModelChanges", matchId);
+					}
+
+					document.querySelector("#favorite").style.display = "none";
+					document.querySelector("#unfavorite").style.display = "block";
+
+					doClose();
+				}
+				else
+				{
+					console.log("ERROR: Item already exists in backpack.");
+					//aaapi.cmd("deactivateInputMode");
+				}
+			}
+
+			function removeFromBackpack()
+			{
+				var isItem = (!!entityInfo.item && entityInfo.item !== "") ? true : false;
+				var matchId = (isItem) ? entityInfo.item.id : entityInfo.model.id;
+				var typeName = (isItem) ? "item" : "model";
+				var alreadyExists = false;
+				for( var i = 0; i < backpackEntries.length; i++ )
+				{
+					if( backpackEntries[i][typeName] === matchId )
+					{
+						alreadyExists = true;
+
+						// Remove this entry
+						backpackEntries.splice(i, 1);
+						//localStorage.setItem("myBackpack", JSON.stringify(backpackEntries));
+						arcadeHud.saveFavoritesLists();
+						aaapi.cmd("addToastMessage", "Removed From Favorites");
+
+						document.querySelector("#favorite").style.display = "block";
+						document.querySelector("#unfavorite").style.display = "none";
+						break;
+					}
+				}
+			}
+
+			function cloneObject()
+			{
+				/*
+				var isItem = false;
+				var oldId = (!!entityInfo.item) ? entityInfo.item.id : entityInfo.model.id;
+				*/
+
+				var oldId;
+				var isItem;
+				if(!!entityInfo.item)
+				{
+					oldId = entityInfo.item.id;
+					isItem = true;
+				}
+				else
+				{
+					oldId = entityInfo.model.id;
+					isItem = false;
+				}
+
+				var oldTransform = localStorage.getItem("trans" + oldId);
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				//var modelId = oldTransform.modelId;
+				//if( typeof modelId === 'undefined' )
+				//	modelId = "";
+
+				//var scale = oldTransform.scale;
+				//if( typeof scale === 'undefined' )
+				//	scale = "1.0";
+
+				var scale = entityInfo.object.scale;
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+				
+				var anim = oldTransform.anim;
+				if( typeof anim === 'undefined' )
+					anim = "";
+
+				if( isItem )
+				{
+					var modelId = (!!entityInfo.model && !!entityInfo.model.id) ? entityInfo.model.id : "";
+					aaapi.cmd("spawnEntry", "items", oldId, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ, anim);
+				}
+				else
+				{
+					aaapi.cmd("spawnEntry", "models", oldId, "", "", "", scale, pitch, yaw, roll, offX, offY, offZ, anim);
+				}
+			}
+
+			var g_instance = aaapi.cmdEx("getInstance");
+			if( entityInfo.object.id !== g_instance.instance.autoplay )
+				document.querySelector("#autoplayOnButton").style.display = "block";
+			else
+				document.querySelector("#autoplayOffButton").style.display = "block";
+
+			function autoplayObject()
+			{
+				var success = aaapi.cmdEx("updateInstance", g_instance.instance.id, ["autoplay", entityInfo.object.id]);
+				if( success )
+				{
+					console.log("Instance updated!");
+					g_instance.instance.autoplay = entityInfo.object.id;
+					document.querySelector("#autoplayOnButton").style.display = "none";
+					document.querySelector("#autoplayOffButton").style.display = "block";
+				}
+				else
+					console.log("Instance update rejected!");
+
+				doClose();
+			}
+
+			function unautoplayObject()
+			{
+				var success = aaapi.cmdEx("updateInstance", g_instance.instance.id, ["autoplay", ""]);
+				if( success )
+				{
+					console.log("Instance updated!");
+					g_instance.instance.autoplay = entityInfo.object.id;
+					document.querySelector("#autoplayOnButton").style.display = "block";
+					document.querySelector("#autoplayOffButton").style.display = "none";
+				}
+				else
+					console.log("Instance update rejected!");
+
+				doClose();
+			}
+
+			var aaModalAlertMenu;
+			function createModalAlert(title, text, action)
+			{
+				modalWindowHeight = 700;
+
+				if( !!aaModalAlertMenu )
+				{
+					console.log("ERROR: A modal alert menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalAlertMenu.flashInterval )
+						{
+							aaModalAlertMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalAlertMenu), 100);
+
+							aaModalAlertMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = parseInt(window.innerHeight / 2.2) - (modalWindowHeight / 2) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="max-width: 700px; height: ' + modalWindowHeight + 'px; max-height: ' + modalWindowHeight + 'px; font-family: Arial;">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalAlertMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalAlertMenu.parentNode.parentNode.removeChild(aaModalAlertMenu.parentNode);
+					aaModalAlertMenu = undefined;
+
+					eval(action);
+				}, true);
+			}
+
+
+			var existsItemButtonContainerElem = document.querySelector("#existsItemButtonContainer");
+			var saveItemButtonContainerElem = document.querySelector("#saveItemButtonContainer");
+			var saveModelButtonContainerElem = document.querySelector("#saveModelButtonContainer");
+			var itemId = (!!entityInfo && !!entityInfo.item && !!entityInfo.item.id) ? entityInfo.item.id : "";
+			
+			var modelId = (!!entityInfo && !!entityInfo.model && !!entityInfo.model.id && (!!!entityInfo.item || !!!entityInfo.item.id || entityInfo.item.id === entityInfo.model.id)) ? entityInfo.model.id : "";
+			var hasEntityItem = (itemId !== "");
+			var isMutatedItem = (hasEntityItem) ? aaapi.cmdEx("isItemMutated", itemId) : false;
+			var isRemoteOnlyItem = (hasEntityItem) ? aaapi.cmdEx("isItemRemoteOnly", itemId) : false;
+
+			var libraryIconHTML = arcadeHud.generateIconHTML("libraryicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+			if( !isRemoteOnlyItem )
+			{
+				existsItemButtonContainerElem.style.display = "block";
+				existsItemButtonContainerElem.innerHTML = libraryIconHTML + " From Your Library";
+			}
+
+			var shouldShowSave = (hasEntityItem && (isMutatedItem || isRemoteOnlyItem));
+			if(shouldShowSave)
+				saveItemButtonContainerElem.style.display = "block";
+			else
+			{
+				var hasEntityModel = (modelId !== "");
+				var isMutatedModel = (hasEntityModel) ? aaapi.cmdEx("isModelMutated", modelId) : false;
+				var isRemoteOnlyModel = (hasEntityModel) ? aaapi.cmdEx("isModelRemoteOnly", modelId) : false;
+
+				shouldShowSave = (hasEntityModel && (isMutatedModel || isRemoteOnlyModel));
+
+				if( shouldShowSave )
+					saveModelButtonContainerElem.style.display = "block";
+			}
+
+			function saveItemToLibrary()
+			{
+				aaapi.cmd("saveRemoteItemChanges", entityInfo.item.id);
+				doClose();
+			}
+
+			function saveModelToLibrary()
+			{
+				aaapi.cmd("saveRemoteModelChanges", entityInfo.model.id);
+				doClose();
+			}
+
+			function generateThumbnail()
+			{
+				/*console.log(entry.platforms[arcadeHud.platformId].file);
+
+				var file = entry.platforms[arcadeHud.platformId].file;
+				file = file.replace(/\\/g, "/");
+				var cmd = "create_model_preview \"" + file + "\";";
+				aaapi.cmd("consoleCommand", cmd);
+				window.location.reload();*/
+				aaapi.cmdEx("generateModelThumbnail", entry.platforms[arcadeHud.platformId].file);
+			}
+
+			/*var image = document.querySelector("#test");
+			image.addEventListener("error", function(e){console.log("Yup, errored.");});
+			image.src = "asset://shots/modelthumbnail.bmp";*/
+
+			var tga = new TGA();
+			var imageContainer = document.querySelector("#test");
+			tga.open( "modelthumb/tester.tga", function()
+			{
+				var elem = tga.getCanvas();
+				elem.style.cssText = "width: 512px; height: 512px;";
+
+			   imageContainer.appendChild(elem);
+			   //document.querySelector("#mapImageContainer").appendChild(mapImage);
+			});
+
+			if( (!!entityInfo.item && !!arcadeHud.hiddenItems[entityInfo.item.id]) || (!!entityInfo.model && !!arcadeHud.hiddenItems[entityInfo.model.id]) )
+				document.querySelector("#unhideEntryButton").style.display = 'block';
+			else
+				document.querySelector("#hideEntryButton").style.display = 'block';
+
+
+			var vehiclePresets = localStorage.getItem("vehiclePresets");
+			if( !!vehiclePresets )
+				vehiclePresets = JSON.parse(vehiclePresets);
+			else
+				vehiclePresets = {};
+
+			if( (!!entityInfo.item && !!vehiclePresets[entityInfo.item.id]) || (!!entityInfo.model && !!vehiclePresets[entityInfo.model.id]) )
+				document.querySelector("#unflagVehicleEntryButton").style.display = 'block';
+			else
+				document.querySelector("#flagVehicleEntryButton").style.display = 'block';
+
+			function hideEntry()
+			{
+				if( !!!entityInfo )
+					return;
+
+				//var isItemMode = true;
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+				{
+					entryId = entityInfo.model.id;
+					//isItemMode = false;
+				}
+
+				// Add the item to the hide list
+				arcadeHud.hiddenItems[entryId] = "1";
+				localStorage.setItem("hiddenItems", JSON.stringify(arcadeHud.hiddenItems));
+
+				aaapi.cmd("deactivateInputMode");
+			}
+
+
+
+			function unhideEntry()
+			{
+				if( !!!entityInfo )
+					return;
+
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+					entryId = entityInfo.model.id;
+
+				if( !!arcadeHud.hiddenItems[entryId] )
+				{
+					delete arcadeHud.hiddenItems[entryId];
+					localStorage.setItem("hiddenItems", JSON.stringify(arcadeHud.hiddenItems));
+					aaapi.cmd("deactivateInputMode");
+				}
+			}
+
+			function unflagVehicleEntry()
+			{
+				if( !!!entityInfo )
+					return;
+
+				//var isItemMode = true;
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+					entryId = entityInfo.model.id;
+
+				if( !!entryId && entryId != '' )
+				{
+					// Remove this entry from the vehicle list
+					delete vehiclePresets[entryId];
+					localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+				}
+
+				// reset current values
+				aaapi.cmd("consoleCommand", "vehicle_eye_offset \"0 0 0\"; air_boat_offset \"0 0 0\"; air_boat_angles \"0 0 0\"; air_boat_model \"\"");
+				aaapi.cmd('deactivateInputMode');
+			}
+
+			function flagVehicleEntry()
+			{
+				if( !!!entityInfo )
+					return;
+
+				//var isItemMode = true;
+				var entryId = '';
+				if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+					entryId = entityInfo.item.id;
+				else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+					entryId = entityInfo.model.id;
+
+				var model = aaapi.cmdEx('getLibraryModel', entryId);
+				if( !!model )
+				{
+					if( !!!vehiclePresets[entryId] )
+					{
+						// Add the item to the hide list
+						vehiclePresets[entryId] = {
+							camx: 0,
+							camy: 0,
+							camz: 0,
+							x: 0,
+							y: 0,
+							z: 0,
+							pitch: 0,
+							yaw: 0,
+							roll: 0
+						};
+						localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+					}
+
+					var vehiclePreset = vehiclePresets[entryId];
+					aaapi.cmd("consoleCommand", "vehicle_eye_offset \"" + vehiclePreset.camx + " " + vehiclePreset.camy + " " + vehiclePreset.camz + "\"; air_boat_offset \"" + vehiclePreset.x + " " + vehiclePreset.y + " " + vehiclePreset.z + "\"; air_boat_angles \"" + vehiclePreset.pitch + " " + vehiclePreset.yaw + " " + vehiclePreset.roll + "\"; air_boat_model \"" + model.platforms[arcadeHud.platformId].file + "\"");
+				}
+
+				window.location = "options.html?tab=vehicle";
+			}
+			
+			function togglePhysics()
+			{
+				aaapi.cmd("consoleCommand", "togglephysics " + entityIndex);
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			var refreshImagesMouseDownTimer;
+			var refreshImageMouseDownHandled = false;
+			function refreshImagesMouseDown()
+			{
+				if( !!refreshImagesMouseDownTimer)
+				{
+					clearTimeout(refreshImagesMouseDownTimer);
+					refreshImagesMouseDownTimer = null;
+				}
+
+				refreshImagesMouseDownTimer = setTimeout(refreshCachedImages, 500);
+			}
+
+			function refreshCachedImages()
+			{
+				refreshImagesMouseDownTimer = null;
+				refreshImageMouseDownHandled = true;
+
+				var modelId = '';
+				var itemId = '';
+				if( !!entityInfo )
+				{
+					if( !!entityInfo.model )
+						modelId = entityInfo.model.id;
+					
+					if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+						itemId = entityInfo.item.id;
+
+					aaapi.cmd("consoleCommand", "refreshimages \"" + itemId + "\" \"" + modelId + "\"");
+					aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+					aaapi.cmd("deactivateInputMode");
+				}
+			}
+
+			function refreshImages()
+			{
+				if( !!refreshImagesMouseDownTimer )
+				{
+					clearTimeout(refreshImagesMouseDownTimer);
+					refreshImagesMouseDownTimer = null;
+				}
+
+				if( refreshImageMouseDownHandled )
+				{
+					refreshImageMouseDownHandled = false;
+					return;
+				}
+
+				var itemId = '';
+				if( !!entityInfo )
+				{
+					if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+						itemId = entityInfo.item.id;
+
+					if( itemId != '' )
+					{
+						aaapi.cmd('consoleCommand', 'reset_image_loader');
+						aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+						aaapi.cmd('refreshItemTextures', itemId, 'ALL');
+						aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+						aaapi.cmd('deactivateInputMode');
+					}
+				}
+			}
+
+			function adoptModel()
+			{
+				var response = aaapi.cmdEx("adoptModel", matchId);
+				if( !!response )
+				{
+					var numFiles = Object.keys(response).length;
+					if( numFiles === 0 )
+						aaapi.cmd("addToastMessage", "Failed to copy files.");
+					else
+						aaapi.cmd("addToastMessage", "Copied " + numFiles + " files into aarcade_user/custom/adopted");
+				}
+				else
+					aaapi.cmd("addToastMessage", "Failed to adopt model.");
+
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			// determine if junk stuff needs to be figured out.
+			// only if the user has the !cheer command enabled in their twitch options.
+			if( !!entityInfo && !!!entityInfo.item && !!entityInfo.model )
+			{
+				// We have a model.  Figure out if it's already in the junk list (if we need to.)
+				var twitchEnabled = (aaapi.cmdEx("getConVarValue", "twitch_enabled") == '1');
+				if( twitchEnabled == '1' )
+				{
+					var twitchBotEnabled = (aaapi.cmdEx("getConVarValue", "twitch_bot_enabled") == '1');
+					if( twitchBotEnabled )
+					{
+						var model = aaapi.cmdEx('getLibraryModel', entityInfo.model.id);
+						var modelFile = model.platforms[arcadeHud.platformId].file;
+
+						var junkStuffElem = document.querySelector('#junkStuff');
+						var models = (aaapi.cmdEx("getConVarValue", "junkmodel").toLowerCase()).split('::');
+						if( models.indexOf(modelFile.toLowerCase()) >= 0 )
+						{
+							junkStuffElem.style.display = 'block';
+							// already exists
+							// unhide UNJUNK
+							document.querySelector('#unjunk').style.display = 'block';
+
+						}
+						else
+						{
+							junkStuffElem.style.display = 'block';
+							// doesn't exist yet
+							// unhide JUNK
+							document.querySelector('#junk').style.display = 'block';
+						}
+					}
+				}
+			}
+		</script>
+	</body>
+</html>

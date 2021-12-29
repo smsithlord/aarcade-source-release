@@ -1,0 +1,55 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Redux Beta Feedback", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<!-- Suggestions -->
+			<!--
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Suggestions" onclick="aaapi.cmd('feedback', 'suggestions'); window.location='asset://ui/welcome.html';" help="Share ideas & feature suggestions here." /><br />
+			-->
+
+			<!-- Bug Reports -->
+			<!--
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Bug Reports" onclick="aaapi.cmd('feedback', 'bugs'); window.location='asset://ui/welcome.html';" help="If you've found a bug or annoyance, please post it here so there is a record of it." /><br />
+			-->
+			
+			<!-- Discord -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Discord" onclick="aaapi.cmd('feedback', 'discord'); window.location='asset://ui/welcome.html';" help="Check out the Discord user community for AArcade." /><br />
+
+			<!-- Twitch -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Twitch" onclick="aaapi.cmd('feedback', 'discord'); window.location='asset://ui/welcome.html';" help="Check out the developer's Twitch channel." /><br />
+
+			<!-- Development Trello -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Development Trello" onclick="aaapi.cmd('feedback', 'trello'); window.location='asset://ui/welcome.html';" help="This is the to-do list & detailed change log that tracks AArcade develoment." /><br />
+
+			<!-- Discussions -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Discussions" onclick="aaapi.cmd('feedback', 'discussions'); window.location='asset://ui/welcome.html';" help="General discussion." />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

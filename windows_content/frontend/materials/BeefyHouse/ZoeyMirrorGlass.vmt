@@ -1,0 +1,6 @@
+LightmappedGeneric
+{
+	"$basetexture"  "beefyhouse/zoeymirror"
+	"$surfaceprop" "glass"
+	"$envmap" "env_cubemap"
+}

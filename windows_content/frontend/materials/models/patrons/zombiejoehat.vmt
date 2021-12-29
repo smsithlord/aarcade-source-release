@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/zombiejoehat"
+	"$bumpmap" "models\patrons/zombiejoehat_normal"
+	"$model" "1"
+}

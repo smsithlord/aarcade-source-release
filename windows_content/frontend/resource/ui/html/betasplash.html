@@ -1,0 +1,2452 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var g_imageTilesOnly = (localStorage.getItem("imageTilesOnly") == "1");
+			var universeInfo = aaapi.cmdEx("getConnectedSession");
+			var bestScreenshot;
+
+			// get the current mapHistory (or create an empty mapHistory)
+			var tga = new TGA();
+			var worldInfo = aaapi.cmdEx("getWorldInfo");
+			var g_screenshots = (!!worldInfo.map) ? aaapi.cmdEx("getAllMapScreenshots", "id" + worldInfo.map.info.id) : {};
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			// if auto_load_map is 1, then auto-load what we want.
+			var autoLoadMapVal = aaapi.cmdEx("getConVarValue", "auto_load_map");
+			var lastMapLoadedVal = aaapi.cmdEx("getConVarValue", "last_map_loaded");
+
+			// find the most recently loaded map / instance / spawn position
+			var bestHistoryTimestamp;
+			var bestHistoryEntry;
+			var potentialMapHistoryEntry;
+			var mapHistoryKeys = Object.keys(mapHistory);
+			for( var i = 0; i < mapHistoryKeys.length; i++ )
+			{
+				potentialMapHistoryEntry = mapHistory[mapHistoryKeys[i]];
+				if( !!!potentialMapHistoryEntry.timestamp || !!!bestHistoryTimestamp || potentialMapHistoryEntry.timestamp > bestHistoryTimestamp )
+				{
+					bestHistoryTimestamp = potentialMapHistoryEntry.timestamp;
+					bestHistoryEntry = potentialMapHistoryEntry;
+				}
+			}
+
+			if( !!bestHistoryEntry )
+			{
+				if( !!bestHistoryEntry.screenshotId && bestHistoryEntry.screenshotId !== "" )
+					bestScreenshot = g_screenshots[bestHistoryEntry.screenshotId];
+
+				//console.log("Test val: " + (autoLoadMapVal == "1"));
+				if( autoLoadMapVal == "1" && lastMapLoadedVal == "1" && !aaapi.cmdEx("isInGame") )
+				{
+					var map = aaapi.cmdEx("getMap", bestHistoryEntry.mapId);
+					if( !!map )
+					{
+						bestHistoryEntry.timestamp = new Date().getTime();
+
+						if( bestHistoryEntry.instanceId === "" )
+						{
+							var mapInstances = aaapi.cmdEx("getMapInstances", bestHistoryEntry.mapId);
+							
+							if( mapInstances.length > 0 )
+								bestHistoryEntry.instanceId = mapInstances[0].id;
+						}
+
+						// save the mapHistory out
+						localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+						window.location = "asset://ui/loading.html?map=" + bestHistoryEntry.mapId + "&instance=" + bestHistoryEntry.instanceId + "&pos=" + bestHistoryEntry.position + "&rot=" + bestHistoryEntry.rotation + "&screenshot=" + bestHistoryEntry.screenshotId;
+					}
+				}
+			}
+
+			function playOnePlayer()
+			{
+				var loadedMapAlready = false;
+				if( lastMapLoadedVal == "1" )
+				{
+					// get the current mapHistory (or create an empty mapHistory)
+					var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+					// find the most recently loaded map / instance / spawn position
+					var bestHistoryTimestamp;
+					var bestHistoryEntry;
+					var potentialMapHistoryEntry;
+					var mapHistoryKeys = Object.keys(mapHistory);
+					for( var i = 0; i < mapHistoryKeys.length; i++ )
+					{
+						potentialMapHistoryEntry = mapHistory[mapHistoryKeys[i]];
+						if( !!!potentialMapHistoryEntry.timestamp || !!!bestHistoryTimestamp || potentialMapHistoryEntry.timestamp > bestHistoryTimestamp )
+						{
+							bestHistoryTimestamp = potentialMapHistoryEntry.timestamp;
+							bestHistoryEntry = potentialMapHistoryEntry;
+						}
+					}
+
+					if( !!bestHistoryEntry )
+					{
+						var map = aaapi.cmdEx("getMap", bestHistoryEntry.mapId);
+						if( !!map )
+						{
+							bestHistoryEntry.timestamp = new Date().getTime();
+
+							if( bestHistoryEntry.instanceId === "" )
+							{
+								var mapInstances = aaapi.cmdEx("getMapInstances", bestHistoryEntry.mapId);
+								
+								if( mapInstances.length > 0 )
+									bestHistoryEntry.instanceId = mapInstances[0].id;
+							}
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+							window.location = "asset://ui/loading.html?map=" + bestHistoryEntry.mapId + "&instance=" + bestHistoryEntry.instanceId + "&pos=" + bestHistoryEntry.position + "&rot=" + bestHistoryEntry.rotation + "&screenshot=" + bestHistoryEntry.screenshotId;
+							loadedMapAlready = true;
+						}
+					}
+				}
+
+				if( !loadedMapAlready )
+				{
+					arcadeHud.playMapNow("meta_lobby.bsp");
+				}
+			}
+		</script>
+
+		<style>
+			.dashboardsContainer
+			{
+				position: absolute;
+				top: 4%;
+				bottom: 15%;
+				left: 20%;
+				right: 20%;
+				display: none;
+			}
+
+			.activeDashboard
+			{
+				display: block;
+			}
+
+			#frontPage
+			{
+				background-color: #000;
+				background: -webkit-linear-gradient(left, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.95) 30%, rgba(0, 0, 0, 0.95) 70%, rgba(0, 0, 0, 0.7));
+				width: 100%;
+				height: 100%;
+				position: absolute;
+			}
+
+			.dashboard
+			{
+				/*background-color: rgba(0, 0, 0, 0.95);*/
+				background: -webkit-linear-gradient(45deg, rgba(20, 20, 20, 0.97), rgba(20, 20, 20, 0.97) 50%, rgba(20, 20, 20, 0.97) 50%, rgba(30, 30, 30, 0.95) 100%);
+				margin: 12px;
+				text-align: center;
+				padding: 16px;
+				padding-top: 8px;
+				border-radius: 20px;
+			}
+
+			.widgetCategory
+			{
+				font-size: 24px;
+				font-family: Arial;
+				letter-spacing: 0.05em;
+				text-align: left;
+				color: white;
+			}
+
+			.widgetContainer
+			{
+				position: relative;
+				font-size: 32px;
+				font-family: Arial;
+				font-weight: 900;
+				border: 2px solid grey;
+				color: grey;
+				width: 300px;
+				height: 150px;
+				vertical-align: bottom;
+				text-align: right;
+				margin: 10px;
+				margin-top: 4px;
+				display: inline-block;
+				background-color: rgb(20, 20, 20);
+			}
+
+			.widgetContainerAlt
+			{
+				position: relative;
+				font-size: 32px;
+				font-family: Arial;
+				font-weight: 900;
+				color: grey;
+				width: 300px;
+				height: 150px;
+				vertical-align: bottom;
+				text-align: right;
+				margin: 10px;
+				margin-top: 4px;
+				display: inline-block;
+			}
+
+			.widgetContainer:hover
+			{
+				color: white;
+				border-color: white;
+			}
+
+			.widgetMask
+			{
+				opacity: 0.5;
+			}
+
+			.widgetContainer:hover > .widgetMask
+			{
+				opacity: 1.0;
+			}
+
+			.onlineImage
+			{
+				position: absolute;
+				top: 4px;
+				right: 4px;
+				
+			}
+
+			.widgetExtended
+			{
+				position: absolute;
+				bottom: 0px;
+				right: 0px;
+				font-size: 16px;
+				padding: 6px;
+				padding-left: 8px;
+				padding-right: 8px;
+				border-style: solid;
+				border-color: transparent;
+				border-size: 1px;
+				border-radius: 6px;
+			}
+
+			.widgetExtended:hover
+			{
+				background-color: rgba(0, 0, 0, 0.8);
+				border-color: #fff;
+			}
+
+			.listImage
+			{
+				position: absolute;
+				top: 4px;
+				right: 4px;
+			}
+
+			.widgetBottom
+			{
+				position: absolute;
+				bottom: 0;
+				right: 0;
+				padding: 12px;
+			}
+
+			.widgetSubtitle
+			{
+				font-size: 32px;
+				font-family: Arial;
+				font-weight: bold;
+				color: white;
+			}
+
+			.widgetAuthor
+			{
+				font-size: 16px;
+				font-family: Arial;
+				font-weight: bold;
+				margin-right: 20px;
+			}
+
+			.widgetTitle
+			{
+				position: absolute;
+				font-size: 32px;
+				font-family: Arial;
+				font-weight: 900;
+				text-align: center;
+				vertical-align: bottom;
+				left: 0;
+				right: 0;
+				top: 50%;
+				color: white;
+				-webkit-transform: translateY(-50%);
+				padding-top: 8px;
+				padding-bottom: 8px;
+			}
+
+			.widgetContainer:hover > .widgetTitle
+			{
+				background-color: rgba(0, 0, 0, 0.8);
+			}
+
+			.closeAtlasButton
+			{
+				display: inline-block;
+				background-color: rgba(0, 0, 0, 0.9);
+				font-size: 24px;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				padding-left: 24px;
+				padding-right: 24px;
+				border-radius: 12px;
+				color: grey;
+				border: 2px solid grey;
+			}
+
+			.closeAtlasButton:hover
+			{
+				color: white;
+				border-color: white;
+				background-color: rgba(10, 10, 10, 0.9);
+			}
+
+			.widgetImage
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+			}
+
+			.linkList
+			{
+				text-align: left;
+				font-weight: bold;
+				font-size: 24px;
+				font-family: Arial;
+			}
+
+			.listLink
+			{
+				display: inline-block;
+				padding: 8px;
+				padding-top: 2px;
+				padding-bottom: 2px;
+				white-space: nowrap;
+			}
+
+			.smallStuff
+			{
+				font-size: 14px;
+				font-weight: normal;
+				display: inline;
+				pointer-events: none;
+			}
+
+			.listLink:hover
+			{
+				background-color: #333;
+			}
+
+			.activeListLink
+			{
+				background-color: #222;
+			}
+
+			.helpHeader
+			{
+				font-size: 24px;
+				font-family: Arial;
+				font-weight: bold;
+			}
+
+			.helpDetails
+			{
+				display: none;
+			}
+
+			.activeListLinkHelp
+			{
+				display: inline-block;
+			}
+
+			.helpDetails li
+			{
+				margin-top: 12px;
+				margin-bottom: 12px;
+			}
+
+			.widgetPane
+			{
+				max-height: 675px;
+				overflow-y: auto;
+			}
+
+			.bigAwardImage
+			{
+				height: 128px;
+			}
+
+			.viewInfoLink
+			{
+				/*color: silver;
+				font-weight: bold;*/
+				padding: 4px;
+				border-radius: 50%;
+			}
+
+			.viewInfoLink:hover
+			{
+				/*color: white;
+				text-decoration: underline;*/
+				background-color: #333;
+			}
+
+			.widgetDot
+			{
+				display: inline-block;
+				width: 8px;
+				height: 8px;
+				border-radius: 8px;
+				border-size: 2px;
+				border-style: solid;
+				border-color: gray;
+			}
+
+			.widgetDot:hover
+			{
+				border-color: white;
+				background-color: silver;
+			}
+
+			.widgetDotActive
+			{
+				background-color: white;
+			}
+
+			.skipButton
+			{
+				border: 4px solid transparent;
+				margin-bottom: -8px;
+			}
+
+			.skipButton:hover
+			{
+				background-color: gray;
+				border: 4px solid gray;
+			}
+
+			.featuredSlate
+			{
+				display: none;
+			}
+
+			.activeFeaturedSlate
+			{
+				display: block;
+			}
+		</style>
+		<script>
+			var browseIconHTML = arcadeHud.generateIconHTML("ezfolder.png", 24, 24, null, [0, 0, 0, 1]);
+			var wwwIconHTML = arcadeHud.generateIconHTML("ezwww.png", 24, 24, null, [0, 0, 0, 1]);
+			var wizardIconHTML = arcadeHud.generateIconHTML("ezwizard.png", 24, 24, null, [0, 0, 0, 1]);
+			var wizard2IconHTML = arcadeHud.generateIconHTML("wizardicon.png", 24, 24, null, [0, 0, 0, 1]);
+			var switchIconHTML = arcadeHud.generateIconHTML("switchicon.png", 24, 24, null, [0, 0, 0, 1]);
+			var steamIconHTML = arcadeHud.generateIconHTML("ezsteam.png", 24, 24, null, [0, 0, 0, 1]);
+			var moveIconHTML = arcadeHud.generateIconHTML("moveicon.png", 24, 24, null, [0, 0, 0, 1]);
+			var editIconHTML = arcadeHud.generateIconHTML("editicon.png", 24, 24, null, [0, 0, 0, 1]);
+			var steam2IconHTML = arcadeHud.generateIconHTML("steamicon.png", 24, 24, null, [0, 0, 0, 1]);
+			var mirrorIconHTML = arcadeHud.generateIconHTML("screenmirror.png", 24, 24, null, [0, 0, 0, 1]);
+			var deleteIconHTML = arcadeHud.generateIconHTML("eraseicon.png", 24, 24, null, [0, 0, 0, 1]);
+			//var youtubeIconHTML = arcadeHud.generateIconHTML("scrapers/youtube.png", 24, 24, null, [0, 0, 0, 1]);
+
+			var featured = {
+				"lobby94":
+				{
+					"title": "Neon Dream",
+					"author": "Sashassin"
+				},
+				"lobby24":
+				{
+					"title": "Dinotopia",
+					"author": "Xaphian"
+				},
+				"lobby30":
+				{
+					"title": "Excellent Lobby",
+					"author": "MeatPuppeTT"
+				},
+				"clockwork":
+				{
+					"title": "Orange Chill",
+					"author": "SM Sith Lord"
+				},
+				"lobby26":
+				{
+					"title": "Themed Gallery",
+					"author": "Xaphian"
+				},
+				"sithgarage":
+				{
+					"title": "Sith's Garage",
+					"author": "SM Sith Lord"
+				}
+			};
+
+			var schedule = [
+				["clockwork", "lobby30", "lobby94"], // sunday
+				["clockwork", "lobby30", "lobby94"],
+				["clockwork", "lobby30", "lobby94"],
+				["lobby24", "sithgarage", "lobby26"],
+				["lobby24", "sithgarage", "lobby26"],
+				["lobby24", "sithgarage", "lobby26"],
+				["lobby24", "sithgarage", "lobby26"]
+				//[], // tuesday
+				//[], // wednesday
+				//[], // thursday
+				//[], // friday
+				//[] // saturday
+			];
+
+			function showDashboard(dashboardName)
+			{
+				var oldDashboard = document.querySelector(".activeDashboard");
+				if( !!oldDashboard )
+					oldDashboard.classList.remove("activeDashboard");
+
+				var dashboard = document.querySelector(".dashboardsContainer[dashboardName='" + dashboardName + "']");
+				if( !!dashboard )
+					dashboard.classList.add("activeDashboard");
+
+				dashboard.querySelector(".backToAtlasButton").style.display = ( dashboardName !== "atlas" ) ? "inline-block" : "none";
+			}
+
+			var mountableGames = [
+				"Counter-Strike: Source",
+				"Team Fortress 2",
+				"Portal",
+				"Half-Life 2: Deathmatch",
+				"Half-Life 2: Episode 2",
+				"Half-Life 2: Episode 1",
+				"Half-Life 2",
+				"Half-Life 2: Lost Coast",
+				"Garry's Mod",
+				"Double Action",
+				"No More Room In Hell",
+				"Day of Defeat: Source",
+				"Pirates, Vikings, and Knights II",
+				"Age of Chivalry",
+				"D.I.P.R.I.P",
+				"Dystopia",
+				"Empires Mod",
+				"Eternal Silence",
+				"Fistful of Frags",
+				"Neotokyo",
+				"Minerva",
+				"Battlegrounds 2",
+				"Jurassic",
+				"GoldenEye: Source",
+				"Black Mesa Mod",
+				"Perfect Dark",
+				"Halloween",
+				"WeekdayWarrior",
+				"Hidden",
+				"Korsakovia",
+				"Dear Esther",
+				"Insurgency Mod"
+			];
+		</script>
+	</head>
+	<body>
+		<div id="frontPage"></div>
+		<div class="dashboardsContainer activeDashboard" dashboardName="atlas">
+			<table style="width: 100%; height: 100%;">
+				<tr><td colspan="2">
+					<div class="dashboard">
+						<div style="text-align: left;">
+							<img src="aaicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">ANARCHY ARCADE</div>
+						</div>
+						<div class="widgetPane">
+							<div class="widgetContainer helpNote" help="Load into the ONLINE metaverse world as a guest." style="border-color: rgb(100, 100, 255); border-left-width: 6px; border-right-width: 6px; margin: 6px; margin-top: 0; margin-bottom: 10px; margin-right: 30px;" onclick="aaapi.cmd('joinLobby', 'metaverse');">
+								<img class="widgetImage" src="featuredshots/meta_lobby.jpg" />
+								<img class="widgetMask" src="widgetmask.png" />
+								<img class="onlineImage" src="mpicon.png" />
+								<div class="widgetExtended" onclick="window.location='asset://ui/hostSession.html?tab=servers';">SERVERS</div>
+								<div class="widgetTitle aaTitleText">Online</div>
+							</div>
+							<div class="widgetContainer helpNote" help="Load into your LOCAL metaverse world as a god." style="margin-left: 30px;" onclick="playOnePlayer();">
+								<img class="widgetImage" src="localbackground.jpg" id="loadLocalImage" />
+								<div id="loadLocalImageContainer" style="display: none; position: absolute; width: 300px; height: 150px;"></div>
+								<img class="widgetMask" src="widgetmask.png" />
+								<div class="widgetExtended" onclick="window.location='asset://ui/play.html?tab=custom';">MAPS</div>
+								<div class="widgetTitle aaTitleText">1-Player</div>
+							</div>
+						</div>
+						<div style="text-align: center; visibility: hidden;">
+							<div class="widgetDot widgetDotActive"></div>
+							<div class="widgetDot"></div>
+							<div class="widgetDot"></div>
+						</div>
+					</div>
+				</td><td>
+					<div class="dashboard" style="vertical-align: bottom;">
+						<div style="text-align: left;">
+							<img src="staricon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">FEATURED</div>
+						</div>
+						<div class="widgetPane" widgetId="featured">
+							<div class="featuredSlate activeFeaturedSlate">
+								<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+									<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+									<img class="widgetMask" src="widgetmask.png" />
+									<img class="onlineImage" src="mpicon.png" />
+									<div class="widgetBottom  aaTitleText">
+										<div class="widgetSubtitle">Server</div>
+										<div class="widgetAuthor">by Author</div>
+									</div>
+								</div>
+							</div>
+							<div class="featuredSlate">
+								<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+									<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+									<img class="widgetMask" src="widgetmask.png" />
+									<img class="onlineImage" src="mpicon.png" />
+									<div class="widgetBottom  aaTitleText">
+										<div class="widgetSubtitle">Server</div>
+										<div class="widgetAuthor">by Author</div>
+									</div>
+								</div>
+							</div>
+							<div class="featuredSlate">
+								<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+									<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+									<img class="widgetMask" src="widgetmask.png" />
+									<img class="onlineImage" src="mpicon.png" />
+									<div class="widgetBottom  aaTitleText">
+										<div class="widgetSubtitle">Server</div>
+										<div class="widgetAuthor">by Author</div>
+									</div>
+								</div>
+							</div>
+							<div class="dotsContainer" widgetId="featured" style="text-align: center;">
+								<div class="widgetDot widgetDotActive" onclick="manualWidgetCycle(this);"></div>
+								<div class="widgetDot" onclick="manualWidgetCycle(this);"></div>
+								<div class="widgetDot" onclick="manualWidgetCycle(this);"></div>
+							</div>
+						</div>
+					</div>
+				</td></tr>
+				<tr><td colspan="2">
+					<!--div class="dashboard">
+						<div class="widgetCategory aaTitleText">FEATURED</div>
+						<div class="widgetPane">
+							<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+								<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+								<img class="widgetMask" src="widgetmask.png" />
+								<img class="onlineImage" src="mpicon.png" />
+								<div class="widgetBottom  aaTitleText">
+									<div class="widgetSubtitle">Server</div>
+									<div class="widgetAuthor">by Author</div>
+								</div>
+							</div>
+							<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+								<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+								<img class="widgetMask" src="widgetmask.png" />
+								<img class="onlineImage" src="mpicon.png" />
+								<div class="widgetBottom  aaTitleText">
+									<div class="widgetSubtitle">Server</div>
+									<div class="widgetAuthor">by Author</div>
+								</div>
+							</div>
+							<div class="widgetContainer featuredWidget helpNote" help="Join this multiplayer server as a guest." lobby="" onclick="aaapi.cmd('joinLobby', this.getAttribute('lobby'));">
+								<img class="widgetImage" src="featuredshots/_placeholder.jpg" />
+								<img class="widgetMask" src="widgetmask.png" />
+								<img class="onlineImage" src="mpicon.png" />
+								<div class="widgetBottom  aaTitleText">
+									<div class="widgetSubtitle">Server</div>
+									<div class="widgetAuthor">by Author</div>
+								</div>
+							</div>
+						</div>
+					</div-->
+
+					<div class="dashboard" style="height: 220px;">
+						<div style="text-align: left;">
+							<img src="locationicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">YOU ARE HERE</div>
+						</div>
+						<div class="widgetPane">
+							<div class="aaOnlyIfMapLoaded">
+								<table style="width: 100%;" cellspacing="0" cellpadding="0">
+									<tr><td align="center" width="1">
+										<div id="mapImageContainer" class="widgetContainer"></div>
+									</td><td style="padding: 8px; font-size: 32px; font-family: Arial; font-weight: 900;" align="left">
+										<div style="font-weight: bold; font-family: monospace; font-size: 18px;" class="aaOnlyIfUniverseNotConnected">SINGLEPLAYER</div>
+										<div style="font-weight: bold; font-family: monospace; font-size: 18px;" class="aaOnlyIfUniverseConnected aaOnlyIfHost">MULTIPLAYER HOST</div>
+										<div style="font-weight: bold; font-family: monospace; font-size: 18px;" class="aaOnlyIfUniverseConnected aaOnlyIfNotHost">MULTIPLAYER GUEST</div>
+										<div style="font-weight: 900; font-size: 26px;" id="currentInstanceTitle"></div>
+										<div style="font-weight: bold; font-size: 16px;" id="currentMap"></div>
+										<div style="font-weight: bold; font-size: 16px;"><div id="currentObjectCount" style="display: inline;"></div> objects</div>
+										<div class="viewInfoLink aaOnlyIfUniverseConnected" style="font-size: 18px; display: inline-block;" onclick="window.location='asset://ui/hostSession.html?tab=online';"><img src="infoicon.png" /></div>
+										<div class="viewInfoLink aaOnlyIfUniverseConnected helpNote" help="Export this arcade's meta data for use in other frontends." style="font-size: 18px; display: inline-block;" onclick="window.location='asset://ui/export.html';"><img src="exporticon.png" /></div>
+										<div class="viewInfoLink aaOnlyIfUniverseNotConnected" style="font-size: 18px; display: inline-block;" onclick="editInstance();"><img src="infoicon.png" /></div>
+
+									</td></tr>
+								</table>
+							</div>
+							<div class="aaOnlyIfNoMapLoaded" style="height: 150px;">
+								<table style="width: 100%; height: 100%;">
+									<tr><td align="center">
+										<div style="font-size: 78px; font-family: Arial; font-weight: 900;">MAIN MENU</div>
+									</td></tr>
+								</table>
+							</div>
+							<div style="text-align: center; visibility: hidden;">
+								<div class="widgetDot widgetDotActive"></div>
+							</div>
+						</div>
+					</div>
+				</td><td rowspan="2" align="center">
+					<div class="dashboard" style="height: 95%;">
+						<div id="allObjectsSlate" style="display: none;">
+							<div style="text-align: left;">
+								<img src="autoplayicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">AUTOPLAY</div>
+							</div>
+							<div id="allObjectsTilesContainer" style="margin-left: -10px; margin-right: -10px;"></div>
+						</div>
+						<div id="autoplaySlate" style="display: none;">
+							<div style="text-align: left;">
+								<img src="autoplayicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">AUTOPLAY</div>
+							</div>
+							<div class="widgetPane">
+								<div class="widgetContainer" id="autoplayImageContainer" style="background-position: center; background-size: cover;"></div>
+							</div>
+							<div id="autoplayTitle" style="display: inline-block; white-space: nowrap; font-family: Arial; font-size: 24px; width: 300px; overflow: hidden; text-overflow: ellipsis; line-height: 50px;"></div>
+							<div id="autoplayTilesContainer" style="margin-left: -10px; margin-right: -10px;"></div>
+							<div style="margin-top: 8px;">
+								<img src="stopicon.png" onclick="aaapi.cmd('closeTask', displayTaskInfo.id); aaapi.cmd('deactivateInputMode');" class="skipButton" style="height: 18px; margin-right: 8px;" />
+							</div>
+							<div style="margin-top: 8px; display: none;">
+								<img src="skipbackicon.png" class="skipButton" style="height: 18px; margin-right: 8px;" />
+								<img src="skipnexticon.png" class="skipButton" style="height: 18px; margin-left: 8px;" />
+							</div>
+						</div>
+						<div id="welcomeSlate" style="display: none;">
+							<div style="text-align: left;">
+								<img src="aaicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">WELCOME</div>
+							</div>
+							<table style="height: 450px; width: 100%;">
+								<tr><td align="center" style="font-size: 24px;">
+									<img src="aalogo.png" style="width: 300px;" />
+								</td></tr>
+							</table>
+						</div>
+					</div>
+				</td></tr>
+				<tr><td>
+					<div class="dashboard">
+						<div style="position: absolute; margin-left: -16px; width: 352px; margin-top: -8px; height: 260px;"><div style="background-image: url('comingsoon.png'); position: relative; border-radius: 18px; width: 100%; height: 100%;"></div></div>
+						<div style="text-align: left;">
+							<img src="awardsicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">AWARDS</div><font style="font-family: Arial; font-weight: bold;">(coming soon)</font>
+						</div>
+						<div class="widgetPane" style="width: 320px; height: 170px;">
+							<table style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+								<tr><td align="center" width="1">
+									<img src="awards/shutterbug_off.png" class="bigAwardImage" />
+								</td><td style="padding: 8px;">
+									<div style="font-weight: 900; font-size: 18px;">Snapper</div>
+									<div style="font-weight: bold; font-size: 12px;">Take your 1st screenshot.</div>
+									<div style="font-weight: bold; font-family: monospace; font-size: 12px; margin-top: 8px;">IN PROGRESS <div style="font-weight: bold; font-size: 12px; display: inline;">0/1</div></div>
+									<div class="viewInfoLink" style="font-size: 18px; display: inline-block;"><img src="infoicon.png" style="" /></div>
+								</td></tr>
+							</table>
+						</div>
+						<div style="text-align: center;">
+							<div class="widgetDot widgetDotActive"></div>
+							<div class="widgetDot"></div>
+							<div class="widgetDot"></div>
+						</div>
+					</div>
+				</td><td>
+					<div class="dashboard">
+						<div style="position: absolute; margin-left: -16px; width: 352px; margin-top: -8px; height: 260px;"><div style="background-image: url('comingsoon.png'); position: relative; border-radius: 18px; width: 100%; height: 100%;"></div></div>
+						<div style="text-align: left;">
+							<img src="socialicon.png" style="display: inline-block; vertical-align: middle;" /><div class="widgetCategory aaTitleText" style="display: inline-block; vertical-align: middle;">SOCIAL</div><font style="font-family: Arial; font-weight: bold;">(coming soon)</font>
+						</div>
+						<div class="widgetPane" style="width: 320px; height: 170px;">
+							<table cellspacing="0" cellpadding="0" style="width: 100%; border: 2px solid transparent;">
+								<tr><td style="width: 1px;">
+									<div style="padding: 4px; border: 2px solid #333; background-color: #111;"><img src="mpicon.png" /></div>
+								</td><td align="right" style="padding-right: 8px; font-family: Arial;">
+									<div style="font-size: 18px; display: inline-block; vertical-align: top;"><div>SM Sith Lord</div>
+									<div style="font-size: 10px;">SINGLEPLAYER</div>
+									<div style="font-size: 10px; font-weight: 900;">meta_lobby</div>
+								</td><td style="width: 1px;">
+									<img src="http://static-cdn.jtvnw.net/jtv_user_pictures/16851a30b9c6ce85-profile_image-300x300.png" style="width: 48px;" />
+								</td></tr>
+							</table>
+						</div>
+						<div style="text-align: center;">
+							<div class="widgetDot widgetDotActive"></div>
+							<div class="widgetDot"></div>
+							<div class="widgetDot"></div>
+						</div>
+					</div>
+				</td></tr>
+				<tr><td colspan="3">
+					<div style="text-align: center;">
+						<div style="display: inline-block;">
+							<div id="steamgamesNagButton" style="display: none;" onclick="getStarted();" class="closeAtlasButton aaOnlyIfMapLoaded helpNote" help="Import your Steam games from your Steam profile to get started.">&nbsp;<img src="steamicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+						</div>
+
+						<div onclick="aaapi.cmd('deactivateInputMode');" class="aaOnlyIfMapLoaded closeAtlasButton helpNote" help="Close this menu."><img src="aaicon.png" style="vertical-align: bottom;" /> &nbsp;Resume</div>
+
+						<div onclick="doPause();" class="closeAtlasButton helpNote" help="Pause AArcade for optimized performance.">&nbsp;<img src="pauseicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+
+						<!--div onclick="" class="closeAtlasButton helpNote" help="View server info & rate this server.">&nbsp;<img src="infoicon.png?w=1" style="vertical-align: bottom;" />&nbsp;</div-->
+
+						<div onclick="window.location='asset://ui/options.html';" class="closeAtlasButton helpNote" help="Customize & configure how your AArcade works.">&nbsp;<img src="cogicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+
+						<!-- intro basics addons advanced -->
+
+						<div onclick="showDashboard('intro');" class="closeAtlasButton helpNote" help="View the help documentation.">&nbsp;<img src="helpicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+
+						<div class="aaOnlyIfNeedsSave">
+							<div onclick="confirmSave();" class="closeAtlasButton helpNote" help="Save this arcade to your local library.">&nbsp;<img src="saveicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+						</div>
+
+						<div onclick="askDisconnectSession();" class="closeAtlasButton aaOnlyIfMapLoaded aaOnlyIfUniverseConnected helpNote" help="Disconnect from this server.">&nbsp;<img src="leaveicon.png" style="vertical-align: bottom;" />&nbsp;</div>
+
+						<div onclick="confirmQuit();" class="closeAtlasButton helpNote" help="Shutdown & close Anarchy Arcade.">&nbsp;<img src="powericon.png" style="vertical-align: bottom;" />&nbsp;</div>
+					</div>
+				</td></tr>
+			</table>
+		</div>
+
+		<div class="dashboardsContainer" dashboardName="basics">
+			<div class="dashboard">
+				<div class="widgetCategory aaTitleText"><img src="atlasicon.png" style="vertical-align: bottom;" /> BASICS</div>
+				<table style="width: 100%;">
+					<tr>
+						<td style="width: 1%;" valign="top">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="spawnaprop"><div class="smallStuff">Spawn a </div>Prop</div></li>
+								<li><div class="listLink" helpName="spawnalocalpicture"><div class="smallStuff">Spawn a </div>Local Picture</div></li>
+								<li><div class="listLink" helpName="spawnaweblink"><div class="smallStuff">Spawn a </div>Web Link</div></li>
+								<li><div class="listLink" helpName="spawnalocalfile"><div class="smallStuff">Spawn a </div>Local File</div></li>
+								<li><div class="listLink" helpName="spawnayoutubevideo"><div class="smallStuff">Spawn a </div>YouTube Video</div></li>
+								<li><div class="listLink" helpName="spawnasteamgame"><div class="smallStuff">Spawn a </div>Steam Game</div></li>
+								<li><div class="listLink" helpName="spawnahollywoodmovie"><div class="smallStuff">Spawn a </div>Hollywood Movie</div></li>
+								<li><div class="listLink" helpName="spawnaninternetpicture"><div class="smallStuff">Spawn an </div>Internet Picture</div></li>
+								<li><div class="listLink" helpName="moveanobject"><div class="smallStuff">Move an </div>Object</div></li>
+								<li><div class="listLink" helpName="deleteanobject"><div class="smallStuff">Delete an </div>Object</div></li>
+								<li><div class="listLink" helpName="launchashortcut"><div class="smallStuff">Launch a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="interactwithashortcut"><div class="smallStuff">Interact w/ a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="editashortcut"><div class="smallStuff">Edit a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="itemproperties">Item Properties</div></li>
+								<li><div class="listLink" helpName="artworkimages">Artwork Images</div></li>
+								<li><div class="listLink" helpName="interactivepreview">Interactive Preview</div></li>
+								<li><div class="listLink" helpName="yourmedialibrary">Your Media Library</div></li>
+								<li><div class="listLink" helpName="usecontinuousplay"><div class="smallStuff">Use </div>Continuous Play</div></li>
+								<li><div class="listLink" helpName="closeaningametask"><div class="smallStuff">Close an </div>In-Game Task</div></li>
+								<li><div class="listLink" helpName="setavideomirror"><div class="smallStuff">Set a </div>Video Mirror</div></li>
+							</ul>
+						</td>
+						<td style="border: 2px solid #111; border-bottom-color: #333; border-right-color: #333; background-color: rgba(255, 255, 255, 0.7); color: #000; padding: 16px; text-align: center;">
+							<div class="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.<br /><br />There's many different ways to do things in AArcade.<br /><br />Use it how ever is easiest for you.</div>
+								</div>
+								<div class="helpDetails" helpName="spawnaprop">
+									<div class="helpHeader">Spawn a Prop</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose a prop from the list on the right-hand-side of the menu.</li>
+										<li>Look where you want to position the prop.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnalocalpicture">
+									<div class="helpHeader">Spawn a Local Picture</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the BROWSE <script>document.write(browseIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Select the local image file you want to spawn.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnaweblink">
+									<div class="helpHeader">Spawn a Web Link</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the WWW <script>document.write(wwwIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Paste or type your URL Into the box & press ENTER.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnalocalfile">
+									<div class="helpHeader">Spawn a Local File</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the BROWSE <script>document.write(browseIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Select the local file you want to spawn.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnayoutubevideo">
+									<div class="helpHeader">Spawn a YouTube Video</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type what you want to watch into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose YOUTUBE <img src="scrapers/youtube.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the video you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnasteamgame">
+									<div class="helpHeader">Spawn a Steam Game</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type the name of the game into the SEARCH BOX.</li>
+										<li>Choose the STEAM <script>document.write(steamIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose STEAM STORE from the sub-menu.</li>
+										<li>Find the game you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnahollywoodmovie">
+									<div class="helpHeader">Spawn a Hollywood Movie</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type the name of the movie into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose THEMOVIEDB <img src="scrapers/themoviedb.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the movie you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnaninternetpicture">
+									<div class="helpHeader">Spawn an Internet Picture</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type what you want into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose DUCKDUCKGOIMAGES <img src="scrapers/ddgimages.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the image you want to spawn.</li>
+										<li>Click the image so that it is displayed by itself, directly.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="moveanobject">
+									<div class="helpHeader">Move an Object</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose MOVE <script>document.write(moveIconHTML);</script> from the menu.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="deleteanobject">
+									<div class="helpHeader">Delete an Object</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose DELETE <script>document.write(deleteIconHTML);</script> from the menu.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="launchashortcut">
+									<div class="helpHeader">Launch a Shortcut</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Click on the item's thumbnail in the center of the menu to launch.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="editashortcut">
+									<div class="helpHeader">Edit a Shortcut</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose the EDIT ITEM <script>document.write(editIconHTML);</script> button from the bottom-center of the menu.</li>
+										<li>Adjust any item properties you wish, pressing ENTER to save changes.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="itemproperties">
+									<div class="helpHeader">Item Properties</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Every item has properties that control how its 3D shortcut functions & looks.</li>
+										<li>The <tt>file target</tt> field is what the shortcut launches.</li>
+										<li>The <tt>open with</tt> field is usually left on <tt>Windows (default)</tt> for all shortcuts.</li>
+										<li>The <tt>type</tt> field is only used when searching through your stuff.</li>
+										<li>The rest of the fields are to change which artwork images & videos are used on its 3D shortcut.</li>
+										<li>You can manually edit an item's properties (pressing ENTER to save changes), or you can use WIZARDS to auto-scrape images & videos from popular internet media databases instead.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="artworkimages">
+									<div class="helpHeader">Artwork Images</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Each 3D shortcut has 2 image channels that it shows based on the item's properties.</li>
+										<li>The <tt>marquee image</tt> is used on the 3D shortcut's display banner so you can tell which game it is at a glance.</li>
+										<li>The <tt>screen image</tt> is used on the 3D shortcut's screen surfaces and is replaced by an interactive preview when the shortcut gets selected.</li>
+										<li>If an item's screen or marquee image is left blank, AArcade will automatically try to determine the best image to use as a replacement.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="interactwithashortcut">
+									<div class="helpHeader">Interactive w/ a Shortcut</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Left-click on a 3D shortcut to select it.</li>
+										<li>When a 3D shortcut is selected, its screen image is replaced by an interactive preview.</li>
+										<li>Look at its screen & hold right-mouse to interact with it, OR left-click the 3D shortcut again to fullscreen it.</li>
+										<li>Press ESC to deselect a 3D shortcut, OR simply left-click on the floor.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="interactivepreview">
+									<div class="helpHeader">Interactive Preview</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>When a 3D shortcut is selected, its screen image is replaced by an interactive preview.</li>
+										<li>AArcade automatically tries to show you the best in-game preview as possible.  If the item has a <tt>preview website</tt>, that will be displayed.  Otherwise, it might be one of the artwork images or the <tt>file target</tt> itself.</li>
+										<li>Web content, local media files, or even in-game emulators are all compatible with being used as in-game interactive previews.</li>
+										<li>Remember that you can launch any of the 3D shortcut to run them in regular standalone mode as well.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="yourmedialibrary">
+									<div class="helpHeader">Your Media Library</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Your media library holds your customizations for all of the shortcuts that you've added to AArcade.</li>
+										<li>Your library is empty at first, with just a few default props in it.  It grows larger with every new shortcut that you add.</li>
+										<li>Spawning things that are already in your library is <b>much faster & easier</u> than the very 1st time that you spawn them.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="usecontinuousplay">
+									<div class="helpHeader">Use Continuous Play</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Look at (or select) a 3D shortcut.</li>
+										<li>Press the R button to put it on continuous play. It will keep playing in the background even as you click on other stuff.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="closeaningametask">
+									<div class="helpHeader">Close an In-Game Task</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Hold down the TAB button and choose Tasks.</li>
+										<li>Click the X next to the in-game task you wish to close.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="setavideomirror">
+									<div class="helpHeader">Set a Video Mirror</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose the VIDEO MIRROR <script>document.write(mirrorIconHTML);</script> button from the bottom-center of the menu.</li>
+										<li>Your active in-game task will be shown on this screen now. Hold down TAB and click on a task to change which one gets shown on your video mirrors.  Having lots of video mirrors in your arcade will <i>not</i> hurt your performance.</li>
+									</ol>
+								</div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div style="text-align: center;">
+				<div class="backToAtlasButton closeAtlasButton helpNote" help="Go back to the Atlas." style="vertical-align: middle; display: none;" onclick="showDashboard('atlas');"><img src="previousicon.png" style="vertical-align: bottom;" />&nbsp;Back to Atlas</div>
+				<div onclick="window.location='mouseEZ.html';" class="closeAtlasButton helpNote" help="Go to the Main Menu." style="vertical-align: middle; display: none;">Resume</div>
+			</div>
+		</div>
+
+		<div class="dashboardsContainer" dashboardName="addons">
+			<div class="dashboard">
+				<div class="widgetCategory aaTitleText"><img src="atlasicon.png" style="vertical-align: bottom;" /> ADDONS</div>
+				<table style="width: 100%;">
+					<tr>
+						<td style="width: 1%;" valign="top">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="customcontent">Custom Content</div></li>
+								<li><div class="listLink" helpName="mountedgames">Mounted Games</div></li>
+								<li><div class="listLink" helpName="importmodels">Importing Models</div></li>
+								<li><div class="listLink" helpName="downloadedcontent">Downloaded Content</div></li>
+								<li><div class="listLink" helpName="gmaextraction">GMA Extraction</div></li>
+								<li><div class="listLink" helpName="steamworkshop">Steam Workshop</div></li>
+							</ul>
+						</td>
+						<td style="border: 2px solid #111; border-bottom-color: #333; border-right-color: #333; background-color: rgba(255, 255, 255, 0.7); color: #000; padding: 16px; text-align: center;">
+							<div class="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.<br /><br />AArcade is able to use existing addon content from over 30 other Source engine games.<br /><br />There are ten's of thousands of addon props & maps that are compatible with Anarchy Arcade.</div>
+								</div>
+								<div class="helpDetails" helpName="customcontent">
+									<div class="helpHeader">Custom Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Any sub-folder that you create inside of the following folder gets mounted as a base content path: <tt>steamapps/common/Anarchy Arcade/aarcade_user/custom</tt></li>
+										<li>Any compatible Source engine model or map can be manually placed into your custom sub-folder for use with AArcade.</li>
+										<li>You must make sure you put <u>all</u> of the files from your addon into your custom sub-folder, and maintain the folder structure that the addon came with. Forgetting to copy all files usually results in a purple checkerboard texture bug.</li>
+										<li>New custom addon MAPS will be detected & added to your library automatically when AArcade starts, but new custom addon MODELS are only detected when you use Main Menu > Settings > Import > Models.</li>
+										<li>As an example, if you named your custom sub-folder <tt>gmodstuff</tt>, you would have folders such as: <tt>custom/gmodstuff/maps</tt>, <tt>custom/gmodstuff/models</tt>, <tt>custom/gmodstuff/materials</tt>, etc.</li>
+										<li>Some good places to find addon content to manually install are: <tt>GameBanana.com</tt>, <tt>ModDb.com</tt>, <tt>GarrysMod.org</tt>, various Steam Workshops, and <tt>SteamWorkshopDownloader.io</tt>.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="mountedgames">
+									<div class="helpHeader">Mounted Games</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>AArcade will automatically mount the content (such as maps, models, etc.) of any compatible Source engine games that you have installed.</li>
+										<li>The MAPS from these mounted games will be detected & added to your library automatically when AArcade starts, but the MODELS from these mounted games are only detected when you use Main Menu > Settings > Import > Models.</li>
+										<li>The game assets are mounted directly from their game's install folder, so there's no extra harddrive space required.</li>
+										<li>Mountable Source engine games are: <tt><script>document.write(mountableGames.join(", "));</script>.</tt></li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="importmodels">
+									<div class="helpHeader">Importing Models</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>By default, there's only a handful of AArcade props in your library.</li>
+										<li>If you want all the other props that are available to you to be in your library, you must use Main Menu > Settings > Import > Models.</li>
+										<li>This could potentially add many thousands of new props to your library from all of your mounted Source engine games as well as any custom content that you installed into your custom sub-folder.</li>
+										<li>After you've imported models, they will be accessible from your Library Browser.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="downloadedcontent">
+									<div class="helpHeader">Downloaded Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>When you join a multiplayer server, you might get some new custom models downloaded from that arcade.</li>
+										<li>The models downloaded from multiplayer servers are only detected & added to your library when you use Main Menu > Settings > Import > Models.</li>
+										<li>There's no rush.  Models that you downloaded from a multiplayer server will remain in your download folder unless you manually delete them. So just import models the next time that you're back in Singleplayer mode and you'll be all good.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="gmaextraction">
+									<div class="helpHeader">GMA Extraction</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Garry's Mod addon content is locked inside of GMA files, so they must be extracted before AArcade can use them.</li>
+										<li>Use gmad.exe (located inside of your <tt>steamapps/common/GarrysMod/bin</tt> folder) to extract the files from the GMA, then install them into a custom sub-folder following the Custom Content instructions.</li>
+										<!--<li>Alternatively, just drag & drop a GMA file onto this menu to extract it for use in AArcade. (gmad.exe extract -file "C:/path/to/some.gma" -out "A:/aarcade/path/custom/autogma" -warninvalid)</li>-->
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="steamworkshop">
+									<div class="helpHeader">Workshop Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>(BETA) AArcade currently has limited Steam Workshop support.</li>
+										<li>Subscribe to an item on the AArcade Steam Workshop to download it.</li>
+										<li>After Steam finishes the download, restart AArcade so that it can detect & add the new content to your library.</li>
+										<li>All compatible workshop content is automatically detected & added to your library when AArcade starts.  You do not have to go to the import menu.</li>
+										<li>Note that some of the very old AArcade workshop items will not yet work in AArcade until workshop support is completed.</li>
+									</ul>
+								</div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div style="text-align: center;">
+				<div class="backToAtlasButton closeAtlasButton helpNote" help="Go back to the Atlas." style="vertical-align: middle; display: none;" onclick="showDashboard('atlas');"><img src="previousicon.png" style="vertical-align: bottom;" />&nbsp;Back to Atlas</div>
+				<div onclick="window.location='mouseEZ.html';" class="closeAtlasButton helpNote" help="Go to the Main Menu." style="vertical-align: middle; display: none;">Resume</div>
+			</div>
+		</div>
+
+		<div class="dashboardsContainer" dashboardName="advanced">
+			<div class="dashboard">
+				<div class="widgetCategory aaTitleText"><img src="atlasicon.png" style="vertical-align: bottom;" /> ADVANCED</div>
+				<table style="width: 100%;">
+					<tr>
+						<td style="width: 1%;" valign="top">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="importsteamlibrary">Import Steam Library</div></li>
+								<li><div class="listLink" helpName="ezmodevsadvancedmode">EZ Mode vs Advanced Mode</div></li>
+								<li><div class="listLink" helpName="usingwizards">Using Wizards</div></li>
+								<li><div class="listLink" helpName="twitch">Twitch</div></li>
+								<li><div class="listLink" helpName="openwith">Open-With</div></li>
+								<li><div class="listLink" helpName="libretroframework">Libretro Framework</div></li>
+								<li><div class="listLink" helpName="leveldesigner">Level Designer</div></li>
+							</ul>
+						</td>
+						<td style="border: 2px solid #111; border-bottom-color: #333; border-right-color: #333; background-color: rgba(255, 255, 255, 0.7); color: #000; padding: 16px; text-align: center;">
+							<div class="widgetPane aaScrollBars">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.</div>
+								</div>
+								<div class="helpDetails" helpName="importsteamlibrary">
+									<div class="helpHeader">Import Steam Library</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Follow these instructions if you wish to bulk-import all of your Steam games at once.</li>
+										<li>Go to Main Menu > Import Steam Games <script>document.write(steam2IconHTML);</script> button.</li>
+										<li>Click CONTINUE and you'll be taken to your Steam profile game list.</li>
+										<li>(NOTE) If you are not signed-in yet, you will have to do so now and then repeat these instructions from the beginning.</li>
+										<li>Click the IMPORT STEAM GAMES <script>document.write(wizard2IconHTML);</script> button that appears on the left-hand-side.</li>
+										<li>Your list of Steam games will then be scraped from your profile and added to your AArcade library.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="ezmodevsadvancedmode">
+									<div class="helpHeader">EZ Mode vs Advanced Mode</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Some menus have both an EZ Mode <u>and</u> an Advanced Mode.</li>
+										<li>You can switch between EZ Mode and Advanced Mode by clicking the <script>document.write(switchIconHTML);</script> button on any menu that supports it.</li>
+										<li>EZ Mode looks like a game console UI, while Advanced Mode looks like the Windows UI.</li>
+										<li>Almost everything you can do in Advanced Mode could also be done from EZ Mode too.</li>
+										<li>The instructions here in the help menu are always talking about EZ Mode, unless they specifically mention Advanced Mode.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="usingwizards">
+									<div class="helpHeader">Using Wizards</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Remember that you can always just use the Edit Item <script>document.write(editIconHTML);</script> menu if it's easier for you.</li>
+										<li>All the basic instructions have you spawn things from Wizards first, and then you'd have to specify a local file when you tried to actually launch the shortcut.  However, you can spawn your local file first instead, and then run the Wizard later.</li>
+										<li>Just middle-click on an object then choose the WIZARDS <script>document.write(wizardIconHTML);</script> button.</li>
+										<li>On the sub-menu, you can choose ALL if you want to deck out your item to the max, or choose POSTER/WALLPAPER to just find a marquee/screen image respectively.</li>
+										<li>Steam Store <img src="scrapers/steamstore.png" style="height: 24px; vertical-align: bottom;" /> is good at marquees & screenshots for games, TheMovieDb <img src="scrapers/themoviedb.png" style="height: 24px; vertical-align: bottom;" /> for hollywood movies, Giant Bomb <img src="scrapers/giantbomb.png" style="height: 24px; vertical-align: bottom;" /> for retro games.  You can also use DuckDuckGoImages <img src="scrapers/ddgimages.png" style="height: 24px; vertical-align: bottom;" /> for generic search terms to fill the item's artwork slots.</li>
+										<li>All wziards work similarly.  When using them, you go directly at either a profile page on a website, or directly at an image file, and click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button to save stuff from the page you're looking at onto your item.</li>
+										<li>You'll always be given a chance to customize your search terms prior to choosing which wizard to use.  And you can always use the website's in-page search box to use different terms after the fact.</li>
+										<li>You'll always be given a chance to choose which item property field(s) will be affected.  The presets POSTER/WALLPAPER/TRAILER will go into the SCREEN/MARQUEE/PREVIEW fields respectively.  If you choose ALL, then everything the wizard is able to successfully scrape from the web page will be used.</li>
+										<li>If wizards give you trouble, remember you can just Edit Item <script>document.write(editIconHTML);</script> and customize your item properties like a boss.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="twitch">
+									<div class="helpHeader">Twitch</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>You can log into Twitch using the Main Menu > Settings > Twitch tab.</li>
+										<li>You'll have to follow the instructions there for getting your OAUTH token from Twitch.</li>
+										<li>After you've logged into Twitch, your Twitch chat will show up in AArcade's chat menu (Y button).</li>
+										<li>You can also enable Twitch Bot Commands so that your own viewers can use the !map and !linx commands in chat to get meta info about what you have currently selected inside of AArcade.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="openwith">
+									<div class="helpHeader">Open-With</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Most items use <tt>Windows (default)</tt> as their <tt>Open With</tt> field.  This allows Windows to launch the shortcut as if you double-clicked on its desktop icon.  This is usually the way you'll want to launch your shortcuts.</li>
+										<li>Advanced users may use Open With app profiles for greater control over launch options.</li>
+										<li>For example, Open With apps allow AArcade to launch your standalone emulator app & automatically load your game.</li>
+										<li>Open With apps can be created & modified in the Advanced Library Browser > Apps tab.</li>
+										<li>They consist of an app EXE that will actually be launched, a launch option syntax that controls how the shortcut's <tt>file target</tt> is used during the launch, and a content folder that helps AArcade detect which files are compatible with the app.</li>
+										<li>There are a number of popular Open With app profiles included with AArcade by default.</li>
+										<li>Further details & instructions for Open With apps are in the Advanced Library Browser > Apps tab > Open-With App Properties menu.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="libretroframework">
+									<div class="helpHeader">Libretro Framework</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Libretro is a platform. People create programs that run <i>on</i> Libretro. Programs such as video players, retro emulators, etc.</li>
+										<li>Libretro runs these programs, but it allows AArcade to handle input (such as which buttons you're pressing) <u>and</u> output (such as the pixels to draw onto the screen).  It essentially allows Libretro programs to run as plug-ins to Anarchy Arcade.</li>
+										<li>The only Libretro program <u>included</u> with AArcade is FFMPEG and it is used to play local video files.  However, there are dozens more Libretro programs that are compatible with AArcade as addons.</li>
+										<li>Further details & instructions for Libretro are in Main Menu > Settings > Embedded tab > Libretro.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="leveldesigner">
+									<div class="helpHeader">Level Designer</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Hammer is the program that creates custom maps for the Source engine. It is very difficult to learn & use. It is the same program Valve used to create HL2, TF2, L4D2, CS:GO, etc.</li>
+										<li>There's lots of tutorials for using Hammer on sites like <tt>Interlopers.net</tt>.</li>
+										<li>Launching Hammer from the Main Menu > Maps > Level Designer tab has several benefits.</li>
+										<li>Hammer is properly auto-configured when launched from AArcade.</li>
+										<li>Create New Project will auto-create the correctly named files & folders inside of the <tt>steamapps/common/Anarchy Arcade/aarcade_user/mapsrc</tt> folder.</li>
+										<li>New projects will automatically use a pre-made template that contains all essential entities + some prefabs geared towards novices and can be compiled & tested right away without any issues.</li>
+										<li>After compiling your project & alt+tabbing back to AArcade, the Main Menu will give you a button to load the map that you just compiled.  It will also give you a RELOAD MAP button so you can quickly test newer versions as you alt+tab between Hammer & AArcade.</li>
+										<li>There is a tutorial video for novices in Main Menu > Maps > Level Designer tab that explains how to use Hammer in general, as well as the template prefab specifically.</li>
+										<li>Experienced level designers could simply create a new project & then delete the prefab to start a blank map.  Experienced level designers would also want to rename the VMF to a unique BSP name just prior to final compile.  They'd also want to know that Hammer remains auto-configured even if they launch it from outside of AArcade & that the Level Designer project menu is generated based on folder/VMF file name.  Novice level designers shouldn't care about these things. Keep calm & party.</li>
+									</ul>
+								</div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div style="text-align: center;">
+				<div class="backToAtlasButton closeAtlasButton helpNote" help="Go back to the Atlas." style="vertical-align: middle; display: none;" onclick="showDashboard('atlas');"><img src="previousicon.png" style="vertical-align: bottom;" />&nbsp;Back to Atlas</div>
+				<div onclick="window.location='mouseEZ.html';" class="closeAtlasButton helpNote" help="Go to the Main Menu." style="vertical-align: middle; display: none;">Resume</div>
+			</div>
+		</div>
+
+		<div class="dashboardsContainer" dashboardName="intro">
+			<div class="dashboard">
+				<div class="widgetCategory aaTitleText"><img src="atlasicon.png" style="vertical-align: bottom;" /> INTRO</div>
+				<table style="width: 100%;">
+					<tr>
+						<td style="width: 1%;" valign="top">
+							<ul class="linkList">
+								<li><div class="listLink activeListLink" helpName="welcome">Welcome</div></li>
+								<li><div class="listLink" helpName="usingwindows">Using Windows</div></li>
+								<li><div class="listLink" helpName="3ddesktop">3D Desktop</div></li>
+								<li><div class="listLink" helpName="gettingstarted">Getting Started</div></li>
+							</ul>
+						</td>
+						<td style="border: 2px solid #111; border-bottom-color: #333; border-right-color: #333; background-color: rgba(255, 255, 255, 0.7); color: #000; padding: 16px; text-align: center;">
+							<div class="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="welcome">
+									<div class="helpHeader">Welcome</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>The metaverse is real, and has existed since the dawn of the computer age.  Through the power of meta-data & personal human curation, Anarchy Arcade will improve the enjoyment & excitement of using your PC.</li>
+										<li>AArcade is a 3D representation of your computer & the internet. It visualizes your metaverse into a game world.</li>
+										<li>It launches shortcuts, and can run some stuff on the in-game screens too.</li>
+										<li>AArcade takes less than 0.1% of your CPU and GPU while it's paused in the background, on average.</li>
+										<li>You leave it open in the background like a desktop wallpaper.</li>
+										<li>Pause AArcade if you aren't walking around in it.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="usingwindows">
+									<div class="helpHeader">Using Windows</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>AArcade features next-gen OTP-based technology allowing Windows and standalone apps to be displayed as if they were part of AArcade's HUD (Kappa).</li>
+										<li>Alt+Tab to switch between programs.</li>
+										<li>Use the Windows key to access your Windows Start Menu.</li>
+										<li>Press ESC to access your task bars.</li>
+										<li>Copy & paste text with Ctrl+C & Ctrl+V.</li>
+										<li>Pause AArcade when you aren't using it.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="3ddesktop">
+									<div class="helpHeader">3D Desktop</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>AArcade is your 3D desktop.</li>
+										<li>You spawn 3D shortcuts into it.</li>
+										<li>They launch your programs exactly like 2D shortcuts do.</li>
+										<li>Some stuff can run on the in-game screens too.</li>
+										<li>You can customize how your 3D shortcuts look.</li>
+										<li>They are just generic looking, by default.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="gettingstarted">
+									<div class="helpHeader">Getting Started</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Go to the Atlas and click Play > Local.</li>
+										<li>This will put you in a blank world for you to build in.</li>
+										<li>Middle-click on an empty spot and start spawning shortcuts.</li>
+										<li>Launch your shortcuts & play your games.</li>
+										<li>AArcade pauses in the background and uses less than 0.1% of your CPU & GPU, on average.</li>
+										<li>Enjoy your interactive 3D desktop wallpaper!</li>
+										<li>Further instructions in Main Menu > Atlas > Help.</li>
+									</ul>
+								</div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div style="text-align: center;">
+				<div class="backToAtlasButton closeAtlasButton helpNote" help="Go back to the Atlas." style="vertical-align: middle; display: none;" onclick="showDashboard('atlas');"><img src="previousicon.png" style="vertical-align: bottom;" />&nbsp;Back to Atlas</div>
+				<div onclick="window.location='mouseEZ.html';" class="closeAtlasButton helpNote" help="Go to the Main Menu." style="vertical-align: middle; display: none;">Resume</div>
+			</div>
+		</div>
+
+		<script>
+			function showListLink(helpName)
+			{
+				var listElem = document.querySelector(".listLink[helpName='" + helpName + "']");
+				var helpElem = document.querySelector(".helpDetails[helpName='" + helpName + "']");
+				if( helpElem && listElem && !listElem.classList.contains("activeListLink"))
+				{
+					var parentElem = listElem.parentNode;
+					while(!!parentElem && !parentElem.classList.contains("dashboardsContainer"))
+						parentElem = parentElem.parentNode;
+
+					if( !!parentElem )
+					{
+						var oldElem = parentElem.querySelector(".activeListLinkHelp");
+						if( !!oldElem )
+							oldElem.classList.remove("activeListLinkHelp");
+
+						var oldListElem = parentElem.querySelector(".activeListLink");
+						if( oldListElem )
+							oldListElem.classList.remove("activeListLink");
+
+						helpElem.classList.add("activeListLinkHelp");
+						listElem.classList.add("activeListLink");
+					}
+				}
+			}
+
+			function listLinkClicked(e)
+			{
+				showListLink(e.target.getAttribute("helpName"));
+			}
+
+			var elems = document.querySelectorAll(".listLink");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				elems[i].addEventListener("click", listLinkClicked);
+			}
+
+			function extendedClicked(e)
+			{
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				e.stopPropagation();
+				return false;
+			}
+
+			function jumpToAutoplay(tile)
+			{
+				var taskId = (!!displayTaskInfo) ? displayTaskInfo.id : "";
+
+				arcadeHud.jumpToYouTube(tile.objectId, taskId);
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			function editInstance()
+			{
+				window.location='asset://ui/editInstance.html?id=' + aaapi.cmdEx("getInstance").instance.id + "&uiback=" + encodeURIComponent("window.location='asset://ui/mouseEZ.html';");
+			}
+
+			function doPause()
+			{
+				window.location='asset://ui/pause.html';
+			}
+
+			var elems = document.querySelectorAll(".widgetExtended");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				elems[i].addEventListener("click", extendedClicked);
+			}
+
+			var day = (new Date()).getDay();
+			var featuredWidgets = document.querySelectorAll(".featuredWidget");
+			var div, widget, scheduled, featuredLobby;
+			for( var i = 0; i < featuredWidgets.length; i++ )
+			{
+				featuredLobby = schedule[day][i];
+				scheduled = featured[featuredLobby];
+				featuredWidgets[i].setAttribute("lobby", featuredLobby);
+
+				widget = featuredWidgets[i].querySelector(".widgetImage");
+				widget.src = "featuredshots/" + featuredLobby + ".jpg";
+
+				div = document.createTextNode(scheduled.title);
+				widget = featuredWidgets[i].querySelector(".widgetSubtitle");
+				widget.innerHTML = "";
+				widget.appendChild(div);
+				
+				div = document.createTextNode(scheduled.author);
+				widget = featuredWidgets[i].querySelector(".widgetAuthor");
+				widget.innerHTML = "";
+				widget.appendChild(div);
+			}
+
+			var displayItem, displayObjectId;
+			var displayTaskInfo;
+			function fetchDisplayTaskInfo()
+			{
+				displayTaskInfo = aaapi.cmdEx("getDisplayTaskInfo");
+				onDisplayTaskInfoFetched();
+			}
+
+			function onDisplayTaskInfoFetched()
+			{
+				if( !!displayTaskInfo )
+				{
+					displayItem = aaapi.cmdEx("getLibraryItem", displayTaskInfo.itemId);
+					displayObjectId = displayTaskInfo.objectId;
+
+					var titleElem = document.querySelector("#autoplayTitle");
+					titleElem.innerHTML = "";
+					titleElem.appendChild(document.createTextNode(displayItem.title));
+
+					var autoplayImageContainer = document.querySelector("#autoplayImageContainer");
+					autoplayImageContainer.innerHTML = "";
+					autoplayImageContainer.entityIndex = displayTaskInfo.entityIndex;
+					autoplayImageContainer.addEventListener("click", function(e)
+					{
+						aaapi.cmd("attemptSelectEntity", autoplayImageContainer.entityIndex, true);
+					});
+
+
+					var autoplayImage = document.createElement("img");
+					autoplayImage.className = "autoplayImage";
+					autoplayImage.style.cssText = "max-height: 100%;";
+					autoplayImage.style.display = "none";
+					autoplayImage.item = displayItem;
+					autoplayImageContainer.appendChild(autoplayImage);
+
+					arcadeHud.loadItemBestImage(autoplayImage, displayItem, function()
+					{
+						//autoplayImage.style.display = "block";
+						autoplayImageContainer.style.backgroundImage = "url(\"" + autoplayImage.src + "\")";
+					});
+
+					var autoplayTilesContainer = document.querySelector("#autoplayTilesContainer");
+					autoplayTilesContainer.innerHTML = "";
+					var allObjectsTilesContainer = document.querySelector("#allObjectsTilesContainer");
+					allObjectsTilesContainer.innerHTML = "";
+
+
+					var ytAutoPlay = sessionStorage.getItem("ytAutoPlay");
+					if( !!!ytAutoPlay )
+						ytAutoPlay = {};
+					else
+						ytAutoPlay = JSON.parse(ytAutoPlay);
+
+					var ytObjectEntry = ytAutoPlay[displayObjectId];
+					var originObject = (!!ytObjectEntry) ? ytObjectEntry.originalId : displayObjectId;
+
+					var maxPrevObjects = 1;
+					var numPrevObjects = 0;
+					var otherId = displayObjectId;
+					if( !!ytObjectEntry && ytObjectEntry.originalId !== displayObjectId )
+					{
+						var prevObjectId, prevObject, prevItem;
+						while( numPrevObjects < maxPrevObjects )
+						{
+							prevObjectId = aaapi.cmdEx("getNearestObjectToObject", "previous", originObject, otherId, true, 300);
+
+							if( prevObjectId === displayObjectId )
+								break;
+
+							prevObject = aaapi.cmdEx("getObject", prevObjectId);
+
+							if( !!!prevObject )
+								break;
+
+							//if( !!arcadeHud.hiddenItems[prevObject.item] )
+							//{
+							//	otherId = prevObjectId;
+							//	continue;
+							//}
+
+							prevItem = aaapi.cmdEx("getLibraryItem", prevObject.item);
+							otherId = prevObjectId;
+							numPrevObjects++;
+
+							var tile = arcadeHud.createTile(prevItem, autoplayTilesContainer, "autoplay", "", jumpToAutoplay);
+							tile.objectId = prevObjectId;
+						}
+					}
+
+					var isYouTubeItem = !!arcadeHud.extractYouTubeId(displayItem.file) || !!arcadeHud.extractYouTubeId(displayItem.preview) || !!arcadeHud.extractYouTubeId(displayItem.stream);
+					if( isYouTubeItem )
+					{
+						var tile = arcadeHud.createTile(displayItem, autoplayTilesContainer, "autoplay", "", jumpToAutoplay);
+						tile.objectId = displayObjectId;
+					}
+
+
+					var max = 5 - numPrevObjects;
+					if( !isYouTubeItem )
+						max += 1;
+					otherId = displayObjectId;
+					for( var i = 0; i < max; i++ )
+					{
+						var nextObjectId = aaapi.cmdEx("getNearestObjectToObject", "next", originObject, otherId, true, 300);
+						if( !!!nextObjectId )
+							break;
+
+						var nextObject = aaapi.cmdEx("getObject", nextObjectId);
+						//if( !!arcadeHud.hiddenItems[nextObject.item] )
+						//{
+						//	otherId = nextObjectId;
+						//	i = i-1;
+						//	continue;
+						//}
+
+						var nextItem = aaapi.cmdEx("getLibraryItem", nextObject.item);
+						var tile = arcadeHud.createTile(nextItem, autoplayTilesContainer, "autoplay", "", jumpToAutoplay);
+						tile.objectId = nextObjectId;
+						otherId = nextObjectId;
+					}
+
+					document.querySelector("#autoplaySlate").style.display = "block";
+				}
+			}
+
+			function onIsMapLoaded(isMapLoaded)
+			{
+				if( isMapLoaded )
+				{
+					document.querySelector("#currentInstanceTitle").appendChild(document.createTextNode(worldInfo.instance.title));
+					document.querySelector("#currentMap").appendChild(document.createTextNode(worldInfo.map.platforms[arcadeHud.platformId].file));
+					document.querySelector("#currentObjectCount").appendChild(document.createTextNode(aaapi.cmdEx("getInstanceObjectCount")));
+
+					if( !!!displayTaskInfo )
+					{
+						var otherId = displayObjectId;
+
+						var startingObject = aaapi.cmdEx("getNearestObjectToPlayerLook");
+						if( !!startingObject )
+						{
+							var max = 12;
+							startingObject = aaapi.cmdEx("getObject", startingObject.entry.id);
+							if( addObjectThing(startingObject) )
+								max -= 1;
+
+							var objectId = startingObject.id;
+							if( objectId )
+							{
+								function addObjectThing(nextObject)
+								{
+									//if( !!arcadeHud.hiddenItems[nextObject.item] )
+									//{
+									//	otherId = nextObjectId;
+									//	i = i-1;
+									//	continue;
+									//}
+
+									var nextItem = aaapi.cmdEx("getLibraryItem", nextObject.item);
+									if( !!nextItem )
+									{
+										var tile = arcadeHud.createTile(nextItem, allObjectsTilesContainer, "autoplay", "", jumpToAutoplay);
+										tile.objectId = nextObject.id;
+										return true;
+									}
+									else
+										return false;
+								}
+
+								for( var i = 0; i < max; i++ )
+								{
+									var nextObjectId = aaapi.cmdEx("getNearestObjectToObject", "next", objectId, otherId, true, 300);
+									if( !!!nextObjectId )
+										break;
+
+									var nextObject = aaapi.cmdEx("getObject", nextObjectId);
+									if( !addObjectThing(nextObject) )
+										i = i - 1;
+									otherId = nextObjectId;
+								}
+
+								document.querySelector("#allObjectsSlate").style.display = "block";
+							}
+						}
+					}
+				}
+				else
+				{
+					document.querySelector("#welcomeSlate").style.display = "block";
+				}
+			}
+
+			var bestScreenshotId;
+			var screenshotKeys = Object.keys(g_screenshots);
+			var screenshots = [];
+			if( !!worldInfo )
+			{
+				for( i = 0; i < screenshotKeys.length; i++ )
+				{
+					screenshot = g_screenshots[screenshotKeys[i]];
+					if( screenshot.instance.id == "id" + worldInfo.instance.id )
+						screenshots.push(screenshot);
+				}
+			}
+
+			// get the current mapHistory (or create an empty mapHistory)
+			var mapHistory = localStorage.getItem("mapHistory");
+			if( !!mapHistory )
+			{
+				mapHistory = JSON.parse(mapHistory);
+
+				// find the most recently loaded map / instance / spawn position
+				var bestHistoryTimestamp;
+				var bestHistoryEntry;
+				var potentialMapHistoryEntry;
+				var mapHistoryKeys = Object.keys(mapHistory);
+				for( var i = 0; i < mapHistoryKeys.length; i++ )
+				{
+					potentialMapHistoryEntry = mapHistory[mapHistoryKeys[i]];
+					if( !!!potentialMapHistoryEntry.timestamp || !!!bestHistoryTimestamp || potentialMapHistoryEntry.timestamp > bestHistoryTimestamp )
+					{
+						bestHistoryTimestamp = potentialMapHistoryEntry.timestamp;
+						bestHistoryEntry = potentialMapHistoryEntry;
+					}
+				}
+
+				if( !!bestHistoryEntry )
+				{
+					if( !!bestHistoryEntry.screenshotId && bestHistoryEntry.screenshotId !== "" )
+						bestScreenshotId = bestHistoryEntry.screenshotId;
+					else
+					{
+						var map = aaapi.cmdEx("getMap", bestHistoryEntry.mapId);
+						if( !!map )
+						{
+							if( bestHistoryEntry.instanceId !== "" )
+							{
+								for( i = 0; i < screenshotKeys.length; i++ )
+								{
+									screenshot = g_screenshots[screenshotKeys[i]];
+									if( screenshot.instance.id == "id" + bestHistoryEntry.instanceId )
+										bestScreenshotId = screenshot.instance.id;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if( screenshots.length > 0 )
+			{
+				var mapImage = document.createElement("div");
+				mapImage.id = "mapImage";
+				//max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; width: 100%;
+
+				tga.open( "screenshots/" + screenshots[0].id + ".tga", function()
+				{
+					var elem = tga.getCanvas();
+					elem.style.cssText = "width: 100%; height: 100%;";
+
+				   mapImage.appendChild(elem);
+				   mapImage.style.display = "block";
+				   document.querySelector("#mapImageContainer").appendChild(mapImage);
+				});
+			}
+			else
+			{
+				var mapImage = document.createElement("div");
+				mapImage.id = "mapImage";
+				mapImage.style.display = "block";
+
+				var image = document.createElement("img");
+				image.style.cssText = "width: 100%; height: 100%;";
+				image.src = "map.jpg";
+				mapImage.appendChild(image);
+
+				document.querySelector("#mapImageContainer").appendChild(mapImage);
+			}
+
+			if( !!bestScreenshotId )
+			{
+				var localImage = document.querySelector("#loadLocalImage");
+				var loadLocalImageContainer = document.querySelector("#loadLocalImageContainer");
+				tga.open( "screenshots/" + bestScreenshotId + ".tga", function()
+				{
+					var elem = tga.getCanvas();
+					elem.style.cssText = "width: 100%; height: 100%;";
+
+				   loadLocalImageContainer.appendChild(elem);
+				   loadLocalImageContainer.style.display = "block";
+				});
+
+
+				if( lastMapLoadedVal == "1" )
+				{
+					// DO AUTO-MAP LOAD HERE IF WE ARE JUST STARTING UP!!
+					//console.log("FIXME: Make auto-map loading work!!");
+				}
+			}
+			//localImage.src = "";
+
+			function manualWidgetCycle(dot)
+			{
+				clearInterval(autoFeaturedFlipHandle);
+				widgetCycle(dot);
+			}
+
+			function widgetCycle(dot)
+			{
+				var dotsContainer = dot.parentNode;
+				var widgetId = dotsContainer.getAttribute("widgetId");
+
+				var widgetContainer = document.querySelector(".widgetPane[widgetId='" + widgetId + "']");
+
+				var widgetDots = dotsContainer.querySelectorAll(".widgetDot");
+				var featuredSlates = widgetContainer.querySelectorAll(".featuredSlate");
+
+				// deactivate the current dot
+				dotsContainer.querySelector(".widgetDotActive").classList.remove("widgetDotActive");
+				widgetContainer.querySelector(".activeFeaturedSlate").classList.remove("activeFeaturedSlate");
+
+				// activate the current dot
+				dot.classList.add("widgetDotActive");
+
+				var currentIndex = 0;
+				for( ; currentIndex < widgetDots.length; currentIndex++ )
+				{
+					if( widgetDots[currentIndex] == dot)
+						break;
+				}
+
+				// handle dots
+				featuredSlates[currentIndex].classList.add("activeFeaturedSlate");
+			}
+
+			var autoFeaturedFlipHandle = setInterval(function()
+			{
+				var dotsContainer = document.querySelector(".dotsContainer[widgetId='featured']");
+				var widgetId = dotsContainer.getAttribute("widgetId");
+				var widgetDots = dotsContainer.querySelectorAll(".widgetDot");
+				var activeDot = dotsContainer.querySelector(".widgetDotActive");
+
+				var currentIndex = 0;
+				for( ; currentIndex < widgetDots.length; currentIndex++ )
+				{
+					if( widgetDots[currentIndex] == activeDot)
+						break;
+				}
+
+				currentIndex++;
+				if( currentIndex >= widgetDots.length )
+					currentIndex = 0;
+
+				widgetCycle(widgetDots[currentIndex]);
+			}, 4000);
+
+			function getStarted()
+			{
+				window.location='asset://ui/importSteamGames.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			var steamgamesNag = localStorage.getItem("steamgames_nag");
+			if( steamgamesNag != "0" )
+			{
+				if( !!!steamgamesNag )
+					steamgamesNag = 0;
+				else
+					steamgamesNag = parseInt(steamgamesNag);
+
+				// now check when the last nag was
+				var lastSteamgamesNag = localStorage.getItem("last_steamgames_nag");
+
+				var shouldSteamgamesNag = false;
+				if( !!!lastSteamgamesNag )
+					shouldSteamgamesNag = true;
+				else
+				{
+					var dateA = new Date(parseInt(lastSteamgamesNag));
+					var dateB = new Date();
+					var dif = daysBetween(dateA.getTime(), dateB.getTime());
+					
+					if( dif >= steamgamesNag )
+						shouldSteamgamesNag = true;
+				}
+
+				if(shouldSteamgamesNag)
+					document.querySelector("#steamgamesNagButton").style.display = "block";
+			}
+
+			function confirmSave()
+			{
+				askSave(false);
+			}
+
+			function askSave(showDiscard)
+			{
+				var victims = [];
+				var volatileCount = aaapi.cmdEx("getVolatileCounts");
+
+				// TODO: Try to detect & prevent saving over one of your arcade instances that existed in singleplayer!!
+//console.log(JSON.stringify(universeInfo));
+				//var instanceInfo = aaapi.cmdEx("getInstance", universeInfo.instance);
+				//if( !!instanceInfo )
+				//	console.log(JSON.stringify(instanceInfo.instance.));
+				var showBackupButton = (!!universeInfo && !universeInfo.isHost);
+				var volatileCountText = "";
+				if( showBackupButton )
+					volatileCountText += "Instance ID: " + universeInfo.instance + "<br />";
+
+
+				var htmlBuf = "Changed: ";
+				var isFirstEntry = true;
+				for( var x in volatileCount.changed )
+				{
+					if( x === "instances" || volatileCount.changed[x] - volatileCount.remote[x] == 0 )
+						continue;
+
+					if( !isFirstEntry )
+						htmlBuf += ", ";
+					else
+						isFirstEntry = false;
+
+					htmlBuf += (volatileCount.changed[x] - volatileCount.remote[x]) + " " + x;
+				}
+
+				if( !isFirstEntry )
+					volatileCountText += htmlBuf;
+
+				if( showBackupButton && Object.keys(volatileCount.remote).length > 1 )
+				{
+					htmlBuf = "<br />New: ";
+
+					isFirstEntry = true;
+					for( var x in volatileCount.remote )
+					{
+						if( x === "instances" || volatileCount.remote[x] == 0 )
+							continue;
+
+						if( !isFirstEntry )
+							htmlBuf += ", ";
+						else
+							isFirstEntry = false;
+
+						htmlBuf += volatileCount.remote[x] + " " + x;
+					}
+
+					if( !isFirstEntry )
+						volatileCountText += htmlBuf;
+
+					createSaveModalPrompt(showDiscard, "Save Changes", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br /><label><input type='radio' name='savewhat' value='all' checked /> Save ALL Entries & Instance</label><br /><label><input type='radio' name='savewhat' value='onlynew' /> New Entries Only & Instance</label><br /><br />" + volatileCountText, "yesSave();", "noSave();");
+				}
+				else
+					createSaveModalPrompt(showDiscard, "Save Changes", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br />" + volatileCountText, "yesSave();", "noSave();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+			//Backup Library (' + formatBytes(aaapi.cmdEx("getDbSize")) + ')
+
+			var aaSaveModalPromptMenu;
+			function createSaveModalPrompt(showDiscard, title, text, yesAction, noAction)
+			{
+				if( !!aaSaveModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaSaveModalPromptMenu.flashInterval )
+						{
+							aaSaveModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaSaveModalPromptMenu), 100);
+
+							aaSaveModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				/*
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+				//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+				//modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Backup Library & Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Discard" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaSaveModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+						aaSaveModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				var showBackupButton = (!!universeInfo && !universeInfo.isHost);
+				if( showBackupButton )
+				{
+					buttons[1].className = "aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+
+					buttons[0].addEventListener("click", function(e)
+					{
+						var elems = document.querySelectorAll("input[name='savewhat']");
+						var saveWhat = "all";
+						if( elems.length > 0 )
+						{
+							for( var i = 0; i < elems.length; i++ )
+							{
+								if( elems[i].checked )
+									saveWhat = elems[i].value;
+							}
+
+							if( aaapi.cmdEx("createDbBackup") )
+							{
+								aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+								aaSaveModalPromptMenu = undefined;
+
+								aaapi.cmd("performAutoSave", "SAVEMODE_SAVE", true, (saveWhat === "onlynew"));
+								window.location.reload();
+							}
+							else
+							{
+								console.log("Failed to create backup.");
+							}
+						}
+					}, true);
+
+					buttons[0].value = "Backup Library (" + formatBytes(aaapi.cmdEx("getDbSize") + ") & Save";
+				}
+				else
+					buttons[0].style.display = "none";
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+
+					var elems = document.querySelectorAll("input[name='savewhat']");
+					var saveWhat = "all";
+					if( elems.length > 0 )
+					{
+						for( var i = 0; i < elems.length; i++ )
+						{
+							if( elems[i].checked )
+								saveWhat = elems[i].value;
+						}
+					}
+
+					aaapi.cmd("performAutoSave", "SAVEMODE_SAVE", true, (saveWhat === "onlynew"));
+					if( showDiscard )
+						aaapi.cmd("quit");
+						//confirmQuit();
+					else
+						window.location.reload();
+
+					//eval(yesAction);
+				}, true);
+
+				if( !showDiscard )
+					buttons[2].style.display = "none";
+
+				buttons[2].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					aaapi.cmd("performAutoSave", "SAVEMODE_DISCARD");
+					if( showDiscard )
+					{
+						aaapi.cmd("quit");
+						/*
+						setTimeout(function()
+						{
+							confirmQuit();
+						}, 100);
+*/
+					}
+					else
+						window.location.reload();
+
+					//eval(noAction);
+				}.bind(buttons[2]), true);
+
+				buttons[3].addEventListener("click", function(e)
+				{
+					aaSaveModalPromptMenu.parentNode.parentNode.removeChild(aaSaveModalPromptMenu.parentNode);
+					aaSaveModalPromptMenu = undefined;
+
+					aaapi.cmd("setSaveMode", "SAVEMODE_NONE");
+					//window.location = "welcome.html";
+				}, true);
+			}
+			function confirmQuit()
+			{
+				//if( aaapi.cmdEx("getNeedsSave") )
+					//askSave(true);
+				//else
+					createModalPrompt("Are You Sure?", "", "Quit", "yesQuit();", "Cancel", "noQuit();");
+			}
+
+			function yesQuit()
+			{
+				var shouldAskSave = (aaapi.cmdEx("getNeedsSave") && (!!!universeInfo || universeInfo.isHost));
+				
+				if( shouldAskSave )
+					askSave(true);
+				else
+					aaapi.cmd("quit");
+			}
+
+			function noQuit()
+			{
+				//console.log("nope");
+			}
+		</script>
+
+
+		<script>
+			
+			function disconnectSession()
+			{
+				var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+				if( !!connectedSessionInfo && !connectedSessionInfo.isHost )
+				{
+					setTimeout(function()
+					{
+						aaapi.cmd("disconnectSession");
+						aaapi.cmd("restartNetwork");
+						aaapi.cmd("deactivateInputMode");
+						aaapi.cmd("disconnect");
+					}, 100);
+				}
+				else
+				{
+					aaapi.cmd("restartNetwork");
+					setTimeout(function()
+					{
+						window.location.reload();
+					}, 100);
+				}
+			}
+
+			function yesDisconnectSession()
+			{
+				disconnectSession();
+			}
+
+			function noDisconnectSession()
+			{
+				console.log("nope");
+			}
+
+			function askDisconnectSession()
+			{
+				createModalPrompt("Are You Sure?", "This will end your online session & return you to singleplayer mode.", "Disconnect", "yesDisconnectSession();", "Cancel", "noDisconnectSession();");
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesTitle, yesAction, noTitle, noAction, validateFunc)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var styleText = (text !== "") ? "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;" : "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 300px;";
+
+				// header
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, styleText, true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				if( text !== "" )
+				{
+					// body
+					modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+					//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+					/*
+					modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+					modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+					modalHTML += text;
+					//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+					modalHTML += "</div>";
+
+					//modalHTML += "</td></tr></table>";
+					modalHTML += "</div>";
+				}
+
+				if( text !== "" )	// simple hax to get 2 different behaviors out of this prompt
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Disconnect" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+				else
+				{
+					modalHTML += '\
+						<table class="aaWindowActions">\
+							<tr>\
+								<td>\
+								</td>\
+								<td style="width: 1%; white-space: nowrap;">\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Quit" />\
+									<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+								</td>\
+							</tr>\
+						</table>\
+					';
+				}
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].value = yesTitle;
+				buttons[0].addEventListener("click", function(e)
+				{
+					if( !!validateFunc && typeof window[validateFunc] === "function" )
+					{
+						if( !window[validateFunc]() )
+							return;
+					}
+
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].value = noTitle;
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+
+			function buildAutoplayList()
+			{
+				fetchDisplayTaskInfo();
+			}
+
+			function onYouTubeEnded()
+			{
+				setTimeout(function()
+				{
+					buildAutoplayList();
+				}, 500);
+			}
+
+			buildAutoplayList();
+		</script>
+	</body>
+</html>

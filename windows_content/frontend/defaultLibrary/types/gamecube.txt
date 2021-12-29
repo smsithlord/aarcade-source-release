@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MHWIRndAbiBua"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"gamecube"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

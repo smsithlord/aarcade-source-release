@@ -1,0 +1,55 @@
+"UnlitGeneric"
+{
+	"$model" 1
+
+	"$audiopeak" 0.5
+	"$fullscale" 1.5
+	"$scale" 1.0
+	"$angle" 0.0
+	"$translate" "[0.0 0.0]"
+	"$center" "[0.5 0.5]"
+
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	"$additive" 1
+	"$selfillum" 1
+	//"$texture2" "dev/dev_scanline"
+	"$surfaceprop" "glass"
+	"%compileNoLight" 1
+	"%compilepassbullets" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "0"
+			"audioPeakVar" "$audiopeak"
+			"audioPeakMin" "0"
+			"audioPeakMax" "0.5"
+			"audioPeakAmp" "1.0"
+		}
+
+		"Subtract"
+		{
+			"srcVar1" "$fullscale"
+			"srcVar2" "$audiopeak"
+			"resultVar" "$scale"
+		}
+
+		"TextureTransform"
+		{
+			"translateVar" "$translate"
+			"scaleVar" "$scale"
+			"rotateVar" "$angle"
+			"centerVar" "$center"
+			"resultVar" "$basetexturetransform"
+		}
+	}
+}

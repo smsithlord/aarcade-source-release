@@ -1,0 +1,5133 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?buster=6"></link>
+		<script src="asset://ui/hud.js?buster=32"></script>
+		<script src="asset://ui/tga.js"></script>
+		<!--<script src="asset://ui/stickers.js"></script>-->
+		<script>
+			var tga = new TGA();
+
+			var g_allStickers = {};
+		</script>
+		<script>
+			var vehiclePresets = localStorage.getItem("vehiclePresets");
+			if( !!vehiclePresets )
+				vehiclePresets = JSON.parse(vehiclePresets);
+			else
+				vehiclePresets = {};
+
+			var universeInfo = aaapi.cmdEx("getConnectedSession");// : null;
+
+			var g_context = "items";
+			var g_instance = aaapi.cmdEx("getInstance");
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var g_imageTilesOnly = (localStorage.getItem("imageTilesOnly") == "1");
+			var libraryBrowserContext = aaapi.cmdEx("getLibraryBrowserContext");
+			var g_searchTerm = libraryBrowserContext.search;
+
+			var g_hiddenWizards = localStorage.getItem("hiddenWizards");
+			if( !!g_hiddenWizards )
+				g_hiddenWizards = JSON.parse(g_hiddenWizards);
+			else
+				g_hiddenWizards = {};
+
+			var g_librarySearchMax = localStorage.getItem("librarysearchmax");
+			if( !!!g_librarySearchMax )
+				g_librarySearchMax = "40";
+
+			g_librarySearchMax = parseInt(g_librarySearchMax);
+
+			var g_showBackgroundWallpapers = localStorage.getItem("showbackgroundwallpapers");
+			if( !!!g_showBackgroundWallpapers || g_showBackgroundWallpapers == "0")
+				g_showBackgroundWallpapers = false;
+			else
+				g_showBackgroundWallpapers = true;
+
+			var g_types = aaapi.cmdEx("getAllLibraryTypes");
+
+			var sortedScrapers = [];
+			var x;
+			for( x in arcadeHud.scrapers )
+			{
+				if( g_hiddenWizards[x] === "1" )
+					continue;
+				
+				sortedScrapers.push(arcadeHud.scrapers[x]);
+			}
+
+			sortedScrapers = sortedScrapers.sort(function(a, b)
+			{
+				var rankA = (a.hasOwnProperty("rank")) ? a.rank : Infinity;
+				var rankB = (b.hasOwnProperty("rank")) ? b.rank : Infinity;
+				if( rankA < rankB )
+					return -1;
+				else if( rankA > rankB )
+					return 1;
+				else
+					return 0;
+			});
+
+			var g_recentModelId = aaapi.cmdEx("getConVarValue", "recent_model_id");
+
+			var g_addedTag = "";
+			var g_field = "all";
+			var g_typeIcons = {
+				"default": "types/default.png",
+				"images": "types/images.png",
+				"movies": "types/movies.png",
+				"videos": "types/movies.png",
+				"youtube": "types/movies.png",
+				"pc": "types/pc.png",
+				"3do": "types/retro.png",
+				"3ds": "types/retro.png",
+				"32x": "types/retro.png",
+				"arcade": "types/retro.png",
+				"atari5200": "types/retro.png",
+				"ds": "types/retro.png",
+				"gameboy": "types/retro.png",
+				"gamecube": "types/retro.png",
+				"gamegear": "types/retro.png",
+				"gba": "types/retro.png",
+				"gbc": "types/retro.png",
+				"genesis": "types/retro.png",
+				"megadrive": "types/retro.png",
+				"n64": "types/retro.png",
+				"neogeo": "types/retro.png",
+				"nes": "types/retro.png",
+				"ps": "types/retro.png",
+				"ps2": "types/retro.png",
+				"ps3": "types/retro.png",
+				"ps4": "types/retro.png",
+				"psp": "types/retro.png",
+				"sms": "types/retro.png",
+				"wii": "types/retro.png",
+				"wiiu": "types/retro.png"
+			};
+
+			g_autoCabinets = {
+				"types/images.png": [
+					"29cb259b",//wall_pad_w
+					"8284a29e",//pic_wide_l
+					"dc041481",//big_movie_wallmount_no_banner
+					"f2dc8d0c",//wall_pad_t
+					"6154927c",//pic_tall_l
+					"03fa65e9",//poster
+					"baffde74"//posterscreen
+					//"c94586f9"//imax
+				],
+				"types/movies.png": [
+					"29cb259b",//wall_pad_w
+					"8284a29e",//pic_wide_l
+					"b5336add",//movie_display_wallmount
+					"e8b5e1a5", //swordfish
+					"dc041481",//big_movie_wallmount_no_banner
+					"6b2ac41e", //cd_wall
+					"9e431444", //cd_headphones_wall
+					"5843a372", //cd_player_headphones
+					"8b52a600", //camcorder
+					"fa77dc7b", //normal_laptop
+					"e81200d8", //tabletop_tv
+					"0c909776",//flatscreen_tv
+					"d87abb32"//movie_stand_standard
+				],
+				"types/retro.png": [
+					"acec221c",//two_player_arcade
+					"8d968c75",//four_player_arcade
+					"49507e4f",//extended_four_player_arcade
+					//"",//four_player_addict
+					"f14652f3",//boxcade
+					"c67b2c74",//brainiac
+					"d238691f",//lunar
+					"a98b9652",//buttonmasher
+					"14ec04c1",//cabsolo
+					"4e904afa",//phaser_gun_coop
+					"4c2ffa9f",//phaser_rifle_coop
+					"4560df22",//double_phasergun_coop
+					//"",//phaser_booth
+					"41440e1b",//standup_car_racer
+					"259ed961",//tripple_standup_racer
+					"a2f4cd0f",//single_car_racer
+					"b87254df",//double_car_racer
+					"19bdc533",//motoracer
+					"c3d740aa",//racer_multiscreen
+					"c6f05a5c",//enclosed_flight
+					"c2430f98",//coffee_cabinet
+					"01415f5e",//icade
+					"1048296e",//lappy
+					"0c909776",//flatscreen_tv
+					"e81200d8",//tabletop_tv
+					"a95d7b84",//console_steam
+					"21f60767",//console_kiosk_steam
+					"36b81013",//pc_kiosk_standard
+					"e80967ba",//wood_cabinet_steam
+					"d61e1e07",//wood_cabinet
+					"6be6992b",//pc_wallmount_small
+					"29cb259b",//wall_pad_w
+					"dc041481"//big_movie_wallmount_no_banner
+					//"",//sitdownvs
+					//"",//triscreen_steambox
+				],
+				"types/default.png": [
+					"29cb259b",//wall_pad_w
+					"8284a29e",//pic_wide_l
+					"dc041481",//big_movie_wallmount_no_banner
+					"fa77dc7b", //normal_laptop
+					"0c909776",//flatscreen_tv
+					"e81200d8",//tabletop_tv
+					"a95d7b84",//console_steam
+					"acec221c",//two_player_arcade
+					"8d968c75",//four_player_arcade
+					"49507e4f"//extended_four_player_arcade
+				]
+			};
+
+			var g_itemId = arcadeHud.getParameterByName("item");
+			if( g_itemId === "" )
+				g_itemId = null;
+
+			var entityIndex = arcadeHud.getParameterByName("entity");
+			if( entityIndex === null )
+				entityIndex = -1;
+			
+			var entityInfo;
+			if( entityIndex !== -1 )
+			{
+				entityInfo = aaapi.cmdEx("getEntityInfo", parseInt(entityIndex));
+				if( !!!entityInfo.item && !!entityInfo.model && entityInfo.model !== "" )
+					g_context = "models";
+
+				if( !!!entityInfo.model )
+				{
+					var spoofModel = aaapi.cmdEx("getLibraryModel", "29cb259b");
+					entityInfo.model = {
+						id: spoofModel.info.id,
+						title: spoofModel.title,
+						workshopIds: '',
+						backpackIds: '',
+						backpackTitle: ''
+					};
+				}
+				//console.log(JSON.stringify(entityInfo.model));
+			}
+
+			if( !!!entityInfo && !!g_itemId )
+			{
+				//console.log("huh??");//entityInfo.model.id
+				// create some fake entity info
+				entityInfo = {
+					"item":
+					{
+						"id": g_itemId
+					},
+					"model":
+					{
+						"id": ""
+					},
+					"object":
+					{
+						"id": "",
+						"slave": 0
+					}
+				};
+				//console.log("Given item ID is: " + entityInfo.item.id);
+			}
+
+			var g_thumbDelay = 1;
+			var g_thumbDelayRequests = 0;
+			var g_thumbDelayHandle;
+			function getThumbDelay()
+			{
+				g_thumbDelayRequests++;
+				if( g_thumbDelayRequests > 10 )
+					g_thumbDelay = 1000;
+
+				if( !!g_thumbDelayHandle )
+					clearTimeout(g_thumbDelayHandle);
+
+				g_thumbDelayHandle = setTimeout(function()
+				{
+					g_thumbDelayRequests = 0;
+					g_thumbDelay = 1;
+					g_thumbDelayHandle = undefined;
+				}, 1000);
+
+				return g_thumbDelay;
+			}
+		</script>
+
+		<style>
+			body
+			{
+				background-color: rgba(0, 0, 0, 0.8);
+				/*-webkit-filter: blur(4px);*/
+			}
+			
+			*:focus
+			{
+				outline: none;
+			}
+
+			.ezHeaderContainer
+			{
+				z-index: 1;
+				pointer-events: none;
+				position: absolute;
+				top: 0;
+				padding: 20px;
+				left: 0;
+				right: 0;
+				text-align: center;
+				background: -webkit-linear-gradient(bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 1));
+			}
+
+			.ezHoverSlate
+			{
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				-webkit-transition: all 0.7s ease-in-out; 
+			}
+
+			.ezThumbNextA .ezHoverSlate, .ezThumbNextB .ezHoverSlate, .ezThumbPreviousA .ezHoverSlate, .ezThumbPreviousB .ezHoverSlate
+			{
+				background-color: rgba(0, 0, 0, 0.7);
+			}
+
+			.ezThumbFarNext .ezHoverSlate, .ezThumbFarPrevious .ezHoverSlate
+			{
+				background-color: rgba(0, 0, 0, 0.95);
+			}
+
+			.ezThumbAwayNext .ezHoverSlate, .ezThumbAwayPrevious .ezHoverSlate
+			{
+				background-color: rgba(0, 0, 0, 1.0);
+			}
+
+			.ezThumbBig:hover .ezSpawnButton
+			{
+				display: inline-block;
+			}
+
+			.ezInfoContainer
+			{
+				z-index: 200;
+				pointer-events: none;
+				position: absolute;
+				bottom: 0;
+				padding-bottom: 20px;
+				padding-top: 200px;
+				left: 0;
+				right: 0;
+				text-align: center;
+				background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0), rgba(0, 0, 0, 1));
+			}
+
+			.ezInfoTitle
+			{
+				font-family: Arial;
+				font-size: 40px;
+				font-weight: bold;
+				margin-bottom: 16px;
+				-webkit-transition: all 0.2s ease-in-out;
+			}
+
+			.ezActionButton
+			{
+				cursor: pointer;
+				pointer-events: all;
+				vertical-align: middle;
+				border: 2px solid #fff;
+				padding: 8px;
+				border-radius: 50%;
+				background-color: rgb(0, 0, 0);
+				font-family: Arial;
+			}
+
+			.ezActionButton:hover
+			{
+				background-color: rgb(40, 40, 40);
+			}
+
+			.ezThumbBig:hover .ezHoverSlate
+			{
+				background-color: rgba(255, 255, 255, 0.5);
+			}
+
+			.ezHoverSlate .ezActionButton
+			{
+				position: relative;
+				top: 50%;
+				left: 50%;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+				margin-left: auto;
+				margin-right: auto;
+				font-size: 60px;
+				padding: 24px;
+				text-transform: uppercase;
+				pointer-events: none;
+			}
+
+
+			.ezSearchContainer
+			{
+				pointer-events: all;
+				border: 2px solid #fff;
+				border-radius: 16px;
+				background-color: rgb(0, 0, 0);
+				font-family: Arial;
+			}
+
+			.ezEntityInfoContainer
+			{
+				pointer-events: all;
+				border-radius: 16px;
+				/*border: 2px solid #fff;
+				background-color: rgb(0, 0, 0);*/
+				font-family: Arial;
+				font-size: 64px;
+			}
+
+			#ezSearchBox
+			{
+				border: 0;
+				background-color: #000;
+				font-size: 24px;
+				font-family: Arial;
+				color: #ccc;
+				width: 200px;
+				margin-right: 6px;
+			}
+
+			#ezTypeBox
+			{
+				border: 0;
+				background-color: #000;
+				font-size: 24px;
+				font-family: Arial;
+				color: #ccc;
+				width: 200px;
+				-webkit-appearance: none;
+				background-image: url('expand.png');
+				background-position: right;
+				background-repeat: no-repeat;
+			}
+
+			.wizardBox
+			{
+				border: 0;
+				background-color: rgba(0, 0, 0, 0);
+				font-size: 24px;
+				font-family: Arial;
+				color: #ccc;
+				-webkit-appearance: none;
+				padding-right: 20px;
+				pointer-events: none;
+				/*
+				background-image: url('expand.png');
+				background-position: right;
+				background-repeat: no-repeat;
+				*/
+			}
+
+			.ezSearchResultCountContainer
+			{
+				padding: 4px;
+				font-family: Arial;
+				font-size: 16px;
+			}
+
+			.ezThumb
+			{
+				position: absolute;
+				top: 44%;
+				padding-right: 4px;
+				/*max-height: 85%;*/
+				overflow: hidden;
+				-webkit-transform: translateY(-50%) scale(0.8);
+				-webkit-transition: all 0.7s ease-in-out;
+				width: 16.66666666666667%;
+				pointer-events: none;
+			}
+
+			.ezThumb .ezThumbImage
+			{
+				width: 100%;
+				padding: 2px;
+				min-height: 100px;
+			}
+
+			.ezThumbBig
+			{
+				right: 33.33333333333333%;
+				width: 33.33333333333333%;
+				-webkit-transform: translateY(-50%);
+				pointer-events: all;
+			}
+
+			.ezThumbNextA
+			{
+				right: 16.66666666666667%;
+			}
+
+			.ezThumbNextB
+			{
+				right: 0;
+			}
+
+			.ezThumbFarNext
+			{
+				right: 0;
+			}
+
+			.ezThumbAwayNext
+			{
+				right: -33.33333333333333%;
+			}
+
+			.ezThumbPreviousA
+			{
+				right: 66.66666666666667%;
+			}
+
+			.ezThumbPreviousB
+			{
+				right: 83.33333333333333%;
+			}
+
+			.ezThumbFarPrevious
+			{
+				right: 83.33333333333333%;
+			}
+
+			.ezThumbAwayPrevious
+			{
+				right: 116.6666666666667%;
+			}
+
+			.ezSpawnButton
+			{
+				display: none;
+				border-radius: 16px;
+				text-align: center;
+				color: #000;
+				background-color: #fff;
+				border-color: #000;
+				border: 0;
+			}
+
+			.ezThumbHidden
+			{
+				display: none;
+			}
+
+			.backgroundContainer
+			{
+				width: 100%;
+				height: 100%;
+				background-color: #000;
+				display: none;
+			}
+
+			.backgroundImage
+			{
+				width: 100%;
+				opacity: 0.3;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+			}
+
+			#noImage
+			{
+				font-size: 45px;
+				font-family: Arial;
+				letter-spacing: 0.1em;
+				padding-right: 12px;
+			}
+
+			#typeIconImage
+			{
+
+			}
+
+			#noResults
+			{
+				position: absolute;
+				width: 100%;
+				top: 50%;
+				left: 50%;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+				font-size: 50px;
+				font-family: Arial;
+				text-align: center;
+			}
+
+			.ezWizardButtons
+			{
+				display: none;
+			}
+
+			.selectedWizard
+			{
+				background-color: rgb(150, 150, 150);
+			}
+
+			#modalSlate
+			{
+				position: fixed;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				z-index: 1000000;
+				/*background-color: rgba(40, 40, 40, 0.98);*/
+				background-color: rgb(0, 0, 0);
+				/*background-image: url('shade.png');*/
+				background-position: center;
+				background-size: cover;
+				background-repeat: no-repeat;
+			}
+
+			.modalPanel
+			{
+				background-color: rgb(0, 0, 0);
+				display: inline-block;
+				border: 2px solid #ccc;
+				border-radius: 32px;
+				padding: 20px;
+				min-width: 420px;
+				max-width: 1100px;
+			}
+
+			#wizardName
+			{
+				font-size: 70px;
+				font-family: Arial;
+				font-weight: 900;
+				letter-spacing: 0.1em;
+				margin-bottom: 100px;
+				/*margin-top: -160px;*/
+				margin-top: 40px;
+				-webkit-transition: opacity 0.2s ease-in-out; 
+			}
+
+			.modalPanel img
+			{
+				border-width: 6px;
+				border-style: solid;
+				border-color: #000;
+				border-radius: 16px;
+			}
+
+			.modalPanel img:hover
+			{
+				border-color: rgb(50, 50, 50);
+				background-color: rgb(50, 50, 50);
+			}
+/*
+			.cabinetImageContainer
+			{
+				width: 100px;
+				text-align: center;
+				pointer-events: none;
+				position: absolute;
+				left: 0;
+				bottom: 0;
+				margin: 10px;
+			}
+*/
+			#cabinetImage
+			{
+				width: 100px;
+			}
+
+			.scrollPanel
+			{
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				width: 50%;
+			}
+
+			.endOfLine
+			{
+				pointer-events: none;
+				opacity: 0;
+				-webkit-transition: opacity 0.3s ease-in-out;
+				position: absolute;
+				top: 50%;
+				margin: 50px;
+				margin-top: 0;
+				margin-bottom: 0;
+				padding: 24px;
+				font-size: 42px;
+				font-family: Arial;
+				border-radius: 32px;
+				z-index: 3000000;
+				background-color: #000;
+				color: #ccc;
+			}
+
+			.ezTitleListContainer
+			{
+				position: absolute;
+				opacity: 0;
+				-webkit-transition: opacity 1.0s ease-in-out; 
+				padding: 8px;
+				text-align: left;
+				font-family: Arial;
+				font-size: 32px;
+			}
+
+			.ezTitleListEntry
+			{
+				display: none;
+				max-width: 430px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.ezTitleListEntry[titleState="big"]
+			{
+				display: block;
+				color: rgba(250, 250, 250, 0.9);
+			}
+
+			.ezTitleListEntry[titleState="next"], .ezTitleListEntry[titleState="previous"]
+			{
+				display: block;
+				color: rgba(250, 250, 250, 0.3);
+			}
+
+			.ezTitleListEntry[titleState="farNext"], .ezTitleListEntry[titleState="farPrevious"]
+			{
+				display: block;
+				color: rgba(250, 250, 250, 0.1);
+			}
+
+			.ezTitleListEntry[titleState="awayNext"], .ezTitleListEntry[titleState="awayPrevious"]
+			{
+				display: block;
+				color: rgba(250, 250, 250, 0.05);
+			}
+
+			#aaLogo
+			{
+				position: fixed;
+				top: 25%;
+				left: 50%;
+				-webkit-transform: translateX(-50%) translateY(-50%);
+			}
+
+			#createSlate
+			{
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				margin-top: 150px;
+				-webkit-transform: translateX(-50%);
+			}
+
+			.regularHelp
+			{
+				padding: 10px;
+				font-size: 30px;
+				padding-bottom: 40px;
+			}
+
+			.createSlateHelp
+			{
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				margin-top: 80px;
+				-webkit-transform: translateX(-50%);
+			}
+
+			.ezButton
+			{
+				cursor: pointer;
+				opacity: 0.5;
+			}
+
+			.ezButton:hover
+			{
+				opacity: 1.0;
+			}
+
+			.aaLogo
+			{
+				border: 3px solid #999;
+				background-color: rgb(20, 20, 20);
+				/*background-image: url('globe.gif');*/
+				background-size: cover;
+				border-radius: 50%;
+				padding: 16px;
+				width: 250px;
+			}
+
+			.aaLogo:hover
+			{
+				background-color: rgb(40, 40, 40);
+			}
+
+			#frontPage
+			{
+				background-color: #000;
+				background: -webkit-linear-gradient(left, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.95) 30%, rgba(0, 0, 0, 0.95) 70%, rgba(0, 0, 0, 0.7));
+				width: 100%;
+				height: 100%;
+			}
+
+			.frontPageCrumbs
+			{
+				float: none;
+				position: fixed;
+				/*bottom: 50%;*/
+				top: 50%;
+				left: 50%;
+				-webkit-transform: translateX(-50%) translateY(-50%);
+			}
+
+			.frontPageCrumbs #ezSearchBox
+			{
+				width: 400px;
+				zoom: 150%;
+			}
+
+			#switchButton
+			{
+				opacity: 0.1;
+			}
+
+			#switchButton:hover
+			{
+				opacity: 1;
+			}
+
+			
+			#wizardItemTitle
+			{
+				font-size: 50px;
+				font-family: Arial;
+				border: 0;
+				background: none;
+				background-color: none;
+				color: #ccc;
+				width: 90%;
+			}
+
+			#wizardItemTitleTable
+			{
+				border: 2px solid rgb(20, 20, 20);
+			}
+
+			#wizardItemTitleTable:hover
+			{
+				border: 2px solid rgb(40, 40, 40);
+			}
+
+			#searchResults
+			{
+				display: none;
+			}
+
+			.wizardButton
+			{
+				cursor: pointer;
+				border: 2px solid transparent;
+				border-radius: 16px;
+				width: 64px;
+				display: none;
+			}
+
+			.wizardButton:hover
+			{
+				border: 2px solid #999;
+				background-color: rgb(30, 30, 30);
+			}
+
+			.menuContainer
+			{
+				cursor: default;
+				display: inline-block;
+			}
+
+			.hiddenMenuContainer
+			{
+				display: none;
+			}
+
+			.menuContainer td:nth-of-type(1)
+			{
+				display: none;
+				border-right: 2px solid #ccc;
+				padding-right: 24px;
+			}
+
+			#enterToConfirm
+			{
+				visibility: hidden;
+				font-size: 20px;
+				color: rgb(30, 30, 30);
+				font-family: Arial;
+				position: relative;
+			}
+
+			#textEnterToConfirm
+			{
+				visibility: hidden;
+				font-size: 20px;
+				color: rgb(30, 30, 30);
+				font-family: Arial;
+				position: relative;
+			}
+
+			.activeMenuContainer td:nth-of-type(1)
+			{
+				display: table-cell;
+			}
+
+			.scraperHelpTitle
+			{
+				text-align: center;
+			}
+
+			.scraperHelpSum
+			{
+				font-size: 12px;
+				color: rgb(30, 30, 30);
+				text-align: center;
+			}
+
+			.arrow-right
+			{
+				width: 0; 
+				height: 0; 
+				border-top: 80px solid transparent;
+				border-bottom: 80px solid transparent;
+				border-left: 80px solid rgb(30, 30, 30);
+				margin-left: -20px;
+			}
+
+			.arrowContent
+			{
+				opacity: 1;
+				-webkit-transition: all 0.15s ease-in-out;
+			}
+
+			.altOpt
+			{
+				text-decoration: underline;
+				font-size: 20px;
+				font-weight: normal;
+			}
+
+			.helpArrow
+			{
+				display: none;
+				position: absolute;
+				-webkit-transition: all 0.5s ease-in-out;
+			}
+
+			#noWizards
+			{
+				font-size: 40px;
+				font-family: Arial;
+				display: none;
+				pointer-events: none;
+			}
+/*
+			.ezNoHover
+			{
+				pointer-events: none;
+			}
+*/
+
+			#stickersContainer
+			{
+				z-index: 2;
+				position: fixed;
+				top: 0;
+				left: 0;
+			}
+
+			.stickersContainer
+			{
+				position: absolute;
+			}
+
+			.sticker
+			{
+				position: relative;
+				display: inline-block;
+				/*padding: 8px;*/
+				/*max-height: 512px;
+				max-width: 512px;*/
+    			-webkit-transform-origin: 50% 50%;
+				/*border: 100px solid pink;*/
+			}
+
+			.ezNoShow
+			{
+				display: none !important;
+			}
+
+			.modeButton
+			{
+				cursor: pointer;
+				background-color: rgb(30, 30, 30);
+			}
+
+			.activeModeButton
+			{
+				background-color: rgb(50, 50, 50);
+			}
+
+			.modeButton:hover
+			{
+				background-color: rgb(60, 60, 60);
+			}
+		</style>
+	</head>
+	<body>
+
+	<div class="helpArrow" style="left: 270px; top: 43%;">
+		<div style="height: 70px; width: 245px; display: inline-block; vertical-align: middle; background-color: rgb(30, 30, 30); border-radius: 32px; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+			<div class="arrowContent" style="position: absolute; top: 50%; -webkit-transform: translateY(-50%); margin-left: 15px; font-size: 20px; font-family: Arial; font-weight: bold; text-align: center;">
+				<!--ADD NEW ITEMS-->
+				SEARCH YOUR STUFF
+			</div>
+		</div>
+		<div class="arrow-right" style="display: inline-block; vertical-align: middle;"></div>
+	</div>
+
+	<div id="frontPage">
+		<div id="aaLogo" onclick="window.location = 'welcome.html';" class="helpNote" help="GO TO MAIN MENU">
+			<img src="aalogo.png" class="aaLogo" style="margin: 40px;" />
+		</div>
+
+		<div id="createSlate">
+			<div class="menuContainer" menuid="steam" style="height: 125px;">
+				<table style="display: inline-block;">
+					<tr>
+						<td>
+							<div style="display: inline-block; padding-left: 30px; padding-right: 30px; border-radius: 16px; font-family: Arial; font-weight: bold;" onclick="showSteamLibrary();" class="ezActionButton helpNote" help="Spawn Steam games that you've already imported.">
+								MY LIBRARY
+							</div>
+							<div style="display: inline-block; padding-left: 30px; padding-right: 30px; border-radius: 16px; font-family: Arial; font-weight: bold; margin-left: 10px; margin-right: 10px;" onclick="steamStoreWizard();" class="ezActionButton helpNote" help="Spawn any game from the Steam Store.">
+								STEAM STORE
+							</div>
+							<div style="display: inline-block; padding-left: 30px; padding-right: 30px; border-radius: 16px; font-family: Arial; font-weight: bold;" onclick="window.location='importSteamGames.html';" class="ezActionButton helpNote" help="Import ALL your Steam games from your profile.">
+								IMPORT ALL
+							</div>
+						</td>
+						<td>
+							<img onclick="showMenu('steam');" class="ezButton helpNote" help="<font size=3>ADD</font> STEAM GAME <font size=3>SHORTCUT</font>" src="ezsteam.png" style="vertical-align: top;" />
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="menuContainer" menuid="internet" style="height: 125px;">
+				<table style="display: inline-block;">
+					<tr>
+						<td align="center">
+							<form style="margin: 0;">
+								<input id="wwwBox" type="text" style="display: inline-block; padding-left: 8px; padding-right: 30px; border-radius: 4px; font-family: Arial; font-size: 24px; font-weight: bold; width: 420px; background-color: #fff; color: #000; border-color: #ccc;" class="ezActionButton" placeholder="Paste your internet link here..." />
+							</form>
+							<div style="position: absolute;">
+								<div id="enterToConfirm">(press ENTER to confirm)</div>
+							</div>
+						</td>
+						<td>
+							<img onclick="showMenu('internet');" class="ezButton helpNote" help="<font size=3>ADD</font> INTERNET <font size=3>SHORTCUT</font>" src="ezwww.png" />
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="menuContainer" menuid="file" style="height: 125px;">
+				<table style="display: inline-block;">
+					<tr>
+						<td>
+							<input id="fileBox" type="text" style="display: inline-block; border-radius: 4px; font-family: Arial; font-size: 24px; font-weight: bold; width: 420px; background-color: #fff; color: #000; border-color: #ccc;" class="ezActionButton" placeholder="Choose file..." />
+						</td>
+						<td>
+							<img onclick="showMenu('file');" class="ezButton helpNote" help="<font size=3>ADD</font> FILE <font size=3>SHORTCUT</font>" src="ezfolder.png" />
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="menuContainer" menuid="text" style="height: 125px;">
+				<table style="display: inline-block;">
+					<tr>
+						<td align="center">
+							<form style="margin: 0;">
+								<input id="textBox" type="text" style="display: inline-block; padding-left: 8px; padding-right: 30px; border-radius: 4px; font-family: Arial; font-size: 24px; font-weight: bold; width: 420px; background-color: #fff; color: #000; border-color: #ccc;" class="ezActionButton" placeholder="Type your text here..." />
+								<div style="display: block; white-space: nowrap; margin-top: 10px;">
+									<input type='checkbox' checked style='' id='text3dBox' /><label style='margin-left: 10px; font-weight: bold; font-family: Arial; font-size: 18px;' for='text3dBox'>3D TEXT</label>
+								</div>
+							</form>
+							<div style="position: absolute;">
+								<div id="textEnterToConfirm">(press ENTER to confirm)</div>
+							</div>
+						</td>
+						<td>
+							<img onclick="showMenu('text');" class="ezButton helpNote" help="<font size=3>ADD</font> TEXT <font size=3>SHORTCUT</font>" src="eztext.png" />
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="menuContainer" menuid="wizard" style="height: 125px;">
+				<table style="display: inline-block;">
+					<tr>
+						<td>
+							<div id="aaWizardContext" style="white-space: nowrap; overflow-x: auto; max-width: 1000px;" class="aaScrollbars">
+								<!--
+								<img class="wizardButton" src="scrapers/youtube.png" />
+								<img class="wizardButton" src="scrapers/googleimages.png" />
+								<img class="wizardButton" src="scrapers/steamstore.png" />
+								<img class="wizardButton" src="scrapers/themoviedb.png" />
+								<img class="wizardButton" src="scrapers/curiositystream.png" />
+								<img class="wizardButton" src="scrapers/origin.png" />
+								<img class="wizardButton" src="scrapers/giantbomb.png" />
+								<img class="wizardButton" src="scrapers/thegamesdb.png" />
+								-->
+							</div>
+						</td>
+						<td>
+							<img onclick="showMenu('wizard');" class="ezButton helpNote" help="<font size=3>SEARCH</font> WIZARDS" src="ezwizard.png" />
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<!--
+		<table style="width: 100%; height: 100%;">
+			<tr>
+				<td style="height: 50%;">
+					<input style="" placeholder="se"
+				</td>
+			</tr>
+			<tr>
+				<td>
+				</td>
+			</tr>
+		</table>
+		-->
+	</div>
+
+	<div class="ezHeaderContainer">
+		<div class="ezHeaderCrumbs" style="float: left;">
+			<div style="display: block;">
+				<div class="ezEntityInfoContainer"></div>
+				<div>
+					<div class="ezSearchContainer" style="display: inline-block; margin-top: 4px;">
+						<form style="margin: 0;" id="ezSearchBoxForm">
+							<table style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+								<tr>
+									<td>
+										<img onclick="submitSearch();" src="searchicon.png" class="helpNote" help="SEARCH" />
+									</td>
+									<td>
+										<input id="ezSearchBox" type="text" placeholder="Library Search..." value="" class="helpNote" help="<font size=3>PRESS</font> ENTER <font size=3>TO SEARCH LIBRARY</font>" style="display: inline-block;" />
+									</td>
+									<td class="modeButton helpNote activeModeButton" modeName="items" onclick="setMode(this.getAttribute('modeName'));" help="SEARCH ITEMS">
+										<div style="display: inline-block; padding: 8px; padding-top: 0; padding-bottom: 0;">
+											<script>
+												var modesHTML = "";
+												modesHTML += arcadeHud.generateIconHTML("itemicon.png", 32, 32, "aaTextColorOneColor");
+												document.write(modesHTML);
+											</script>
+										</div>
+									</td>
+									<td class="modeButton helpNote" modeName="models" onclick="setMode(this.getAttribute('modeName'));" style="border-radius: 16px; border-top-left-radius: 0; border-bottom-left-radius: 0;" help="SEARCH PROPS">
+										<div style="display: inline-block; padding: 8px; padding-top: 0; padding-bottom: 0;">
+											<script>
+												var modesHTML = "";
+												modesHTML += arcadeHud.generateIconHTML("objecticon.png", 40, 40, "aaTextColorOneColor");
+												document.write(modesHTML);
+											</script>
+										</div>
+									</td>
+								</tr>
+							</table>
+						</form>
+					</div>
+					<div id="ezSearchTypeContainer" class="ezSearchContainer" style="display: inline-block; margin-top: 4px;">
+						<table style="width: 100%; height: 100%;">
+							<tr>
+								<td>
+									<select id="ezTypeBox" class="helpNote" help="FILTER SEARCH RESULTS">
+										<option value="" selected>All Types</option>
+									</select>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<img id="wizardSearch" class="ezActionButton helpNote" help="SEARCH WIZARDS" style="width: 24px; height: 24px; margin-top: 4px; vertical-align: top;" onclick="searchWithWizard();" src="wizardicon.png" />
+					<!--
+					<img id="wizardSearch" class="ezActionButton helpNote" help="SEARCH WIZARDS" style="width: 32px; height: 32px; vertical-align: top;" onclick="searchWithWizard();" src="wizardicon.png" />-->
+				</div>
+				<div class="ezTitleListContainer"></div>
+			</div>
+			<!--
+				<div class="ezSearchResultCountContainer">
+					(40+ results)
+				</div>
+			-->
+		</div>
+
+		<div class="ezHeaderActions" style="float: right;">
+			<img id="backButton" class="ezActionButton helpNote" help="GO BACK" style="vertical-align: top; width: 32px; height: 32px; display: none;" src="backarrow.png" onclick="document.location.reload();" />
+			<img id="switchButton" class="ezActionButton helpNote" help="SWITCH TO ADVANCED MODE" style="vertical-align: top; width: 32px; height: 32px; display: inline-block;" src="switchicon.png" onclick="DoSwitchEZModes();" />
+			<!--<img class="ezActionButton" style="width: 32px; height: 32px;" src="help.png" />-->
+			<img class="ezActionButton helpNote" help="CLOSE LIBRARY" style="width: 32px; height: 32px;" onclick="doClose();" src="close.png" />
+		</div>
+	</div>
+
+	<script>
+		function toggleMore(val)
+		{
+			if( val === 1 )
+			{
+				var elems = document.querySelectorAll('.notMore');
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].style.display = 'none';
+
+				document.querySelector('.moreOnly').style.display = 'inline-block';
+			}
+			else
+			{
+				var elems = document.querySelectorAll('.notMore');
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].style.display = 'inline-block';
+
+				document.querySelector('.moreOnly').style.display = 'none';
+			}
+		}
+
+		function select()
+		{
+			aaapi.cmd("consoleCommand", "select " + entityIndex);
+			aaapi.cmd("deactivateInputMode");
+		}
+
+		function adoptModel()
+		{
+			window.location = "adopt.html?modelId=" + encodeURIComponent(entityInfo.model.id);
+
+			/*
+			var response = aaapi.cmdEx("adoptModel", entityInfo.model.id);
+			if( !!response )
+			{
+				var numFiles = Object.keys(response).length;
+				if( numFiles === 0 )
+					aaapi.cmd("addToastMessage", "Failed to copy files.");
+				else
+					aaapi.cmd("addToastMessage", "Copied " + numFiles + " files into aarcade_user/custom/adopted");
+			}
+			else
+				aaapi.cmd("addToastMessage", "Failed to adopt model.");
+
+			aaapi.cmd("deactivateInputMode");
+			*/
+		}
+
+		function lookAtMe()
+		{
+			aaapi.cmd("consoleCommand", "look_at_me " + entityIndex + ";");//" select " + entityIndex);
+			aaapi.cmd("deactivateInputMode");
+		}
+
+		function togglePhysics()
+		{
+			aaapi.cmd("consoleCommand", "togglephysics " + entityIndex);
+			aaapi.cmd("deactivateInputMode");
+		}
+
+		var refreshImagesMouseDownTimer;
+		var refreshImageMouseDownHandled = false;
+		function refreshImagesMouseDown()
+		{
+			if( !!refreshImagesMouseDownTimer)
+			{
+				clearTimeout(refreshImagesMouseDownTimer);
+				refreshImagesMouseDownTimer = null;
+			}
+
+			refreshImagesMouseDownTimer = setTimeout(refreshCachedImages, 500);
+		}
+
+		function refreshCachedImages()
+		{
+			refreshImagesMouseDownTimer = null;
+			refreshImageMouseDownHandled = true;
+
+			var modelId = '';
+			var itemId = '';
+			if( !!entityInfo )
+			{
+				if( !!entityInfo.model )
+					modelId = entityInfo.model.id;
+				
+				if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+					itemId = entityInfo.item.id;
+				
+				aaapi.cmd("consoleCommand", "refreshimages \"" + itemId + "\" \"" + modelId + "\"");
+				aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+				aaapi.cmd("deactivateInputMode");
+			}
+		}
+
+		function refreshImages()
+		{
+			if( !!refreshImagesMouseDownTimer )
+			{
+				clearTimeout(refreshImagesMouseDownTimer);
+				refreshImagesMouseDownTimer = null;
+			}
+
+			if( refreshImageMouseDownHandled )
+			{
+				refreshImageMouseDownHandled = false;
+				return;
+			}
+
+			var itemId = '';
+			if( !!entityInfo )
+			{
+				if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+					itemId = entityInfo.item.id;
+
+				if( itemId != '' )
+				{
+					aaapi.cmd('consoleCommand', 'reset_image_loader');
+					aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+					aaapi.cmd('refreshItemTextures', itemId, 'ALL');
+					aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+					setTimeout(function(){aaapi.cmd('deactivateInputMode');}, 10);
+				}
+			}
+		}
+	</script>
+
+	<div id="searchResults">
+		<div id="modalSlate" style="display: none;">
+			<table style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+				<tr>
+					<td class="closeModalPanel" align="center">
+						<div id="wizardContainer" style="pointer-events: none;">
+							<table style="height: 1px; margin-bottom: 80px; pointer-events: all; border-radius: 16px;" id="wizardItemTitleTable">
+								<tr>
+									<td>
+										<img onclick="submitSearch();" src="searchicon.png" style="width: 32px;" />
+									</td>
+									<td>
+										<input id="wizardItemTitle" value="" placeholder="Wizard Search..." class="helpNote" help="MODIFY SEARCH TERMS" />
+									</td>
+								</tr>
+							</table>
+							<div class="wizardSearchDesc" style="font-size: 40px; font-family: Arial; font-weight: bold; color: #ccc;">CHOOSE A WIZARD</div>
+							<div class="modalPanel" style="pointer-events: all;">
+								<!--
+								<img src="scrapers/youtube.png" />
+								<img src="scrapers/themoviedb.png" />
+								<img src="scrapers/amazon.png" />
+								<img src="scrapers/curiositystream.png" />
+								<img src="scrapers/giantbomb.png" />
+								<img src="scrapers/google.png" />
+								<img src="scrapers/googleimages.png" />
+								<img src="scrapers/netflix.png" />
+								<img src="scrapers/oculusstore.png" />
+								<img src="scrapers/origin.png" />
+								<img src="scrapers/steamstore.png" />
+								<img src="scrapers/thegamesdb.png" />
+								<img src="scrapers/vimeo.png" />
+								-->
+							</div>
+							<div id="wizardName" style="opacity: 0;">Untitled</div>
+						</div>
+						<div id="noWizards">Oops! Please try a different wizard option.</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="backgroundContainer"><img class="backgroundImage" src="" /></div>
+
+		<div id="noResults" style="display: none; z-index: 2;">
+			<div style="background-color: #000; border: 2px solid #ccc; border-radius: 32px; padding: 24px; display: inline-block; pointer-events: all;">No results.  Try searching for something else.
+			<div class="altOpt" id="repeatSearch" style="display: none;" onclick="repeatSearch();">Or repeat the search without filters.</div>
+			<div class="altOpt" id="searchWizardInstead" onclick="searchWizardInstead();">Or search a wizard instead.</div></div>
+		</div>
+
+		<div class="ezInfoContainer">
+			<div class="ezInfoTitle"></div>
+			<div class="ezActions" style="pointer-events: all; display: inline-block;">
+				<div class="ezEntityButtons" style="display: none; border-right: 2px solid #fff; padding-right: 14px; margin-right: 10px;">
+					<div class="aaOnlyIfUniverseConnected aaOnlyIfNotHost" style="display: inline-block;">
+						<div id="existsItemButtonContainer" style="display: none;">
+							<img id="existsItemButton" class="ezActionButton helpNote" help="ITEM EXISTS IN YOUR LIBRARY" style="width: 32px; height: 32px; border-color: transparent; background-color: transparent;" src="libraryicon.png" />
+						</div>
+					</div>
+					<!--
+					 border-color: transparent; background-color: '';
+				-->
+					<div class="notMore" style="display: inline-block;">
+						<div id="saveItemButtonContainer" style="display: none;">
+							<div class="aaOnlyIfUniverseConnected aaOnlyIfNotHost" style="display: inline-block;">
+								<img id="saveItemButton" class="ezActionButton helpNote" help="SAVE ITEM CHANGES TO LIBRARY" onclick="saveItemToLibrary();" style="width: 32px; height: 32px;" src="saveicon.png" />
+							</div>
+						</div>
+						<div id="saveModelButtonContainer" style="display: none;">
+							<div class="aaOnlyIfUniverseConnected aaOnlyIfNotHost" style="display: inline-block;">
+								<img id="saveModelButton" class="ezActionButton helpNote" help="SAVE MODEL CHANGES TO LIBRARY" onclick="saveModelToLibrary();" style="width: 32px; height: 32px;" src="saveicon.png" />
+							</div>
+						</div>
+						<img class="ezActionButton aaOnlyIfHost helpNote" help="MOVE OBJECT" onclick="moveObject();" style="width: 32px; height: 32px;" src="moveicon.png" />
+						<img class="ezActionButton aaOnlyIfHost helpNote" help="CLONE OBJECT" onclick="cloneObject();" style="width: 32px; height: 32px;" src="cloneicon.png" />
+						<img class="ezActionButton helpNote" help="MIRROR VIDEO TO OBJECT" onclick="doMirror();" style="width: 32px; height: 32px;" id="screenMirrorButton" src="screenmirror.png" />
+						<img class="ezActionButton helpNote" help="DELETE OBJECT" onclick="deleteObject();" style="width: 32px; height: 32px;" src="eraseicon.png" />
+					</div>
+				</div>
+				
+				<div class="notMore" style="display: inline-block;">
+					<img class="ezActionButton helpNote" help="FAVORITE" onclick="doFavorites();" style="width: 32px; height: 32px;" id="favoritesIcon" src="favoriteicon.png" />
+					<div class="ezWizardButtons">
+						<div class="ezActionButton helpNote" help="FIND MARQUEE IMAGE" style="display: inline-block; width: inherit; border-radius: 16px; height: 32px; padding-left: 20px; padding-right: 20px;" field="marquee" onclick="showWizards(this.getAttribute('field'), this.firstElementChild.value, true, this.getAttribute('help'));">
+							<select class="wizardBox" id="wizardMarquee">
+								<option value="boxart">BOXART</option>
+								<option value="marquee">MARQUEE</option>
+								<option value="poster" selected>POSTER</option>
+								<option value="grid">GRID</option>
+							</select>
+						</div>
+						<div class="ezActionButton helpNote" help="FIND SCREEN IMAGE" style="display: inline-block; width: inherit; border-radius: 16px; height: 32px; padding-left: 20px; padding-right: 20px;" field="screen" onclick="showWizards(this.getAttribute('field'), this.firstElementChild.value, true, this.getAttribute('help'));">
+							<select class="wizardBox" id="wizardScreen">
+								<option value="screenshot">SCREENSHOT</option>
+								<option value="wallpaper" selected>WALLPAPER</option>
+							</select>
+						</div>
+						<div class="ezActionButton helpNote" help="FIND PREVIEW VIDEO" style="display: inline-block; width: inherit; border-radius: 16px; height: 32px; padding-left: 20px; padding-right: 20px;" field="preview" onclick="showWizards(this.getAttribute('field'), this.firstElementChild.value, true, this.getAttribute('help'));">
+							<select class="wizardBox" id="wizardPreview">
+								<option value="scene">SCENE</option>
+								<option value="trailer" selected>TRAILER</option>
+								<option value="gameplay">GAMEPLAY</option>
+								<option value="full">FULL</option>
+							</select>
+						</div>
+						<div class="ezActionButton helpNote" help="FIND ALL" style="display: inline-block; width: inherit; border-radius: 16px; height: 32px; padding-left: 20px; padding-right: 20px;" onclick="showWizards('all', undefined, true, this.getAttribute('help'));">
+							<div style="position: relative; top: 3px;">ALL</div>
+						</div>
+					</div>
+					<img class="ezActionButton helpNote" help="EDIT" onclick="doEdit();" style="width: 32px; height: 32px;" src="editicon.png" />
+					<!--
+					<img id="hideItemButton" class="ezActionButton helpNote" help="HIDE" onclick="doHide();" style="width: 32px; height: 32px;" src="noeye.png" />
+					<img id="unhideItemButton" class="ezActionButton ezNoShow helpNote" help="UNHIDE" onclick="doUnHide();" style="width: 32px; height: 32px;" src="eye.png" />
+					-->
+					<img id="wizardButton" help="RUN WIZARD ON ITEM" class="ezActionButton helpNote" onclick="toggleWizard();" style="width: 32px; height: 32px; display: inline-block;" src="wizardicon.png" />
+					<img class="ezActionButton helpNote" help="ADVANCED COMMANDS" onclick="toggleMore(1);" style="width: 32px; height: 32px;" src="ellipsis.png" />
+				</div>
+				<div class="moreOnly" style="display: none;">
+					<div class="onlyIfEntity" style="display: inline-block;">
+						<img id="makeSlideshowButton" class="ezActionButton helpNote" help="MAKE SLIDESHOW" onclick="makeSlideshow();" style="display: none; width: 32px; height: 32px;" src="slideshowicon.png" />
+						<img class="ezActionButton helpNote" id="questBuilderButton" help="QUEST BUILDER" onclick="showQuestBuilder();" style="width: 32px; height: 32px;" src="questsicon.png" />
+						<img class="ezActionButton helpNote" id="adoptButton" help="ADOPT MODEL" onclick="adoptModel();" style="width: 32px; height: 32px;" src="adopticon.png" />
+						<!--img class="ezActionButton helpNote" help="Roll Item" onclick="rollObjectItem();" style="width: 32px; height: 32px;" id="exportButton" src="exporticon.png" /-->
+						<img class="ezActionButton helpNote" help="EXPORT META DATA" onclick="exportObject();" style="width: 32px; height: 32px;" id="exportButton" src="exporticon.png" />
+						<img class="ezActionButton helpNote" help="LOOK AT ME" onclick="lookAtMe();" style="width: 32px; height: 32px;" src="shadesicon.png" />
+						<img class="ezActionButton helpNote" help="TOGGLE PHYSICS" onclick="togglePhysics();" style="width: 32px; height: 32px;" src="physicsicon.png" />
+						<img class="ezActionButton helpNote" help="REFRESH TEXTURES" onclick="refreshImages();" onmousedown="refreshImagesMouseDown();" style="width: 32px; height: 32px;" src="refreshicon.png" />
+						<img class="ezActionButton helpNote" help="EDIT MODEL" onclick="editModel();" style="width: 32px; height: 32px;" src="3dmodelicon.png" />
+					</div>
+					<img id="autoplayOnButton" class="ezActionButton aaOnlyIfHost helpNote" help="MARK AS THE AUTOPLAY OBJECT" onclick="autoplayObject();" style="width: 32px; height: 32px; display: none;" src="autoplayonicon.png" />
+					<img id="autoplayOffButton" class="ezActionButton aaOnlyIfHost helpNote" help="UN-MARK AS THE AUTOPLAY OBJECT" onclick="unautoplayObject();" style="width: 32px; height: 32px; display: none;" src="autoplayofficon.png" />
+					<div class="onlyIfEntity" style="display: inline-block;">
+						<img class="ezActionButton helpNote" help="SELECT OBJECT" onclick="select();" style="width: 32px; height: 32px;" src="objecticon.png" />
+						<img class="ezNoShow ezActionButton helpNote" id="flagVehicleButton" help="FLAG AS VEHICLE" onclick="flagVehicleEntry();" style="width: 32px; height: 32px;" src="vehicleplusicon.png" />
+						<img class="ezNoShow ezActionButton helpNote" id="unflagVehicleButton" help="UNFLAG AS VEHICLE" onclick="unflagVehicleEntry();" style="width: 32px; height: 32px;" src="vehicleminusicon.png" />
+						<img class="ezNoShow ezActionButton helpNote" id="addToJunkButton" help="FLAG AS JUNK" onclick="addToJunk();" style="width: 32px; height: 32px;" src="addjunkicon.png" />
+						<img class="ezNoShow ezActionButton helpNote" id="removeFromJunkButton" help="UNFLAG AS JUNK" onclick="removeFromJunk();" style="width: 32px; height: 32px;" src="removejunkicon.png" />
+					</div>
+					<img id="hideItemButton" class="ezActionButton helpNote" help="HIDE" onclick="doHide();" style="width: 32px; height: 32px;" src="noeye.png" />
+					<img id="unhideItemButton" class="ezActionButton ezNoShow helpNote" help="UNHIDE" onclick="doUnHide();" style="width: 32px; height: 32px;" src="eye.png" />
+					<img class="ezActionButton helpNote" help="NORMAL COMMANDS" onclick="toggleMore(0);" style="width: 32px; height: 32px;" src="ellipsis_off.png" />
+				</div>
+			</div>
+		</div>
+
+	<!--
+		<div class="cabinetImageContainer">
+			<img id="cabinetImage" style="display: none;" src="cabinets/phaser_gun_coop.png" />
+		</div>
+	-->
+
+		<div class="typeIcon" style="position: absolute; right: 10; bottom: 10; z-index: 1;">
+			<table id="cabinetIconContainer">
+				<tr align="right" valign="bottom">
+					<td colspan="2">
+						<img id="cabinetImage" style="display: none;" src="" class="helpNote" help="CHANGE CABINET" />
+					</td>
+				</tr>
+				<tr align="right" valign="bottom">
+					<td>
+						<div id="noImage" style="display: none;">NO IMAGE</div>
+					</td>
+					<td>
+						<img id="typeIconImage" style="display: none;" src="types/default.png" />
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="endOfLine" id="leftEndOfLine" style="left: 0; -webkit-transform: translateY(-50%) rotate(-90deg);">FIRST</div>
+		<div class="endOfLine" id="rightEndOfLine" style="right: 0; -webkit-transform: translateY(-50%) rotate(90deg);">LAST</div>
+
+		<div class="scrollPanel helpNote" style="left: 0;" onclick="ScrollThumbs('right');" help="PREVIOUS"></div>
+
+		<div class="scrollPanel helpNote" style="right: 0;" onclick="ScrollThumbs('left');" help="NEXT"></div>
+	</div>
+
+	<div style="position: absolute; left: 10; bottom: 10; z-index: 1; pointer-events: none;">
+		<div class="aaHelpContainer regularHelp" allowMarkup="yes"></div>
+	</div>
+
+	<a href="javascript:location.reload();" class="devReload" style="z-index: 1000000;">&bull;&nbsp;</a>
+
+	<script>
+		function rollObjectItem()
+		{
+			if( !!!entityInfo )
+				return;
+
+			var itemId = '';
+			{
+				if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+					itemId = entityInfo.item.id;
+
+				if( itemId == '' )
+					return;
+
+				var item = aaapi.cmdEx("getLibraryItem", itemId);
+
+				var fileLocation = item.file;
+				if( fileLocation.length <= 3 || fileLocation[1] != ':' )
+					return;
+
+				// get the path
+				var foundLast = fileLocation.lastIndexOf("/");
+				if( foundLast < 0 )
+					foundLast = fileLocation.lastIndexOf("\\");
+
+				if( foundLast < 0 )
+					return;
+
+				var path = fileLocation.substring(0, foundLast + 1);
+				if( path.length <= 3 )
+					return;
+
+				var name = fileLocation.substring(foundLast+1);
+				if( name.length < 3 )
+					return;
+
+				// get the extension
+				foundLast = fileLocation.lastIndexOf(".");
+				if( foundLast < 0 )
+					return;
+
+				var fileExtension = fileLocation.substring(foundLast+1);
+				fileExtension = fileExtension.toLowerCase();
+
+				if( fileExtension.length < 1 )
+					return;
+
+				// Is this a video file?
+				var videoFileExtensions = ["avi", "mpg", "mp4", "mpeg", "vob", "mkv"];
+				var isVideoFile = (videoFileExtensions.indexOf(fileExtension) >= 0);
+
+				if( !isVideoFile )
+					return;
+
+				var response = aaapi.cmdEx('getDirectoryListing', path, 0, 500);
+				if( response.files.length > 0 )
+				{
+					var fileEntries = [];
+
+					// filter the results for only file extensions we care about.
+					var selfIndex = -1;
+					var fileEntry;
+					var testFileExtension;
+					for( var i = 0; i < response.files.length; i++ )
+					{
+						fileEntry = response.files[i];
+
+						// get its file extension						
+						foundLast = fileEntry.name.lastIndexOf(".");
+						if( foundLast < 0 )
+							continue;
+
+						testFileExtension = fileEntry.name.substring(foundLast+1);
+						testFileExtension = testFileExtension.toLowerCase();
+
+						if( videoFileExtensions.indexOf(testFileExtension) < 0 )
+							continue;
+
+						// Is this our current file?
+						if( fileEntry.name.toLowerCase() == name.toLowerCase() )
+							selfIndex = fileEntries.length;
+
+						// This is a valid file, add it to the array.
+						fileEntries.push(fileEntry);
+					}
+
+					// Now we only have valid file entries in the response.
+					//console.log("Valid siblings found: " + fileEntries.length);
+
+					var indexToUse = -1;
+					if( selfIndex >= 0 )
+					{
+						//console.log("Found us at index: " + selfIndex);
+
+						if( selfIndex+1 < fileEntries.length )
+							indexToUse = selfIndex + 1;
+						else
+							indexToUse = 0;
+					}
+					else
+						console.log("ERROR: Did not find the current item file in the file list.");
+
+					if( indexToUse < 0 )
+						return;
+
+					// We have a new file to use.  Does it exist already in our library?
+					var goodEntry = fileEntries[indexToUse];
+					var goodFileLocation = path + goodEntry.name;
+					//console.log("Next file is: " + goodFileLocation);
+
+					// first check if an item already exists for this file location
+					var goodItem = aaapi.cmdEx("findLibraryItem", "file", goodFileLocation);
+		 			if( goodItem )
+		 			{
+						//console.log("Found existing item for file!");
+						aaapi.cmd("addToastMessage", "Replaced w/ Rolled Item");
+						aaapi.cmd("assignObjectItem", entityInfo.object.id, goodItem.info.id);
+						aaapi.cmd("deactivateInputMode");
+					}
+					else
+					{
+						//console.log("No existing item found for file!");
+
+			 			goodItem = aaapi.cmdEx("createItem", "file", goodFileLocation);	
+
+			 			// item is created but NOT saved yet, time for last-minute changes!!
+						if( goodItem )
+						{
+							// auto-add some info for this item...
+
+							// create a title
+							var regEx = /(?=[^\\/]*$).+$/i;
+							var matches = regEx.exec(goodFileLocation);
+							if( matches )
+							{
+								var titleVal = matches[matches.length-1];
+								var foundDot = titleVal.lastIndexOf(".");
+								if( foundDot >= titleVal.length - 4)
+									titleVal = titleVal.substring(0, foundDot);
+
+								goodItem.title = titleVal;
+							}
+							else
+								goodItem.title = goodEntry.name;
+
+							// assign a type
+							//var allTypes = aaapi.cmdEx("getAllLibraryTypes");
+							//var goodTypeId = "";
+							//if( isVideoFile )
+							//{
+							//	var goodType = aaapi.cmdEx("findLibraryType", "title", "videos");
+							//	goodTypeId = JSON.stringify(goodType);
+							//}
+							var goodTypeId = (!!item.type) ? item.type : "";
+							goodItem.type = goodTypeId;
+
+				 			// save it then spawn it
+				 			//var params = ["title", goodItem.title, "type", goodItem.type];
+
+				 			// save it then spawn it
+				 			var params = [];
+
+							var itemKeys = Object.keys(goodItem);
+							for( var i = 0; i < itemKeys.length; i++ )
+							{
+								var x = itemKeys[i];
+
+								if( x === "info" )
+									continue;
+
+								params.push(x);
+								params.push(goodItem[x]);
+							}
+
+							if( aaapi.cmdEx("saveItem", goodItem.info.id, params) )
+							{
+								aaapi.cmd("addToastMessage", "Replaced w/ Newly Created Rolled Item");
+								aaapi.cmd("assignObjectItem", entityInfo.object.id, goodItem.info.id);
+								aaapi.cmd("deactivateInputMode");
+							}
+						}
+					}
+				}
+			}
+		}
+
+		function exportObject()
+		{
+			window.location = "asset://ui/export.html?entity=" + entityIndex + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html?entity=" + entityIndex + "';");
+		}
+
+		var g_thumbs = [];
+		var g_currentThumbIndex = -4;
+		var g_searchQueryId;
+		var frontPageElem = document.querySelector("#frontPage");
+		var searchResultsElem = document.querySelector("#searchResults");
+		var typeIconImageElem = document.querySelector("#typeIconImage");
+		var ezSearchBoxElem = document.querySelector("#ezSearchBox");
+		var ezSearchBoxFormElem = document.querySelector("#ezSearchBoxForm");	
+		var ezTypeBoxElem = document.querySelector("#ezTypeBox");
+		var ezInfoContainerElem = document.querySelector(".ezInfoContainer");
+		var noResultsElem = document.querySelector("#noResults");
+		var repeatSearchElem = document.querySelector("#repeatSearch");
+		var favoritesIconElem = document.querySelector("#favoritesIcon");
+		var ezWizardButtonsElem = document.querySelector(".ezWizardButtons");
+		//var wizardButtonElem = document.querySelector("#wizardButton");
+		var modalPanelElem = document.querySelector(".modalPanel");
+		var wizardNameElem = document.querySelector("#wizardName");
+		var ezInfoTitleElem = document.querySelector(".ezInfoTitle");
+		var screenMirrorButtonElem = document.querySelector("#screenMirrorButton");
+		var exportButtonElem = document.querySelector("#exportButton");
+		var cabinetIconContainerElem = document.querySelector("#cabinetIconContainer");
+		var cabinetImageElem = document.querySelector("#cabinetImage");
+		var noImageElem = document.querySelector("#noimage");
+		var leftEndOfLineElem = document.querySelector("#leftEndOfLine");
+		var rightEndOfLineElem = document.querySelector("#rightEndOfLine");
+		var ezHeaderCrumbsElem = document.querySelector(".ezHeaderCrumbs");
+		var aaHelpContainerElem = document.querySelector(".aaHelpContainer");
+		var wizardItemTitleElem = document.querySelector("#wizardItemTitle");
+		var wizardContextElem = document.querySelector("#aaWizardContext");
+		var enterToConfirmElem = document.querySelector("#enterToConfirm");
+		var textEnterToConfirmElem = document.querySelector("#textEnterToConfirm");
+		var wwwBoxElem = document.querySelector("#wwwBox");
+		var textBoxElem = document.querySelector("#textBox");
+		var fileBoxElem = document.querySelector("#fileBox");
+		var helpArrowElem = document.querySelector(".helpArrow");
+		var searchWizardInsteadElem = document.querySelector("#searchWizardInstead");
+		//cabinetIconContainerElem.style.display = "none";
+
+		var makeSlideshowButtonElem = document.querySelector("#makeSlideshowButton");
+		// if this item is to a local image file somewhere - show the option to transform it into a slideshow item. (by using the old file filed as the screen filed, and changing the new file field to be a slideshow.html?s=1f=X, where X = the old file field's folder path.
+		if( g_context == "items" && !!entityInfo )
+		{
+			var item;
+			if( !!entityInfo.item )
+				item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+
+			if( !!item &&  item.file[1] == ':' )
+			{
+				makeSlideshowButtonElem.item = item;
+				var imageExtensions = ['jpg', 'gif', 'jpeg', 'png'];
+				var lowerFile = item.file.toLowerCase();
+				var foundMatch = false;
+				for( var i = 0; i < imageExtensions.length; i++ )
+				{
+					if( lowerFile.indexOf('.' + imageExtensions[i]) == lowerFile.length - imageExtensions[i].length - 1 )
+					{
+						foundMatch = true;
+						break;
+					}
+				}
+
+				if( foundMatch )
+					makeSlideshowButtonElem.style.display = "inline-block";
+			}
+		}
+
+		function makeSlideshow()
+		{
+			var item = makeSlideshowButtonElem.item;
+			if( !!item &&  item.file[1] == ':' )
+			{
+				var imageExtensions = ['jpg', 'gif', 'jpeg', 'png'];
+				var lowerFile = item.file.toLowerCase();
+				var foundMatch = false;
+				for( var i = 0; i < imageExtensions.length; i++ )
+				{
+					if( lowerFile.indexOf('.' + imageExtensions[i]) == lowerFile.length - imageExtensions[i].length - 1 )
+					{
+						foundMatch = true;
+						break;
+					}
+				}
+
+				if( foundMatch )
+				{
+					var path = item.file;
+					var pathFound = path.lastIndexOf('/');
+					if( pathFound < 0 )
+						pathFound = path.lastIndexOf('\\');
+					if( pathFound > 0 )
+						path = path.substring(0, pathFound + 1);
+
+					// Now edit the item to use item.file as item.screen, and then set item.file to slideshow.html?s=1&f=item.file.
+					var title = "Slideshow: " + path;
+					var file = 'slideshow.html?s=1&f=' + path;
+					var screen = item.file;
+					var success = aaapi.cmdEx("updateItem", item.info.id, ['title', title, 'file', file, 'screen', screen]);
+					if( success )
+					{
+						item.title = title;
+						item.file = file;
+						item.screen = screen;
+						aaapi.cmd("addToastMessage", "Slideshow Created");
+						aaapi.cmd("deactivateInputMode");
+					}
+				}
+			}
+		}
+
+		function showQuestBuilder()
+		{
+			var modelId = '';
+			var itemId = '';
+			if( !!entityInfo )
+			{
+				if( !!entityInfo.model )
+					modelId = entityInfo.model.id;
+				
+				if( !!entityInfo.item && entityInfo.item.id != entityInfo.model.id )
+					itemId = entityInfo.item.id;
+				window.location = "questBuilderObject.html?objectId=" + encodeURIComponent(entityInfo.object.id);
+			}
+		}
+
+		function setMode(modeName)
+		{
+			g_context = modeName;
+
+			if( g_context === "items" )
+			{
+				searchWizardInsteadElem.style.display = "block";
+				cabinetIconContainerElem.style.display = "table";
+				document.querySelector("#wizardButton").style.display = "inline-block";
+
+				if( frontPageElem.style.display === "none" )
+				{
+					document.querySelector("#ezSearchTypeContainer").style.display = "inline-block";
+					document.querySelector("#wizardSearch").style.display = "inline-block";
+				}
+			}
+			else
+			{
+				ezTypeBoxElem.value = "";
+				searchWizardInsteadElem.style.display = "none";
+				cabinetIconContainerElem.style.display = "none";
+				document.querySelector("#wizardButton").style.display = "none";
+
+				if( frontPageElem.style.display === "none" )
+				{
+					document.querySelector("#ezSearchTypeContainer").style.display = "none";
+					document.querySelector("#wizardSearch").style.display = "none";
+				}
+			}
+
+			var oldActiveModeButton = document.querySelector(".activeModeButton");
+			oldActiveModeButton.classList.remove("activeModeButton");
+
+			var activeModeButton = document.querySelector(".modeButton[modeName='" + modeName + "']");
+			activeModeButton.classList.add("activeModeButton");
+
+			//if( ezSearchBoxElem.value !== "" || frontPageElem.style.display === "none")
+			//{
+				helpArrowElem.style.display = "none";
+				submitSearch();
+			//}
+		}
+
+		if( !!!entityInfo )
+		{
+			helpArrowElem.style.display = "block";
+			helpArrowElem.leftA = "250px";
+			helpArrowElem.leftB = "270px";
+			helpArrowElem.count = 0;
+			helpArrowElem.handle = setInterval(function()
+			{
+				if( this.style.display === "none" )
+				{
+					clearInterval(this.handle);
+					delete this.handle;
+					return;
+				}
+
+				if( this.count === -1 )
+				{
+					var elem = this.querySelector(".arrowContent");
+					elem.innerHTML = "ADD NEW ITEMS";
+					elem.style.opacity = 1;
+				}
+
+				if( this.style.left !== this.leftA )
+				{
+					this.style.left = this.leftA;
+					this.count++;
+				}
+				else
+					this.style.left = this.leftB;
+
+				if( this.count >= 4 )
+				{
+					if( this.style.top === "62%" )
+					{
+						delete this.handle;
+						this.style.display = "none";
+					}
+					else
+					{
+						this.querySelector(".arrowContent").style.opacity = 0;//innerHTML = ""
+						this.style.left = this.leftB;
+						this.style.top = "62%";
+						this.count = -1;
+					}
+				}
+			}.bind(helpArrowElem), 500);
+
+			setTimeout(function()
+			{
+				if( this.style.left !== this.leftA )
+					this.style.left = this.leftA;
+				else
+					this.style.left = this.leftB;
+			}.bind(helpArrowElem), 1);
+		}
+		else
+		{
+			if( !!entityInfo.model && entityInfo.model.id === "" )
+			{
+				//document.querySelector("#hideItemButton").style.display = "none";
+				document.querySelector("#hideItemButton").classList.add("ezNoShow");
+				//document.querySelector("#flagVehicleButton").classList.add("ezNoShow");
+			}
+			else if( (!!entityInfo.item && !!arcadeHud.hiddenItems[entityInfo.item.id]) || (!!entityInfo.model && !!arcadeHud.hiddenItems[entityInfo.model.id]) )
+			{
+				document.querySelector("#hideItemButton").classList.add("ezNoShow");
+				document.querySelector("#unhideItemButton").classList.remove("ezNoShow");	
+			}
+
+			var modelId = (!!entityInfo && !!entityInfo.model && !!entityInfo.model.id) ? entityInfo.model.id : "";
+			var itemId = (!!entityInfo.item && entityInfo.item.id != entityInfo.model.id) ? entityInfo.item.id : "";
+			if( modelId != '' && (itemId == modelId || itemId == '') )
+			{
+				console.log(modelId);
+				console.log(JSON.stringify(vehiclePresets[modelId]));
+				if( !!vehiclePresets[modelId] )
+				{
+					document.querySelector("#flagVehicleButton").classList.add("ezNoShow");
+					document.querySelector("#unflagVehicleButton").classList.remove("ezNoShow");
+				}
+				else
+				{
+				console.log("eh???");
+					document.querySelector("#unflagVehicleButton").classList.add("ezNoShow");
+					document.querySelector("#flagVehicleButton").classList.remove("ezNoShow");
+				}
+			}
+		}
+
+		function doUnHide()
+		{
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+			if( !!arcadeHud.hiddenItems[item.info.id] )
+			{
+				delete arcadeHud.hiddenItems[item.info.id];
+				localStorage.setItem("hiddenItems", JSON.stringify(arcadeHud.hiddenItems));
+				location.reload();
+			}
+		}
+
+		wwwBoxElem.parentNode.addEventListener("submit", function(e)
+		{
+			e.preventDefault();
+			wwwDo();
+			return false;
+		}, false);
+
+		wwwBoxElem.addEventListener("input", function()
+		{
+			if( this.value !== "" )
+				enterToConfirmElem.style.visibility = "visible";
+			else
+				enterToConfirmElem.style.visibility = "hidden";
+		}.bind(wwwBoxElem), false);
+
+		textBoxElem.parentNode.addEventListener("submit", function(e)
+		{
+			e.preventDefault();
+			textDo();
+			return false;
+		}, false);
+
+		textBoxElem.addEventListener("input", function()
+		{
+			if( this.value !== "" )
+				textEnterToConfirmElem.style.visibility = "visible";
+			else
+				textEnterToConfirmElem.style.visibility = "hidden";
+		}.bind(textBoxElem), false);
+
+		if( !!!entityInfo || (!!entityInfo.model && entityInfo.model.id === "") )
+		{
+			var wizardButtonElem;
+			var scraper;
+			for( var i = 0; i < sortedScrapers.length; i++ )
+			{
+				scraper = sortedScrapers[i];
+				if( !scraper.hasLogo || !!scraper.fields && Object.keys(scraper.fields).length === 0 )
+					continue;
+
+				wizardButtonElem = document.createElement("img");
+				wizardButtonElem.scraper = scraper;
+				wizardButtonElem.className = "wizardButton helpNote";
+				wizardButtonElem.addEventListener("load", function()
+				{
+					this.style.display = "inline-block";
+				}.bind(wizardButtonElem), false);
+				wizardButtonElem.src = "scrapers/" + scraper.id + ".png";
+				wizardButtonElem.setAttribute("help","<div class='scraperHelpTitle'>" + scraper.title + "</div><div class='scraperHelpSum'>" + scraper.summary + "</div>");
+				arcadeHud.assignHelp(wizardButtonElem);
+				wizardButtonElem.addEventListener("click", function()
+				{
+					var scraper = this.scraper;
+					doScrape(scraper, false);
+				}.bind(wizardButtonElem), false);
+				wizardContextElem.appendChild(wizardButtonElem);
+			}
+
+			if( true || g_searchTerm === "" )
+			{
+				ezHeaderCrumbsElem.classList.add("frontPageCrumbs");
+				document.querySelector("#ezSearchTypeContainer").style.display = "none";
+				document.querySelector("#wizardSearch").style.display = "none";
+				
+				ezSearchBoxElem.focus();
+				setTimeout(function()
+				{
+					ezSearchBoxElem.select();
+				}, 1);
+
+				cabinetImageElem.addEventListener("click", function(e)
+				{
+					var ezThumbBigElem = document.querySelector(".ezThumbBig");
+					if( !!!ezThumbBigElem )
+						return;
+
+					var item = ezThumbBigElem.item;
+
+					var modelIndex = e.target.modelIndex;
+					if( typeof modelIndex === "undefined" )
+						modelIndex = -1;
+
+					// yadda
+					if( modelIndex === -1 )
+					{
+						var modelId = g_recentModelId;
+						if( !!modelId && modelId !== "" && modelId !== e.target.modelId )
+							updateCabinetIcon(modelId);
+						else
+							modelIndex++;
+					}
+
+					if( modelIndex >= 0 )
+					{
+						var cabinets = g_autoCabinets[g_typeIcons[typeIconImageElem.typeTitle]];
+
+						if( !!!cabinets )
+							cabinets = g_autoCabinets["types/default.png"];
+
+						if( modelIndex < cabinets.length )
+						{
+							var modelId = cabinets[modelIndex];
+							updateCabinetIcon(modelId);
+						}
+						else
+						{
+							//console.log("Reached end of cabinet list.");
+							doUpdateCabinetIcon(item);
+							modelIndex = e.target.modelIndex;
+							modelIndex--;
+						}
+					}
+
+					modelIndex++;
+					e.target.modelIndex = modelIndex;
+				}, false);
+			}
+		}
+		else
+			cabinetImageElem.style.pointerEvents = "none";
+
+		cabinetImageElem.addEventListener("load", function(e)
+		{
+			e.target.style.display = "block";
+			clearTimeout(cabinetImageElem.handle);
+		}, false);
+
+		function cloneObject()
+		{
+			var oldId;
+			var isItem;
+			if(!!entityInfo.item)
+			{
+				oldId = entityInfo.item.id;
+				isItem = true;
+			}
+			else
+			{
+				oldId = entityInfo.model.id;
+				isItem = false;
+			}
+
+			var oldTransform = localStorage.getItem("trans" + oldId);
+			if( !!!oldTransform )
+				oldTransform = {};
+			else
+				oldTransform = JSON.parse(oldTransform);
+
+			//var modelId = oldTransform.modelId;
+			//if( typeof modelId === 'undefined' )
+			//	modelId = "";
+
+			//var scale = oldTransform.scale;
+			//if( typeof scale === 'undefined' )
+			//	scale = "1.0";
+
+			var scale = entityInfo.object.scale;
+
+			var pitch = oldTransform.pitch;
+			if( typeof pitch === 'undefined' )
+				pitch = "0";
+
+			var yaw = oldTransform.yaw;
+			if( typeof yaw === 'undefined' )
+				yaw = "0";
+			
+			var roll = oldTransform.roll;
+			if( typeof roll === 'undefined' )
+				roll = "0";
+			
+			var offX = oldTransform.offX;
+			if( typeof offX === 'undefined' )
+				offX = "0";
+			
+			var offY = oldTransform.offY;
+			if( typeof offY === 'undefined' )
+				offY = "0";
+			
+			var offZ = oldTransform.offZ;
+			if( typeof offZ === 'undefined' )
+				offZ = "0";
+				
+			var anim = oldTransform.anim;
+			if( typeof anim === 'undefined' )
+				anim = "";
+				
+			var body = oldTransform.body;
+			if( typeof body === 'undefined' )
+				body = "0";
+				
+			var skin = oldTransform.skin;
+			if( typeof skin === 'undefined' )
+				skin = "0";
+
+			if( isItem )
+			{
+				var modelId = (!!entityInfo.model && !!entityInfo.model.id) ? entityInfo.model.id : "";
+				aaapi.cmd("spawnEntry", "items", oldId, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ, anim, body, skin);
+			}
+			else
+			{
+				aaapi.cmd("spawnEntry", "models", oldId, "", "", "", scale, pitch, yaw, roll, offX, offY, offZ, anim, body, skin);
+			}
+		}
+
+		function wwwDo()
+		{
+			if( wwwBoxElem.value !== "" )
+				createShortcut(wwwBoxElem.value);
+			else
+				showMenu('www');
+		}
+
+		function textDo()
+		{
+			if( textBoxElem.value !== "" )
+			{
+				var extraModelParams = (document.querySelector('#text3dBox').checked) ? '&m=1' : '';
+				var url = "http://text.txt/?txt=" + encodeURIComponent(textBoxElem.value) + extraModelParams;
+				createShortcut(url);
+			}
+			else
+				showMenu('text');
+		}
+
+		function showSteamLibrary()
+		{
+			ezSearchBoxElem.value = "";
+
+			var foundType = false;
+			for( var i = 0; i < ezTypeBoxElem.options.length; i++ )
+			{
+				if( ezTypeBoxElem.options[i].text === "pc" )
+				{
+					ezTypeBoxElem.value = ezTypeBoxElem.options[i].value;
+					foundType = true;
+					break;
+				}
+			}
+
+			if( !foundType )
+				ezTypeBoxElem.value = ezTypeBoxElem.options[0].value;
+
+			submitSearch();
+		}
+
+		function steamStoreWizard()
+		{
+			//arcadeHud.metaSearch(item.info.id, "all", "steamstore", ezTypeBoxElem.value);
+
+			var dummy = {"itemId": "", "field": "all", "scraperId": "steamstore", "term": ezSearchBoxElem.value};
+			
+			setTimeout(function()
+			{
+				arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
+				document.location = "asset://ui/overlay.html";
+			}.bind(dummy), 10);
+		}
+
+		function searchWithWizard()
+		{
+			showWizards("all", undefined, false);
+		}
+
+		function showMenu(menuId)
+		{
+			helpArrowElem.style.display = "none";
+
+			var activeMenuElem = document.querySelector(".menuContainer[menuid='" + menuId + "']");
+
+			var isHide = activeMenuElem.classList.contains("activeMenuContainer");
+
+			if( isHide )
+				activeMenuElem.classList.remove("activeMenuContainer");
+			else
+				activeMenuElem.classList.add("activeMenuContainer");
+
+			var menuElems = document.querySelectorAll(".menuContainer");
+			for( var i = 0; i < menuElems.length; i++ )
+			{
+				if( menuElems[i] === activeMenuElem )
+					continue;
+
+				if( isHide )
+					menuElems[i].classList.remove("hiddenMenuContainer");
+				else
+					menuElems[i].classList.add("hiddenMenuContainer");
+			}
+
+			if( menuId === "internet" )
+			{
+				var inputElem = (isHide) ? ezSearchBoxElem : wwwBoxElem;
+
+				if( inputElem !== wwwBoxElem && isHide )
+				{
+					wwwBoxElem.value = "";
+					enterToConfirmElem.style.visibility = "hidden";
+				}
+				else if( inputElem === wwwBoxElem && !isHide )
+				{
+					var lowerTest = ezSearchBoxElem.value.toLowerCase();
+					if( lowerTest.indexOf("http:") === 0 || lowerTest.indexOf("https:") === 0 || lowerTest.indexOf("www.") === 0 )
+					{
+						wwwBoxElem.value =  ezSearchBoxElem.value;
+						enterToConfirmElem.style.visibility = "visible";
+					}
+				}
+
+				inputElem.focus();
+				setTimeout(function(e)
+				{
+					this.select(wwwBoxElem);
+				}.bind(inputElem), false);
+			}
+
+			if( menuId === "text" )
+			{
+				var inputElem = (isHide) ? ezSearchBoxElem : textBoxElem;
+
+				if( inputElem !== textBoxElem && isHide )
+				{
+					textBoxElem.value = "";
+					textEnterToConfirmElem.style.visibility = "hidden";
+				}
+				else if( inputElem === textBoxElem && !isHide )
+				{
+					if( ezSearchBoxElem.value !== "" )
+					{
+						textBoxElem.value = ezSearchBoxElem.value;
+						textEnterToConfirmElem.style.visibility = "visible";
+					}
+				}
+
+				inputElem.focus();
+				setTimeout(function(e)
+				{
+					this.select(textBoxElem);
+				}.bind(inputElem), 0);
+			}
+
+			if( menuId === "file" )
+			{
+				if( !isHide )
+				{
+					browse(fileBoxElem);
+				}
+			}
+		}
+
+		function createShortcut(val)
+		{
+			var tunedVal = val;
+			if( tunedVal.indexOf("https") === 0 )
+				tunedVal = "http" + tunedVal.substring(5);
+
+			// first, check if an item that matches this one already exists...
+ 			var item = aaapi.cmdEx("findLibraryItem", "file", val);
+ 			if( !item )
+ 				item = aaapi.cmdEx("findLibraryItem", "refrence", val);
+
+			if( !item )
+				item = aaapi.cmdEx("findLibraryItem", "file", tunedVal);
+			
+ 			if( !item )
+ 				item = aaapi.cmdEx("findLibraryItem", "refrence", tunedVal);
+
+ 			if( item )
+ 			{
+ 				aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+
+				// if this is a 3d text item, set the next cabinet model
+				if( item.file.indexOf("http://text.txt/") == 0 && !!arcadeHud.getParameterByName('m', item.file) )
+				{
+					var clearModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/clear.mdl');
+					if( !!clearModel )
+						aaapi.cmd("consoleCommand", "recent_model_id \"" + clearModel.info.id + "\"");
+				}
+
+ 				aaapi.cmd("spawnItem", item.info.id);
+ 			}
+ 			else
+ 			{
+				if( val.toLowerCase().indexOf(".mdl") !== val.length-4 )
+				{
+	 				aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");			
+
+					// if this is a 3d text item, set the next cabinet model
+					if( val.indexOf("http://text.txt/") == 0 && !!arcadeHud.getParameterByName('m', val) )
+					{
+						var clearModel = aaapi.cmdEx('findLibraryModel', 'file', 'models/cabinets/clear.mdl');
+						if( !!clearModel )
+							aaapi.cmd("consoleCommand", "recent_model_id \"" + clearModel.info.id + "\"");
+					}
+
+					// start the wizard for creating a new item
+					createNewItemWizard(val);
+				}
+				else
+				{
+	 				aaapi.cmd("setLibraryBrowserContext", "models", "", "", "");
+					spawnModelIntoWorld(val);
+				}
+			}
+		}
+
+		function createNewItemWizard(val)
+		{
+			document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(val);
+		}
+
+
+		function spawnModelIntoWorld(chosenFile)
+		{
+			var relativeFile = aaapi.cmdEx("getRelativeAssetPath", chosenFile);
+			if( chosenFile === relativeFile )
+			{
+				console.log("ERROR: MDL must be in a mounted content folder.\n");
+				//createModalAlert("Oops!", "The MDL file must be in a mounted content folder.", "");
+				chosenFile = "";
+			}
+			else
+				chosenFile = relativeFile;
+
+			if( chosenFile !== "" )
+			{
+				// first, check if an item that matches this one already exists...
+				var model = aaapi.cmdEx("findLibraryModel", "file", chosenFile);
+
+	 			if( !model )
+	 				model = aaapi.cmdEx("createModel", "file", chosenFile);
+
+	 			if( model )
+	 			{
+	 				//aaapi.cmd("setLibraryBrowserContext", "models", model.info.id, "", "");
+	 				//aaapi.cmd("spawnEntry", model.info.id);
+	 				var oldTransform = localStorage.getItem("trans" + model.info.id);
+				
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					var modelId = "";
+					//var modelId = oldTransform.modelId;
+					//if( typeof modelId === 'undefined' )
+					//	modelId = "";
+
+					var scale = oldTransform.scale;
+					if( typeof scale === 'undefined' )
+						scale = "1.0";
+
+					var pitch = oldTransform.pitch;
+					if( typeof pitch === 'undefined' )
+						pitch = "0";
+
+					var yaw = oldTransform.yaw;
+					if( typeof yaw === 'undefined' )
+						yaw = "0";
+					
+					var roll = oldTransform.roll;
+					if( typeof roll === 'undefined' )
+						roll = "0";
+					
+					var offX = oldTransform.offX;
+					if( typeof offX === 'undefined' )
+						offX = "0";
+					
+					var offY = oldTransform.offY;
+					if( typeof offY === 'undefined' )
+						offY = "0";
+					
+					var offZ = oldTransform.offZ;
+					if( typeof offZ === 'undefined' )
+						offZ = "0";
+				
+					var anim = oldTransform.anim;
+					if( typeof anim === 'undefined' )
+						anim = "";
+				
+					var body = oldTransform.body;
+					if( typeof body === 'undefined' )
+						body = "0";
+						
+					var skin = oldTransform.skin;
+					if( typeof skin === 'undefined' )
+						skin = "0";
+
+					aaapi.cmd("spawnEntry", "models", model.info.id, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ, anim, body, skin);
+	 			}
+			}
+		}
+
+		function browse(inputElem)
+		{
+			arcadeHud.browseForFile(function(chosenFile)
+			{
+				if(chosenFile !== "")
+				{
+					if( chosenFile.toLowerCase().indexOf(".mdl") !== chosenFile.length-4 )
+					{
+						this.value = chosenFile;
+						createShortcut(this.value);
+					}
+					else
+					{
+						spawnModelIntoWorld(chosenFile);
+					}
+				}
+				else
+				{
+					showMenu('file');
+				}
+			}.bind(inputElem));
+		}
+
+		function getModelThumb(model)
+		{
+			var modelThumb;
+			if(!!model.screen && model.screen !== "")
+				modelThumb = model.screen;
+			else
+			{
+				modelThumb = model.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+				var found = modelThumb.lastIndexOf("/");
+				if( found < 0 )
+					found = modelThumb.lastIndexOf("\\");
+
+				if( found >= 0 )
+					modelThumb = modelThumb.substring(found+1);
+
+				found = modelThumb.lastIndexOf(".");
+				if( found >= 0 )
+					modelThumb = modelThumb.substring(0, found);
+
+				modelThumb = "cabinets/" + modelThumb + ".png";
+			}
+
+			return modelThumb;
+		}
+
+		// cache these sons of bitches, cuz we are in item mode anyways, we are not changing model properties.
+		var g_cachedLibraryModels = {};
+		function fetchModel(modelId)
+		{
+			var model = g_cachedLibraryModels[modelId];
+			if( !!!model )
+				model = aaapi.cmdEx("getLibraryModel", modelId);
+
+			if( !!model )
+				g_cachedLibraryModels[modelId] = model;
+
+			return model;
+		}
+
+		function updateCabinetIcon(modelId)
+		{
+			var modelThumb;
+			if( !!modelId && modelId !== "" )
+			{
+				var model = fetchModel(modelId);
+				modelThumb = getModelThumb(model);
+				cabinetImageElem.modelId = modelId;
+			}
+
+			cabinetImageElem.src = "";
+			cabinetImageElem.style.display = "none";
+			if( !!modelThumb )
+				cabinetImageElem.src = modelThumb;
+
+			if( !!cabinetImageElem.handle )
+				clearTimeout(cabinetImageElem.handle);
+
+			cabinetImageElem.handle = setTimeout(function()
+			{
+				cabinetImageElem.src = "noimageicon.png";
+			}, 100);
+			//else
+			//	cabinetImageElem.src = "";
+		}
+
+		if( !!entityInfo )
+		{
+			if( g_context === "items" && !!entityInfo.model )
+				updateCabinetIcon(entityInfo.model.id);
+			else
+			{
+				cabinetIconContainerElem.style.display = "none";
+			}
+
+			document.querySelector(".ezSearchContainer").parentNode.classList.add("ezNoShow");
+
+			if( !!entityInfo.model && entityInfo.model.id !== "" )
+				document.querySelector(".ezEntityButtons").style.display = "inline-block";
+
+			if( g_context === "items" )
+			{
+				if( entityInfo.object.slave == 1 )
+				{
+					screenMirrorButtonElem.src = "unscreenmirror.png";
+					screenMirrorButtonElem.setAttribute("help", "DON'T MIRROR VIDEO TO OBJECT");
+				}
+			}
+			else
+			{
+				screenMirrorButtonElem.style.display = "none";
+				exportButtonElem.style.display = "none";
+			}
+
+			var endOfLineElems = document.querySelectorAll(".endOfLine");
+			for( var i = 0 ; i < endOfLineElems.length; i++ )
+				endOfLineElems[i].classList.add("ezNoShow");
+
+			var scrollPanelElems = document.querySelectorAll(".scrollPanel");
+			for( var i = 0 ; i < scrollPanelElems.length; i++ )
+				scrollPanelElems[i].classList.add("ezNoShow");
+		}
+		/*
+		var wizardPreviewElem = document.querySelector("#wizardPreview");
+		wizardPreviewElem.parentNode.addEventListener("click", function(e)
+		{
+			showWizards(this.getAttribute("field"));
+		}.bind(wizardPreviewElem), false);*/
+
+		//var wizardMarqueeBoxElem = document.querySelector("#wizardMarquee");
+
+		var modalSlateElem = document.querySelector("#modalSlate");
+		modalSlateElem.addEventListener("click", function(e)
+		{
+			if( e.target.classList.contains("closeModalPanel") )
+				this.style.display = "none";
+		}.bind(modalSlateElem), false);
+
+		var ezTitleListContainerElem = document.querySelector(".ezTitleListContainer");
+
+		// holding donw click on favorites stuff
+		var g_favoritesIgnoreClick = false;
+		var g_favoritesMouseTimerHandle;
+		function onMouseDownFavorites(e)
+		{
+			g_favoritesMouseTimerHandle = setTimeout(onFavoritesTimeout, 500);
+		}
+
+		function onFavoritesTimeout()
+		{
+			g_favoritesIgnoreClick = true;
+			g_favoritesMouseTimerHandle = null;
+
+			var slate = document.createElement('div');
+			slate.id = 'whatmeow';
+			slate.addEventListener('click', function(e)
+			{
+				if(e.target == slate)
+					slate.parentNode.removeChild(slate);
+			});
+			slate.style.cssText = "position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.98); z-index: 999999;";
+
+			var table = document.createElement('table');
+			table.style.cssText = "width: 100%; height: 100%; pointer-events: none;";
+			var row = document.createElement('tr');
+			var cel = document.createElement('td');
+			cel.align = 'center';
+			cel.valign = 'middle';
+			table.appendChild(row);
+			row.appendChild(cel);
+			slate.appendChild(table);
+
+			var container = document.createElement('div');
+			container.style.cssText = "display: inline-block; background-color: rgb(0, 0, 0); border: 1px solid white; border-radius: 16px; padding: 24px; pointer-events: all;";
+
+			var caption = document.createElement('div');
+			caption.style.cssText = "font-size: 32px; font-weight: bold; font-family: Arial;";
+			caption.innerHTML = "Send To Favorites";
+			container.appendChild(caption);
+
+			var favoritesSelectBox = document.createElement('select');
+			favoritesSelectBox.style.cssText = "font-size: 24px; min-width: 300px;";
+			container.appendChild(favoritesSelectBox);
+			cel.appendChild(container);
+
+			// add in all the lists to the box
+			var option, list;
+			for( var listId in arcadeHud.favoritesLists )
+			{
+				list = arcadeHud.favoritesLists[listId];
+				option = document.createElement("option");
+				option.value = listId;
+				option.text = list.title;
+
+				if( listId === arcadeHud.activeFavoritesList )
+					option.selected = true;
+
+				favoritesSelectBox.appendChild(option);
+			}
+
+			// TODO: Add a "change" listener on the selectbox and perform the required logic when the user chooses something from it.
+			favoritesSelectBox.addEventListener('change', function(e)
+			{
+				var selectedListId = favoritesSelectBox.options[favoritesSelectBox.selectedIndex].value;
+
+				var ezThumbBigElem = document.querySelector(".ezThumbBig");
+				var item = ezThumbBigElem.item;
+
+				var cat = g_context.substring(0, g_context.length-1);
+				var matchId = item.info.id;
+				var alreadyExists = false;
+				var favorites = arcadeHud.favoritesLists[selectedListId];//arcadeHud.favorites;
+				if( !!!favorites )
+					return;
+				else
+					arcadeHud.setActiveFavoritesList(selectedListId);
+
+				for( var i = 0; i < favorites.length; i++ )
+				{
+					if( favorites[i][cat] === matchId )
+					{
+						// Remove this entry
+						favorites.splice(i, 1);
+						arcadeHud.saveFavoritesLists();
+						//localStorage.setItem("myBackpack", JSON.stringify(arcadeHud.favorites));
+						aaapi.cmd("addToastMessage", "Removed From Favorites");
+
+						favoritesIconElem.src = "favoriteicon.png";
+						favoritesIconElem.setAttribute("help", "FAVORITE");
+
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var backpackEntry = {};
+					backpackEntry[cat] = matchId;
+					arcadeHud.favorites.unshift(backpackEntry);
+					//localStorage.setItem("myBackpack", JSON.stringify(arcadeHud.favorites));
+					arcadeHud.saveFavoritesLists();
+					aaapi.cmd("addToastMessage", "Added To Favorites");
+				}
+				else
+				{
+					aaapi.cmd("addToastMessage", "Already Favorited");
+				}
+
+				doClose();
+			});
+
+			document.body.appendChild(slate);
+		}
+
+		function onClickFavorites(e)
+		{
+			clearTimeout(g_favoritesMouseTimerHandle);
+			g_favoritesMouseTimerHandle = null;
+		}
+
+		favoritesIconElem.addEventListener("mousedown", onMouseDownFavorites, false);
+		favoritesIconElem.addEventListener("click", onClickFavorites, false);
+
+		var g_mouseDownHoldHandle;
+		function onMouseDownHold()
+		{
+			var event;
+			event = document.createEvent('MouseEvents');
+			event.initMouseEvent('mousedown', true, true, window);
+			this.dispatchEvent(event);
+			g_mouseDownHoldHandle = undefined;
+		}
+
+		var wizardBoxElems = document.querySelectorAll(".wizardBox");
+		for( var i = 0; i < wizardBoxElems.length; i++ )
+		{
+			wizardBoxElem = wizardBoxElems[i];
+			wizardBoxElem.parentNode.addEventListener("mousedown", function(e)
+			{
+				if( !!g_mouseDownHoldHandle )
+					return;
+
+				g_mouseDownHoldHandle = setTimeout(onMouseDownHold.bind(this), 500);
+			}.bind(wizardBoxElem), false);
+
+			wizardBoxElem.parentNode.addEventListener("click", function(e)
+			{
+				clearTimeout(g_mouseDownHoldHandle);
+				g_mouseDownHoldHandle = undefined;
+			}, false);
+
+			wizardBoxElem.addEventListener("change", function(e)
+			{
+				clearTimeout(g_mouseDownHoldHandle);
+				g_mouseDownHoldHandle = undefined;
+				showWizards(this.parentNode.getAttribute("field"), this.value, true);
+			}.bind(wizardBoxElem), false);
+		}
+
+		// populate the type box
+		var typeKeys = Object.keys(g_types);
+		var option, type;
+		for( var i = 0; i < typeKeys.length; i++ )
+		{
+			type = g_types[typeKeys[i]];
+			option = document.createElement("option");
+			option.value = type.info.id;
+			option.text = type.title;
+			ezTypeBoxElem.appendChild(option);
+		}
+
+		if( !!libraryBrowserContext && libraryBrowserContext.category === "items" )
+		{
+			ezSearchBoxElem.value = libraryBrowserContext.search;
+			ezTypeBox.value = libraryBrowserContext.filter;
+		}
+
+		ezTypeBoxElem.addEventListener("change", function(e)
+		{
+			document.activeElement.blur();
+
+			//var option = e.target.options[e.target.selectedIndex];
+			ResetResults();
+		}, false);
+
+		function submitSearch()
+		{
+			if( frontPageElem.style.display !== "none" )
+			{
+				// are we actually searching or are we pasting in a URL to spawn?
+				var term = ezSearchBoxElem.value;
+				if( term.toLowerCase().indexOf("http://") === 0 || term.toLowerCase().indexOf("https://") === 0 || term.toLowerCase().indexOf("www.") === 0 )
+				{
+					aaapi.cmd("setLibraryBrowserContext", "items", "", "", "");
+					document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(term);
+					return;
+				}
+				else if( (term.indexOf(":/") === 1 || term.indexOf(":\\") === 1) && "abcdefghijklmnopqrstuvwxyz".indexOf(term.toLowerCase()[0]) >= 0 )
+				{
+					if(term.toLowerCase().indexOf(".mdl") !== term.length-4)
+					{
+						aaapi.cmd("setLibraryBrowserContext", "models", "", "", "");
+						document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(term);
+					}
+					return;
+				}
+
+				frontPageElem.style.display = "none";
+				aaHelpContainerElem.classList.remove("createSlateHelp");
+				aaHelpContainerElem.classList.add("regularHelp");
+				searchResultsElem.style.display = "block";
+
+				if( g_context === "items" )
+				{
+					document.querySelector("#ezSearchTypeContainer").style.display = "inline-block";
+					document.querySelector("#wizardSearch").style.display = "inline-block";
+				}
+
+				ezHeaderCrumbsElem.classList.remove("frontPageCrumbs");
+				document.querySelector("#backbutton").style.display = "inline-block";
+
+				var sideLists = document.querySelectorAll(".sideList");
+				for( var i = 0; i < sideLists.length; i++ )
+				{
+					sideLists[i].parentNode.removeChild(sideLists[i]);
+				}
+			}
+
+			document.activeElement.blur();
+			ResetResults();
+		}
+
+		ezSearchBoxFormElem.addEventListener("submit", function(e)
+		{
+			e.preventDefault();
+			helpArrowElem.style.display = "none";
+			submitSearch();
+			return false;
+		}, false);
+
+		ezSearchBoxElem.addEventListener("focus", function(e)
+		{
+			e.target.select();
+			e.preventDefault();
+			return false;
+		}, false);
+
+		ezSearchBoxElem.addEventListener("mouseup", function(e)
+		{
+			e.preventDefault();
+			return false;
+		}, false);
+
+		function ResetResults()
+		{
+			if( !!propListTileHandle )
+				clearInterval(propListTileHandle);
+
+			ezTitleListContainerElem.innerHTML = "";
+
+			typeIconImageElem.style.display = "none";
+
+			g_currentThumbIndex = -4;
+			g_thumbs = [];
+			var thumbElems = document.querySelectorAll(".ezThumb");
+			for( var i = 0; i < thumbElems.length; i++ )
+				thumbElems[i].parentNode.removeChild(thumbElems[i]);
+
+			var type = ezTypeBox.options[ezTypeBox.selectedIndex].value;
+			aaapi.cmd("setLibraryBrowserContext", g_context, "", ezSearchBoxElem.value, type);
+
+			if( !!g_thumbDelayHandle )
+				clearTimeout(g_thumbDelayHandle);
+
+			g_thumbDelayRequests = 0;
+			g_thumbDelay = 1;
+			g_thumbDelayHandle = undefined;
+
+			if( !!g_setBackgroundHandle )
+				clearTimeout(g_setBackgroundHandle);
+
+			backgroundContainerElem.style.display = "none";
+			g_setBackgroundHandle = undefined;
+
+			DoSearch();
+		}
+
+		// init
+		if( !!entityInfo )// || g_searchTerm !== "" )
+		{
+			//if( entityInfo.model.id !== "" )
+			//{
+			//	aaHelpContainerElem.classList.add("regularHelp");
+			//	aaHelpContainerElem.classList.add("createSlateHelp");
+			//}
+
+			setTimeout(function()
+			{
+				//frontPageElem.style.display = "none";
+				//searchResultsElem.style.display = "block";
+				frontPageElem.style.display = "none";
+				aaHelpContainerElem.classList.remove("createSlateHelp");
+				aaHelpContainerElem.classList.add("regularHelp");
+				searchResultsElem.style.display = "block";
+				document.querySelector("#ezSearchTypeContainer").style.display = "inline-block";
+				document.querySelector("#wizardSearch").style.display = "inline-block";
+				ezHeaderCrumbsElem.classList.remove("frontPageCrumbs");
+				DoSearch();
+			}, 1);
+		}
+		else
+		{
+			aaHelpContainerElem.classList.add("regularHelp");
+			aaHelpContainerElem.classList.add("createSlateHelp");
+
+			if( !!libraryBrowserContext && libraryBrowserContext.category === "items" )
+			{
+				ezSearchBoxElem.value = libraryBrowserContext.search;
+				ezTypeBox.value = libraryBrowserContext.filter;
+			}
+		}
+
+		//console.log("init... PSYCH!");
+
+		//function goback()
+		//{
+		//	eval(uiBack);
+		//}
+
+		function DoSwitchEZModes()
+		{
+			localStorage.setItem("ezmode", "0");
+
+			if( !!!entityInfo || entityIndex < 0)
+				window.location ="libraryBrowser.html";
+			else
+				window.location = "buildModeContext.html?entity=" + entityIndex;
+		}
+
+		function repeatSearch()
+		{
+			ezTypeBoxElem.value = "";
+			ResetResults();
+		}
+
+		function DoSearch()
+		{
+			g_searchTerm = ezSearchBoxElem.value;
+			ScrollThumbs("left");
+		}
+
+		var scrollRepeaterHandle;
+		document.addEventListener("keydown", function(e)
+		{
+			if( document.activeElement.tagName === "INPUT" ||  modalSlateElem.style.display === "block" )
+				return;
+
+			var keyCode = e.keyCode;
+			if( keyCode === 39 || keyCode === 38 || keyCode === 87 || keyCode === 68 )
+			{
+				ScrollThumbs("left");
+
+				if( !!scrollRepeaterHandle )
+					clearInterval(scrollRepeaterHandle);
+
+				scrollRepeaterHandle = setInterval(function()
+				{
+					ScrollThumbs("left");
+				}, 500);
+			}
+			else if( keyCode === 37 || keyCode === 40 || keyCode === 83 || keyCode === 65 )
+			{
+				ScrollThumbs("right");
+
+				if( !!scrollRepeaterHandle )
+					clearInterval(scrollRepeaterHandle);
+				
+				scrollRepeaterHandle = setInterval(function()
+				{
+					ScrollThumbs("right");
+				}, 550);
+			}
+			//else
+			//	console.log(keyCode);
+		}, false);
+
+		document.body.addEventListener("mousewheel", function(e)
+		{
+			if( !!document.querySelector("#aaPopupBlackout") )
+				return;
+
+			if( modalSlateElem.style.display === "block" )
+				return;
+
+			if( document.activeElement.tagName === "INPUT" )
+			{
+				if( frontPageElem.style.display !== "none" )
+				{
+					return;
+					frontPageElem.style.display = "none";
+					searchResultsElem.style.display = "block"
+					document.querySelector("#ezSearchTypeContainer").style.display = "inline-block";
+					document.querySelector("#wizardSearch").style.display = "inline-block";
+					ezHeaderCrumbsElem.classList.remove("frontPageCrumbs");
+					document.activeElement.blur();
+					ResetResults();
+				}
+			}
+
+			var delta = (e.wheelDeltaX) ? e.wheelDeltaX : -e.wheelDeltaY;
+			if( delta < 0 )
+				ScrollThumbs("left");
+			else if( delta > 0 )
+				ScrollThumbs("right");
+		}, false);
+
+		document.addEventListener("keyup", function(e)
+		{
+			if( document.activeElement.tagName === "INPUT" ||  modalSlateElem.style.display === "block" )
+				return;
+
+			var keyCode = e.keyCode;
+			if( keyCode === 39 || keyCode === 38  || keyCode === 37 || keyCode === 40 || keyCode === 87 || keyCode === 68 || keyCode === 83 || keyCode === 65 )
+			{
+				if( !!scrollRepeaterHandle )
+					clearInterval(scrollRepeaterHandle);
+			}
+		}, false);
+
+		function muteLocalFile(file)
+		{
+			// mute local file locations
+			var lastFoundSlash;
+			var privateData = file;
+			if( privateData.indexOf(":") === 1 )
+			{
+				lastFoundSlash = privateData.lastIndexOf("/");
+				if( lastFoundSlash < 0 )
+					lastFoundSlash = privateData.lastIndexOf("\\");
+
+				if( lastFoundSlash >= 0 )
+				{
+					privateData = privateData.substring(lastFoundSlash+1);
+				}
+			}
+
+			return privateData;
+		}
+
+		function doUpdateCabinetIcon(item)
+		{
+			if( g_context !== "items" )
+				return;
+
+			var oldTransform = localStorage.getItem("trans" + item.info.id);
+			var modelId;
+			if( !!oldTransform )
+			{
+				oldTransform = JSON.parse(oldTransform);
+				modelId = oldTransform.modelId;
+				cabinetImageElem.modelIndex = -1;
+			}
+			else
+			{
+				//modelId = g_recentModelId;
+				//cabinetImageElem.modelIndex = 0;
+
+				// select a random cabinet
+				var ezThumbBigElem = document.querySelector(".ezThumbBig");
+
+				var type = g_types[ezThumbBigElem.item.type];
+
+				var typeTitle = (!!type) ? type.title : "";
+				// check if the file is just an integer (then its of type PC)
+				if( item.file == parseInt(item.file).toString() )
+					typeTitle = "pc";
+
+				var cabinets = g_autoCabinets[g_typeIcons[typeTitle]];
+
+				if( !!!cabinets )
+					cabinets = g_autoCabinets["types/default.png"];
+
+				var modelIndex = Math.floor(Math.random() * cabinets.length) + 0;
+				modelId = cabinets[modelIndex];
+
+				cabinetImageElem.modelIndex = -1;
+			}
+
+			updateCabinetIcon(modelId);
+		}
+
+		var g_titleCycleHandle;
+		var g_titleCycleFadeHandle;
+		var g_titleDisplayed = true;
+		var g_lastwasright = false;
+		function ScrollThumbs(direction)
+		{
+			if( !!entityInfo && g_currentThumbIndex === 0 )
+				return;
+
+			if( frontPageElem.style.display !== "none" )
+			{
+				return;
+			}
+
+			//if( frontPageElem.style.display !== "none" )
+			//{
+				
+			//	return;
+			//}
+
+			if( document.querySelector("#wizardButton").classList.contains("selectedWizard") )
+				toggleWizard();
+
+			var needsNextResult = (g_thumbs.length - g_currentThumbIndex < 5 && direction === "left" );
+
+			var thumbElem;
+			if( needsNextResult )
+			{
+				// add the next result
+				var response;
+				if( g_thumbs.length === 0 )
+				{
+					var type = ezTypeBox.options[ezTypeBox.selectedIndex].value;
+					if( !!entityInfo )
+					{
+						var item;
+						if(g_context === "items")
+						{
+							if( !!entityInfo.item )
+								item = aaapi.cmdEx("getLibraryItem", entityInfo.item.id);
+						}
+						else
+						{
+							if( !!entityInfo.model )
+								item = aaapi.cmdEx("getLibraryModel", entityInfo.model.id);
+						}
+
+						if( !!item )
+							response = {"success": true, "entry": item};
+						else
+							response = {"success": false};
+					}
+					else if( type !== "" )
+					{
+						var searchInfo = {
+							mode: g_context,
+							term: g_searchTerm,
+							filter: type
+						};
+						localStorage.setItem("lastSearchInfo", JSON.stringify(searchInfo));
+
+						response = (g_context === "items") ? aaapi.cmdEx("findFirstLibraryEntry", "items", "title", g_searchTerm, "type", type) : aaapi.cmdEx("findFirstLibraryEntry", "models", "title", g_searchTerm, "type", type);
+					}
+					else
+					{
+						var searchInfo = {
+							mode: g_context,
+							term: g_searchTerm,
+							filter: type
+						};
+						localStorage.setItem("lastSearchInfo", JSON.stringify(searchInfo));
+
+						response = (g_context === "items") ? aaapi.cmdEx("findFirstLibraryEntry", "items", "title", g_searchTerm) : aaapi.cmdEx("findFirstLibraryEntry", "models", "title", g_searchTerm);
+					}
+
+					if( !!!entityInfo )
+					{
+						while( response.success && (!!arcadeHud.hiddenItems[response.entry.info.id] || response.entry.dynamic == "1") )
+						{
+							response = (g_context === "items") ? aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "items") : aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "models");
+						}
+					}
+
+					if( !!!response.success )
+					{
+						ezInfoContainerElem.style.display = "none";
+						noResultsElem.style.display = "block";
+
+						if( ezTypeBoxElem.value !== "" && g_context === "items")
+							repeatSearchElem.style.display = "block";
+						else
+							repeatSearchElem.style.display = "none";
+
+						typeIconImageElem.style.display = "none";
+						ezSearchBox.focus();
+					}
+					else
+					{
+						ezInfoContainerElem.style.display = "block";
+						noResultsElem.style.display = "none";
+						repeatSearchElem.style.display = "none";
+
+						typeIconImageElem.style.display = "block";
+					}
+				}
+				else if( !!!entityInfo )
+				{
+					response = (g_context === "items") ? aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "items") : aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "models");
+
+					while( response.success && (!!arcadeHud.hiddenItems[response.entry.info.id] || response.entry.dynamic == "1") )
+					{
+						response = (g_context === "items") ? aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "items") : aaapi.cmdEx("findNextLibraryEntry", g_searchQueryId, "models");
+					}
+				}
+
+				if( !!response && response.success )
+					thumbElem = CreateThumb(response.entry);
+				//else
+				//	return;
+			}
+
+			//if( g_currentThumbIndex + 2 > g_thumbs.length )
+			//	return;
+
+			var shouldCycle = true;
+			if( direction === "left" )
+			{
+				//if( g_currentThumbIndex + 1 >= g_thumbs.length + 3 )
+				if( g_currentThumbIndex + 2 > g_thumbs.length )
+				{
+					shouldCycle = false;
+
+					if( g_currentThumbIndex >= 0 )
+					{
+						rightEndOfLineElem.style.opacity = 0.5;
+						if( !!rightEndOfLineElem.handle )
+							clearTimeout(rightEndOfLineElem.handle);
+
+						rightEndOfLineElem.handle = setTimeout(function()
+						{
+							rightEndOfLineElem.style.opacity = 0;
+						}, 500);
+					}
+
+					return;
+				}
+
+				//g_currentThumbIndex++;
+			}
+			else if( g_currentThumbIndex - 1 < 0 )
+			{
+				shouldCycle = false;
+
+				if( g_currentThumbIndex >= 0 )
+				{
+					leftEndOfLineElem.style.opacity = 0.5;
+					if( !!leftEndOfLineElem.handle )
+						clearTimeout(leftEndOfLineElem.handle);
+
+					leftEndOfLineElem.handle = setTimeout(function()
+					{
+						leftEndOfLineElem.style.opacity = 0;
+					}, 500);
+				}
+
+				return;
+			}
+
+			if( shouldCycle )
+			{
+				if( direction === "left" )
+					g_currentThumbIndex++;
+				else
+					g_currentThumbIndex--;
+
+				var ezThumbElems = document.querySelectorAll(".ezThumb");
+				for( var i = 0; i < ezThumbElems.length; i++ )
+				{
+					//if( g_context === "items" )
+						ChangeThumbState(ezThumbElems[i], document.querySelector(".ezTitleListEntry[itemId='" + ezThumbElems[i].item.info.id + "']"), direction);
+					//else
+					//{
+					//	console.log(document.querySelector(".ezTitleListEntry[itemId='" + ezThumbElems[i].item.info.id + "']"));
+					//	ChangeThumbState(ezThumbElems[i], document.querySelector(".ezTitleListEntry[itemId='" + ezThumbElems[i].item.info.id + "']"), direction);
+					//}
+				}
+
+				ezTitleListContainerElem.style.opacity = 0.9;
+				clearTimeout(ezTitleListContainerElem.handle);
+				ezTitleListContainerElem.handle = setTimeout(function()
+				{
+					ezTitleListContainerElem.style.opacity = 0;
+				}, 2000);
+
+
+				// update the title
+				var ezThumbBigElem = document.querySelector(".ezThumbBig");
+				if( !!ezThumbBigElem )
+				{
+					var item = ezThumbBigElem.item;
+					doUpdateCabinetIcon(item);
+
+					document.querySelector(".ezInfoTitle").innerHTML = item.title;
+
+					clearInterval(g_titleCycleHandle);
+					g_titleDisplayed = true;
+					ezInfoTitleElem.style.fontStyle = "normal";
+					ezInfoTitleElem.style.fontWeight = "bold";
+					clearTimeout(g_titleCycleFadeHandle);
+					ezInfoTitleElem.style.opacity = 1;
+
+					g_titleCycleHandle = setInterval(function()
+					{
+						ezInfoTitleElem.style.opacity = 0;//.innerHTML =title;
+						g_titleCycleFadeHandle = setTimeout(function()
+						{
+							var title;
+							if( g_titleDisplayed )
+							{
+								if(g_context === "items")
+									title = this.file;
+								else
+								{
+									title = this.platforms[arcadeHud.platformId].file;
+								}
+
+								ezInfoTitleElem.style.fontStyle = "italic";
+								ezInfoTitleElem.style.fontWeight = "normal";
+
+								title = muteLocalFile(title);
+							}
+							else
+							{
+								title = this.title;
+								ezInfoTitleElem.style.fontStyle = "normal";
+								ezInfoTitleElem.style.fontWeight = "bold";
+							}
+
+							ezInfoTitleElem.innerHTML = "&nbsp;";
+							ezInfoTitleElem.appendChild(document.createTextNode(title));
+							ezInfoTitleElem.style.opacity = 1;
+
+							g_titleDisplayed = !g_titleDisplayed;
+						}.bind(this), 200);
+					}.bind(item), 2000);
+
+					// update the icon
+					var type = g_types[ezThumbBigElem.item.type];
+
+					var typeTitle = (!!type) ? type.title : "";
+					// check if the file is just an integer (then its of type PC)
+					if( item.file == parseInt(item.file).toString() )
+						typeTitle = "pc";
+
+					var typeIcon = (typeTitle !== "") ? g_typeIcons[typeTitle] : undefined;
+					if( !!!typeIcon )
+						typeIcon = g_typeIcons["default"];
+
+					typeIconImageElem.src = typeIcon;
+					typeIconImageElem.style.display = "block";
+					typeIconImageElem.typeTitle = typeTitle;
+
+					// Update the favorites icon
+					var item = ezThumbBigElem.item;
+					var matchId = item.info.id;
+					var foundMatch = false;
+					var cat = g_context.substring(0, g_context.length-1);
+					for( var i = 0; i < arcadeHud.favorites.length; i++ )
+					{
+						if( arcadeHud.favorites[i][cat] === matchId )
+						{
+							foundMatch = true;
+							break;
+						}
+					}
+
+					if( foundMatch )
+					{
+						favoritesIconElem.src = "unfavoriteicon.png";
+						favoritesIconElem.setAttribute("help", "UNFAVORITE");
+					}
+					else
+					{
+						favoritesIconElem.src = "favoriteicon.png";
+						favoritesIconElem.setAttribute("help", "FAVORITE");
+					}
+				}
+			}
+
+			if( direction === "left" && g_currentThumbIndex+3 < g_thumbs.length )
+			{
+					g_thumbs[g_currentThumbIndex+3].classList.remove("ezThumbHidden");
+					g_thumbs[g_currentThumbIndex+3].classList.add("ezThumbAwayNext");
+			}
+			else if( direction === "right" && g_currentThumbIndex-3 >= 0 )
+			{
+					g_thumbs[g_currentThumbIndex-3].classList.remove("ezThumbHidden");
+					g_thumbs[g_currentThumbIndex-3].classList.add("ezThumbAwayPrevious");
+			}
+
+			if( !!thumbElem )
+				document.body.appendChild(thumbElem);
+
+			if( g_currentThumbIndex < 0 )
+			{
+				document.body.offsetHeight;
+				ScrollThumbs("left");
+			}
+		}
+
+		function OnSearchResult(item)
+		{
+			/*
+				1. Add this item to g_searchResults;
+				2. Load this item's best image.
+				3. After the image loads (or fails to load), call OnItemReady w/ the item & its aspect ratio.
+			*/
+		}
+
+		function OnItemReady(item, aspect)
+		{
+			/*
+				1. Request the next search result, if g_thumbQueue.length - g_currentThumbIndex < 7
+
+				Request the NEXT search result.
+				1. Call CreateThumb w/ the item & aspect ratio to.
+				2. Call AddThumb w/ the thumb.
+			*/
+		}
+
+		function attemptImageLoad()
+		{
+			delete this.thumbElem.handle;
+
+			if( !this.thumbElem.classList.contains("ezThumbBig") && !this.thumbElem.classList.contains("ezThumbNextA") && !this.thumbElem.classList.contains("ezThumbFarNext") && !this.thumbElem.classList.contains("ezThumbAwayNext") && !this.thumbElem.classList.contains("ezThumbPreviousA") && !this.thumbElem.classList.contains("ezThumbFarPrevious") && !this.thumbElem.classList.contains("ezThumbAwayPrevious") )
+			return;
+
+			var item = this.item;
+
+			if( g_context === "models" )
+			{
+				if( !!item.screen && item.screen !== "" )
+				{
+					if( item.screen.indexOf(":") === 1 )
+					{
+						var imageSrc = "asset://local/" + item.screen;
+						imageSrc = imageSrc.replace(/\\/g, "/");
+						item.screen = imageSrc;
+					}
+					else if( item.screen.toLowerCase().indexOf("http://") === 0 || item.screen.toLowerCase().indexOf("https://") === 0 || item.screen.toLowerCase().indexOf("www.") === 0 )
+						item.screen = item.screen;
+				}
+				else
+				{
+					var modelName = item.platforms[arcadeHud.platformId].file;
+					var found = modelName.lastIndexOf("\\");
+					if( found >= 0 )
+						modelName = modelName.substring(found+1);
+					else
+					{
+						found = modelName.lastIndexOf("/");
+						if( found >= 0 )
+							modelName = modelName.substring(found+1);
+					}
+
+					if( found >= 0 )
+					{
+						found = modelName.lastIndexOf(".");
+						if( found >= 0 )
+						{
+							modelName = modelName.substring(0, found);
+							item.screen = "props/" + modelName + ".png";
+						}
+					}
+				}
+
+				//if( item.screen !== "" )
+				//	this.thumbImageElem.hasImage = true;
+			}
+
+			this.thumbElem.imageLoadAttempted = true;
+
+			var modelFile;
+			var modelThumbnail;
+			//&& (!!!item.screen || item.screen.indexOf(".") < 0)
+			if( arcadeHud.modelThumbs && !!item && arcadeHud.npcs.indexOf(item.info.id) < 0 && arcadeHud.defaultModels.indexOf(item.info.id) < 0 && arcadeHud.letters.indexOf(item.info.id) < 0 && !!item.platforms && !!item.platforms[arcadeHud.platformId] && !!item.platforms[arcadeHud.platformId].file && item.platforms[arcadeHud.platformId].file.indexOf(".mdl") === item.platforms[arcadeHud.platformId].file.length-4 )
+			{
+				modelFile = item.platforms[arcadeHud.platformId].file;
+				modelFile = modelFile.replace(/\\/g, "/");
+				modelThumbnail = aaapi.cmdEx("generateModelThumbnail", modelFile);
+
+				var thumbImageElem = this.thumbImageElem;
+				function loadModelTGA()
+				{
+					tga.open(modelThumbnail, function()
+					{
+						var elem = tga.getCanvas();
+						elem.style.cssText = "width: 100%;";
+
+						var imageElem = thumbImageElem;
+						imageElem.appendChild(elem);
+
+						if( !!imageElem.parentNode.timeoutHandle )
+						{
+							clearTimeout(imageElem.parentNode.timeoutHandle);
+							delete imageElem.parentNode.timeoutHandle;
+						}
+
+						if( imageElem.parentNode.classList.contains("ezThumbBig") )
+							noImageElem.style.display = "none";
+
+						imageElem.hasImage = true;
+					});
+				}
+
+				//var tga = new TGA();
+				if( modelThumbnail.indexOf("-caching-") < 0 )
+					loadModelTGA();
+				else
+				{
+					setTimeout(function()
+					{
+						modelThumbnail = aaapi.cmdEx("generateModelThumbnail", modelFile);
+						if( !!modelThumbnail && modelThumbnail.indexOf("-caching-") < 0 )
+						{
+							loadModelTGA();
+						}
+						else
+						{
+							if( !!imageElem.parentNode.timeoutHandle )
+							{
+								clearTimeout(imageElem.parentNode.timeoutHandle);
+								delete imageElem.parentNode.timeoutHandle;
+							}
+
+							if( imageElem.parentNode.classList.contains("ezThumbBig") )
+								noImageElem.style.display = "block";
+
+							imageElem.hasImage = false;
+
+							if( g_context === "items" )
+								imageElem.src = "noimage.png";
+							else
+								imageElem.src = "noimageicon.png";
+						}
+					}, 1000);
+				}
+			}
+			else
+			{
+				arcadeHud.loadItemBestImage(this.thumbImageElem, item, function(imageElem)
+				{
+					if( !!imageElem.parentNode.timeoutHandle )
+					{
+						clearTimeout(imageElem.parentNode.timeoutHandle);
+						delete imageElem.parentNode.timeoutHandle;
+					}
+
+					if( imageElem.parentNode.classList.contains("ezThumbBig") )
+						noImageElem.style.display = "none";
+
+					imageElem.hasImage = true;
+				}, function(imageElem)
+				{
+					if( !!imageElem.parentNode.timeoutHandle )
+					{
+						clearTimeout(imageElem.parentNode.timeoutHandle);
+						delete imageElem.parentNode.timeoutHandle;
+					}
+
+					if( imageElem.parentNode.classList.contains("ezThumbBig") )
+						noImageElem.style.display = "block";
+
+					imageElem.hasImage = false;
+
+					if( g_context === "items" )
+						imageElem.src = "noimage.png";
+					else
+						imageElem.src = "noimageicon.png";
+				});
+
+				if( !!this.thumbElem.timeoutHandle )
+				{
+					clearTimeout(this.thumbElem.timeoutHandle);
+					delete this.thumbElem.timeoutHandle;
+				}
+
+				this.thumbElem.timeoutHandle = setTimeout(function()
+				{
+					delete this.thumbElem.timeoutHandle;
+
+					if( this.thumbImageElem.parentNode.classList.contains("ezThumbBig") )
+						noImageElem.style.display = "block";
+
+					this.thumbImageElem.hasImage = false;
+
+					if( g_context === "items" )
+						this.thumbImageElem.src = "noimage.png";
+					else
+						this.thumbImageElem.src = "noimageicon.png";
+				}.bind(this), 2000);
+			}
+		}
+
+		function CreateThumb(item)
+		{
+			/*
+				1. Create the HTML element.
+				2. Add it to the body.
+			*/
+
+			var thumbElem = document.createElement("div");
+			thumbElem.item = item;
+			thumbElem.className = "helpNote ezThumb ezThumbAwayNext";
+			thumbElem.setAttribute("itemId", item.info.id);
+
+			//if( !!entityInfo )
+			//	thumbElem.className += " ezNoHover";
+			thumbElem.addEventListener("click", function(e)
+			{
+				if( !!!entityInfo || entityInfo.model.id === "" )
+					doConfirm();
+				else if( g_context === "items" )
+					doLaunch();
+
+				//document.body.style.display = "none";
+			}, false);
+
+			var hoverSlateElem = document.createElement("div");
+			hoverSlateElem.className = "ezHoverSlate";
+
+			var spawnButtonElem = document.createElement("div");
+			spawnButtonElem.className = "ezActionButton ezSpawnButton";
+
+			if( !!!entityInfo || entityInfo.model.id === "" )
+			{
+				spawnButtonElem.innerHTML = "SPAWN";
+				thumbElem.setAttribute("help", "SPAWN SHORTCUT");
+			}
+			else
+			{
+				spawnButtonElem.innerHTML = "LAUNCH";
+				thumbElem.setAttribute("help", "LAUNCH SHORTCUT");
+			}
+
+			if( g_context === "models" && !!entityInfo )
+				thumbElem.style.pointerEvents = "none";
+
+			arcadeHud.assignHelp(thumbElem);
+
+			var thumbImageElem;
+
+			var modelFile;
+			var modelThumbnail;
+			if( arcadeHud.modelThumbs && !!item && (!!!item.screen || item.screen.indexOf(".") < 0) && arcadeHud.npcs.indexOf(item.info.id) < 0 && arcadeHud.defaultModels.indexOf(item.info.id) < 0 && !!item.platforms && !!item.platforms[arcadeHud.platformId] && !!item.platforms[arcadeHud.platformId].file && item.platforms[arcadeHud.platformId].file.indexOf(".mdl") === item.platforms[arcadeHud.platformId].file.length-4 )
+			{
+				modelFile = item.platforms[arcadeHud.platformId].file;
+				modelFile = modelFile.replace(/\\/g, "/");
+				modelThumbnail = aaapi.cmdEx("generateModelThumbnail", modelFile);
+				thumbImageElem = document.createElement("div");
+			}
+			else
+				thumbImageElem = document.createElement("img");
+
+			thumbImageElem.className = "ezThumbImage";
+
+			if( g_context === "items" )
+				thumbImageElem.src = "noimage.png";
+			else
+				thumbImageElem.src = "noimageicon.png";
+
+			// compose
+			thumbElem.appendChild(hoverSlateElem);
+			if( g_context === "items" || !!!entityInfo )
+			{
+				hoverSlateElem.appendChild(spawnButtonElem);
+				thumbElem.appendChild(hoverSlateElem);
+			}
+			else
+			{
+
+			}
+
+			thumbElem.appendChild(thumbImageElem);
+
+			thumbElem.imageLoadAttempted = false;
+			thumbElem.handle = setTimeout(attemptImageLoad.bind({"thumbImageElem": thumbImageElem, "item": item, "thumbElem": thumbElem}), getThumbDelay());
+
+			g_thumbs.push(thumbElem);
+
+			var titleListEntryElem = document.createElement("div");
+			titleListEntryElem.setAttribute("itemId", item.info.id);
+			titleListEntryElem.className = "ezTitleListEntry";
+			titleListEntryElem.appendChild(document.createTextNode(item.title));
+			var ezTitleListContainerElem = document.querySelector(".ezTitleListContainer");
+			ezTitleListContainerElem.insertBefore(titleListEntryElem, ezTitleListContainerElem.firstChild);
+			//document.querySelector(".ezTitleListContainer").appendChild(titleListEntryElem);
+
+			return thumbElem;
+		}
+
+		function AddThumb(thumbElem)
+		{
+			/*
+				1. Add the thumb to g_thumbQueue.
+				2. If g_thumbQueue.length - g_currentThumbIndex < 7
+			*/
+		}
+
+		var backgroundContainerElem = document.querySelector(".backgroundContainer");
+		var backgroundImageElem = backgroundContainerElem.querySelector(".backgroundImage");
+		var g_setBackgroundHandle;
+		function DoSetBackground(item)
+		{
+			var primaryImageElem = document.querySelector(".ezThumbBig");
+
+			if( !!!backgroundContainerElem )
+				return;
+
+			//backgroundImageElem.style.display = "none";
+			arcadeHud.loadItemBestImage(backgroundImageElem, item, function(imageElem)
+			{
+				var primaryImageElem = document.querySelector(".ezThumbBig");
+
+				//if( primaryImageElem.item !== imageElem.item )
+				//	return;
+				
+				//console.log(primaryImageElem.querySelector(".ezThumbImage").src + " vs " + imageElem.src);
+
+				if( primaryImageElem.querySelector(".ezThumbImage").src !== imageElem.src )
+					backgroundContainerElem.style.display = "block";
+				else
+					backgroundContainerElem.style.display = "none";
+			}, function(imageElem)
+			{
+				var primaryImageElem = document.querySelector(".ezThumbBig");
+
+				//console.log(primaryImageElem.querySelector(".ezThumbImage") + " vs " + imageElem);
+
+				//if( primaryImageElem.querySelector(".ezThumbImage") !== imageElem )
+				//	return;				
+
+				backgroundContainerElem.style.display = "none";
+			}, {"screen": true, "preview": true, "file": true});
+
+			//dummyImageElem.src = item.screen;
+			//if( item.screen !== item.marquee )
+			//	backgroundImageElem.src = item.screen;
+		}
+		function SetBackground(item)
+		{
+			if( !!g_setBackgroundHandle )
+				clearTimeout(g_setBackgroundHandle);
+
+			g_setBackgroundHandle = setTimeout(function()
+			{
+				DoSetBackground(this);
+				g_setBackgroundHandle = undefined;
+			}.bind(item), 300);
+		}
+
+		function ChangeThumbState(ezThumbElem, ezTitleListEntryElem, direction)
+		{
+			if( ezThumbElem.classList.contains("ezThumbAwayNext") )
+			{
+				ezThumbElem.classList.remove("ezThumbAwayNext");
+
+				if( direction === "left" )
+					ezThumbElem.classList.add("ezThumbFarNext");
+				else
+					ezThumbElem.classList.add("ezThumbHidden");
+					//document.body.removeChild(ezThumbElem);
+			}
+			else if( ezThumbElem.classList.contains("ezThumbFarNext") )
+			{
+				ezThumbElem.classList.remove("ezThumbFarNext");
+
+				if( direction === "left" )
+					ezThumbElem.classList.add("ezThumbNextA");
+				else
+					ezThumbElem.classList.add("ezThumbAwayNext");
+			}
+			else if( ezThumbElem.classList.contains("ezThumbNextA") )
+			{
+				ezThumbElem.classList.remove("ezThumbNextA");
+
+				if( direction === "left" )
+				{
+					ezThumbElem.classList.add("ezThumbBig");
+
+					if( g_showBackgroundWallpapers )
+						SetBackground(ezThumbElem.item);
+				}
+				else
+					ezThumbElem.classList.add("ezThumbFarNext");
+			}
+			else if( ezThumbElem.classList.contains("ezThumbBig") )
+			{
+				ezThumbElem.classList.remove("ezThumbBig");
+
+				if( direction === "left" )
+					ezThumbElem.classList.add("ezThumbPreviousA");
+				else
+					ezThumbElem.classList.add("ezThumbNextA");
+			}
+			else if( ezThumbElem.classList.contains("ezThumbPreviousA") )
+			{
+				ezThumbElem.classList.remove("ezThumbPreviousA");
+
+				if( direction === "left" )
+					ezThumbElem.classList.add("ezThumbFarPrevious");
+				else
+				{
+					ezThumbElem.classList.add("ezThumbBig");
+					if( g_showBackgroundWallpapers )
+						SetBackground(ezThumbElem.item);
+				}
+			}
+			else if( ezThumbElem.classList.contains("ezThumbFarPrevious") )
+			{
+				ezThumbElem.classList.remove("ezThumbFarPrevious");
+
+				if( direction === "left" )
+					ezThumbElem.classList.add("ezThumbAwayPrevious");
+				else
+					ezThumbElem.classList.add("ezThumbPreviousA");
+			}
+			else if( ezThumbElem.classList.contains("ezThumbAwayPrevious") )
+			{
+				ezThumbElem.classList.remove("ezThumbAwayPrevious");
+
+				if( direction === "left" )
+				{
+					if( g_context !== "items" )
+						console.log(ezThumbElem.item.title);
+					ezThumbElem.classList.add("ezThumbHidden");
+				}
+				else
+					ezThumbElem.classList.add("ezThumbFarPrevious");
+			}
+
+			var titleState = "";
+			if( ezThumbElem.classList.contains("ezThumbBig") )
+				titleState = "big";
+			else if( ezThumbElem.classList.contains("ezThumbNextA") )
+				titleState = "next";
+			else if( ezThumbElem.classList.contains("ezThumbFarNext") )
+				titleState = "farNext";
+			else if( ezThumbElem.classList.contains("ezAwayThumbNext") )
+				titleState = "awayNext";
+			else if( ezThumbElem.classList.contains("ezThumbPreviousA") )
+				titleState = "previous";
+			else if( ezThumbElem.classList.contains("ezThumbFarPrevious") )
+				titleState = "farPrevious";
+			else if( ezThumbElem.classList.contains("ezAwayThumbPrevious") )
+				titleState = "awayPrevious";
+
+			ezTitleListEntryElem.setAttribute("titleState", titleState);
+
+			if( !ezThumbElem.imageLoadAttempted && !!!ezThumbElem.handle )
+			{
+				if( !ezThumbElem.classList.contains("ezThumbBig") && !ezThumbElem.classList.contains("ezThumbNextA") && !ezThumbElem.classList.contains("ezThumbFarNext") && !ezThumbElem.classList.contains("ezThumbAwayNext") && !ezThumbElem.classList.contains("ezThumbPreviousA") && !ezThumbElem.classList.contains("ezThumbFarPrevious") && !ezThumbElem.classList.contains("ezThumbAwayPrevious") )
+				{
+					// do nothing
+				}
+				else
+				{
+					ezThumbElem.handle = setTimeout(attemptImageLoad.bind({"thumbImageElem": ezThumbElem.querySelector(".ezThumbImage"), "item": ezThumbElem.item, "thumbElem": ezThumbElem}), getThumbDelay());
+				}
+			}
+
+			if( ezThumbElem.classList.contains("ezThumbBig") )
+			{
+				if( ezThumbElem.querySelector(".ezThumbImage").hasImage === true || !ezThumbElem.imageLoadAttempted || !!ezThumbElem.handle )
+					noImageElem.style.display = "none";
+				else
+					noImageElem.style.display = "block";
+			}
+		}
+
+		function doLaunch()
+		{
+			arcadeHud.play(entityInfo.item.id);
+		}
+
+		function doMirror()
+		{
+			//var object = aaapi.cmdEx("getObjectInfo", entityInfo.object.id);
+			var value = (entityInfo.object.slave == 1) ? false : true;
+			aaapi.cmd("setSlaveScreen", entityInfo.object.id, value);
+
+			if( value )
+				aaapi.cmd("addToastMessage", "Screen Mirrored Object");
+			else
+				aaapi.cmd("addToastMessage", "Un-Screen Mirrored Object");
+		}
+
+		function doEdit()
+		{
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+			if( !!!entityInfo )
+			{
+				if( g_context === "items" )
+				{
+					window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html';");
+				}
+				else
+				{
+					window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html';");
+				}
+			}
+			else
+			{
+				if( g_context === "items" )
+				{
+					if( entityInfo.model.id !== "" )
+					{
+						window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html?entity=" + entityIndex + "';");
+					}
+					else
+					{
+						window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html?item=" + encodeURIComponent(entityInfo.item.id) + "';");
+					}
+				}
+				else
+				{
+					//console.log(JSON.stringify(entityInfo));
+					if( !!entityInfo.model && entityInfo.model.id !== "" )
+					{
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html?entity=" + entityIndex + "';");
+					}
+					else if( !!entityInfo.item && entityInfo.item.id !== "")
+					{
+						//console.log("huh???");
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(item.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html?item=" + encodeURIComponent(entityInfo.item.id) + "';");
+					}
+				}
+			}
+		}
+
+		function doFavorites()
+		{
+			if( g_favoritesIgnoreClick )
+			{
+				g_favoritesIgnoreClick = false;
+				return;
+			}
+
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+			var cat = g_context.substring(0, g_context.length-1);
+			//console.log(localStorage.getItem("myBackpack"));
+			//console.log(cat);
+			//localStorage.removeItem("myBackpack");
+			//return;
+			var matchId = item.info.id;
+			var alreadyExists = false;
+			for( var i = 0; i < arcadeHud.favorites.length; i++ )
+			{
+				if( arcadeHud.favorites[i][cat] === matchId )
+				{
+					// Remove this entry
+					arcadeHud.favorites.splice(i, 1);
+					arcadeHud.saveFavoritesLists();
+					//localStorage.setItem("myBackpack", JSON.stringify(arcadeHud.favorites));
+					aaapi.cmd("addToastMessage", "Removed From Favorites");
+
+					favoritesIconElem.src = "favoriteicon.png";
+					favoritesIconElem.setAttribute("help", "FAVORITE");
+
+					alreadyExists = true;
+					break;
+				}
+			}
+
+			if( !alreadyExists )
+			{
+				var backpackEntry = {};
+				backpackEntry[cat] = matchId;
+				arcadeHud.favorites.unshift(backpackEntry);
+				//localStorage.setItem("myBackpack", JSON.stringify(arcadeHud.favorites));
+				arcadeHud.saveFavoritesLists();
+				aaapi.cmd("addToastMessage", "Added To Favorites");
+
+				if( !!universeInfo && !!universeInfo.lobby && universeInfo.lobby !== "" )
+				{
+					if( cat === "item" )
+						aaapi.cmd("saveRemoteItemChanges", matchId);
+					else if( cat === "model" )
+						aaapi.cmd("saveRemoteModelChanges", matchId);
+				}
+
+				favoritesIconElem.src = "unfavoriteicon.png";
+				favoritesIconElem.setAttribute("help", "UNFAVORITE");
+				if( !!universeInfo )//&& cat === "item" && !universeInfo.isHost )
+					doClose();
+			}
+		}
+
+		function toggleWizard()
+		{
+			var displayValue;
+			if( ezWizardButtonsElem.style.display === "inline-block" )
+				displayValue = "none";
+			else
+				displayValue = "inline-block";
+
+			var otherDisplayValue = (displayValue === "none") ? "inline-block" : "none";
+
+			ezWizardButtonsElem.style.display = displayValue;
+
+			var elems = document.querySelectorAll(".ezActions>.ezActionButton, .ezActions>.notMore>.ezActionButton");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				if( elems[i].id !== "wizardButton" )
+					elems[i].style.display = otherDisplayValue;
+			}
+
+			if( displayValue === "none" )
+				document.querySelector("#wizardButton").classList.remove("selectedWizard");
+			else
+				document.querySelector("#wizardButton").classList.add("selectedWizard");
+		}
+
+		var g_tags = {
+			"stream": ""
+		};
+
+		function searchWizardInstead()
+		{
+			showWizards("all", undefined, false);
+		}
+
+		function showWizards(field, keyword, isForItem, wizardSearchDesc, showAll)
+		{
+			g_field = field;
+
+			if( typeof showAll === "undefined" )
+				showAll = false;
+
+			if( isForItem )
+			{
+				if( !!wizardSearchDesc )
+					document.querySelector(".wizardSearchDesc").innerHTML = wizardSearchDesc;
+				else
+					document.querySelector(".wizardSearchDesc").innerHTML = "CHOOSE A WIZARD";
+			}
+			else
+				document.querySelector(".wizardSearchDesc").innerHTML = "SEARCH FOR NEW ITEM";
+
+			modalPanelElem.innerHTML = "";
+			modalSlateElem.style.display = "block";
+
+			//if( isForItem )
+			//	modalSlateElem.style.backgroundColor = "initial";
+			//else
+			//	modalSlateElem.style.backgroundColor = "#000";
+
+			g_addedTag = "";
+
+			if( isForItem && !!g_tags[keyword] )
+				g_addedTag = g_tags[keyword];
+
+			if( !!!g_addedTag && isForItem && keyword !== "" )
+				g_addedTag = " " + keyword;
+
+			var isAcquire = false;
+			var scraperLogoElem;
+
+			// sort the scrapers by priority
+
+			var foundValidScraper = false;
+			for( var i = 0; i < sortedScrapers.length; i++ )
+			{
+				scraper = sortedScrapers[i];
+
+				if( !scraper.hasLogo )
+					continue;
+
+				if( isAcquire && scraper.can_acquire !== true )
+					continue;
+
+				if( !isAcquire && isForItem && (!!!scraper.fields[field] || scraper.id === "importSteamGames") )
+					continue;
+
+				if( field !== "all" && typeIconImageElem.typeTitle !== "other" && !!scraper.quickTypes && (typeIconImageElem.typeTitle !== "" || Object.keys(scraper.quickTypes).length === 0) && !!!scraper.quickTypes[typeIconImageElem.typeTitle] )
+					continue;
+
+				if( field !== "all" && isForItem && !!scraper.keywords && !!!scraper.keywords[keyword] )
+					continue;
+
+				var type = g_types[ezTypeBoxElem.value];
+				var typeTitle;
+				if( !isForItem )
+					typeTitle = (!!type) ? type.title : "";
+				else
+					typeTitle = typeIconImageElem.typeTitle;
+
+				if( isForItem && !showAll )
+				{
+					if( field === "all" && !!scraper.quickAllTypes && ( typeTitle !== "" || !!!scraper.quickAllTypes["other"]) && !!!scraper.quickAllTypes[typeTitle] )
+						continue;
+				}
+				else
+				{
+					if( field === "all" && !!scraper.quickAllTypes && (!!type || !!!scraper.fields || Object.keys(scraper.fields).length === 0) && ( typeTitle !== "" || !!!scraper.quickAllTypes["other"]) && !!!scraper.quickAllTypes[typeTitle] )
+						continue;
+					//fields
+				}
+
+				scraperLogoElem = document.createElement("img");
+				scraperLogoElem.scraper = scraper;
+				scraperLogoElem.src = "scrapers/" + scraper.id + ".png";
+
+				if( isForItem )
+				{
+					scraperLogoElem.addEventListener("click", function(e)
+					{
+						doScrape(this.scraper);
+					}.bind(scraperLogoElem), false);
+				}
+				else
+				{
+					scraperLogoElem.addEventListener("click", function(e)
+					{
+						doScrape(this.scraper, false);
+					}.bind(scraperLogoElem), false);
+				}
+
+				scraperLogoElem.addEventListener("mouseover", function(e)
+				{
+					wizardNameElem.innerHTML = "";
+					wizardNameElem.appendChild(document.createTextNode(this.scraper.title));
+					wizardNameElem.style.opacity = 1;
+				}.bind(scraperLogoElem), false);
+				scraperLogoElem.addEventListener("mouseout", function(e)
+				{
+					wizardNameElem.style.opacity = 0;
+				}.bind(scraperLogoElem), false);
+
+				modalPanelElem.appendChild(scraperLogoElem);
+				foundValidScraper = true;
+			}
+
+			if( foundValidScraper )
+			{
+				document.querySelector("#wizardContainer").style.display = "block";
+
+				document.querySelector("#noWizards").style.display = "none";
+
+				if( isForItem )
+				{
+					var ezThumbBigElem = document.querySelector(".ezThumbBig");
+					var item = ezThumbBigElem.item;
+					wizardItemTitleElem.value = item.title;
+					var len = wizardItemTitleElem.value.length * 24;
+					if( len > 1700 )
+						len = 1700;
+					else if( len < 420 )
+						len = 420;
+					wizardItemTitleElem.style.width = len + "px";
+				}
+				else	
+				{
+					wizardItemTitleElem.value = ezSearchBoxElem.value;
+					var len = wizardItemTitleElem.value.length * 24;
+					if( len > 1700 )
+						len = 1700;
+					else if( len < 420 )
+						len = 420;
+					wizardItemTitleElem.style.width = len + "px";
+				}
+			}
+			else
+			{
+				if( ezTypeBoxElem.value === "" )
+				{
+					showWizards(field, keyword, isForItem, wizardSearchDesc, true);
+					return;
+				}
+
+				document.querySelector("#wizardContainer").style.display = "none";
+				document.querySelector("#noWizards").style.display = "block";
+
+				wizardItemTitleElem.value = "";
+			}
+		}
+
+		function doScrape(scraper, useItem)
+		{
+			var addedTag = g_addedTag;
+
+			if( typeof useItem === "undefined" )
+				useItem = true;
+
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = (useItem) ? ezThumbBigElem.item : undefined;
+			var itemTitle = (!!item) ? item.title : ezSearchBoxElem.value;
+			var itemId = (!!item) ? item.info.id : "";
+
+			var otherTitle = (frontPageElem.style.display !== "none") ? ezSearchBoxElem.value : wizardItemTitleElem.value;
+			var customTitle = (itemTitle != otherTitle);
+
+			if( customTitle )
+				itemTitle = otherTitle;
+
+			var term = itemTitle;
+			term = term.replace("&", "");
+
+			var dateCull = term.indexOf(" (");
+			if( dateCull >= 0 )
+				term = term.substring(0, dateCull);
+
+			if( customTitle || !!!scraper.allow_keywords || addedTag === "" )
+			{
+				// do nothing
+			}
+			else
+				term += addedTag;
+
+			var field = (!!item) ? g_field : "all";
+			var dummy = {"itemId": itemId, "field": field, "scraperId": scraper.id, "term": term};
+			setTimeout(function()
+			{
+				arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
+			}.bind(dummy), 10);
+		}
+
+		function doClose()
+		{
+			aaapi.cmd("deactivateInputMode");
+		}
+
+		function doWizard()
+		{
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+ //+ "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowserEZ.html';");
+
+ 			var backCode = "window.location='asset://ui/libraryBrowserEZ.html';";
+			arcadeHud.metaSearchEasy(item.info.id, backCode);
+		}
+
+		function doHide()
+		{
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+			ezThumbBigElem.parentNode.removeChild(ezThumbBigElem);
+
+			// Add the item to the hide list
+			arcadeHud.hiddenItems[item.info.id] = "1";
+			localStorage.setItem("hiddenItems", JSON.stringify(arcadeHud.hiddenItems));
+
+			if( !!!entityInfo )
+			{
+				// Remove this entry
+				g_thumbs.splice(g_currentThumbIndex, 1);
+
+				// Hide its title too
+				var titleElem = document.querySelector(".ezTitleListEntry[itemId='" + item.info.id + "']");
+				titleElem.parentNode.removeChild(titleElem);
+
+				// Try to shift all of the PREVIOUS thumbs over 1.
+				if( g_currentThumbIndex > 0 )
+				{
+					g_thumbs[g_currentThumbIndex-1].classList.remove("ezThumbPreviousA");
+					g_thumbs[g_currentThumbIndex-1].classList.add("ezThumbBig");
+				}
+
+				if( g_currentThumbIndex > 1 )
+				{
+					g_thumbs[g_currentThumbIndex-2].classList.remove("ezThumbFarPrevious");
+					g_thumbs[g_currentThumbIndex-2].classList.add("ezThumbPreviousA");
+				}
+
+				if( g_currentThumbIndex > 2 )
+				{
+					g_thumbs[g_currentThumbIndex-3].classList.remove("ezThumbAwayPrevious");
+					g_thumbs[g_currentThumbIndex-3].classList.add("ezThumbFarPrevious");
+				}
+
+				if( g_currentThumbIndex > 3 )
+				{
+					g_thumbs[g_currentThumbIndex-4].classList.remove("ezThumbHidden");
+					g_thumbs[g_currentThumbIndex-4].classList.add("ezThumbAwayPrevious");
+				}
+
+				// Try to scroll left
+				g_currentThumbIndex--;
+				ScrollThumbs("left");
+
+				if( g_thumbs.length === 0 )
+				{
+					ezInfoContainerElem.style.display = "none";
+					noResultsElem.style.display = "block";
+
+					if( ezTypeBoxElem.value !== "" && g_context === "items" )
+						repeatSearchElem.style.display = "block";
+					else
+						repeatSearchElem.style.display = "none";
+
+					typeIconImageElem.style.display = "none";
+				}
+	/*
+				// Is there a next item?
+				var ezThumbNextElem = document.querySelector(".ezThumbNextA");
+				console.log(ezThumbNextElem);*/
+			}
+			else
+				location.reload();
+		}
+
+		function doConfirm()
+		{
+			var ezThumbBigElem = document.querySelector(".ezThumbBig");
+			var item = ezThumbBigElem.item;
+
+			var oldTransform = localStorage.getItem("trans" + item.info.id);
+
+			if( !!!oldTransform )
+				oldTransform = {};
+			else
+				oldTransform = JSON.parse(oldTransform);
+
+			var modelId = cabinetImageElem.modelId;
+			if( typeof modelId === 'undefined' )
+				modelId = "";
+
+			document.body.style.display = "none";
+			if( oldTransform.modelId !== modelId )
+			{
+				if( g_context === "items" )
+					aaapi.cmd("spawnEntry", g_context, item.info.id, g_searchTerm, ezTypeBox.value, modelId);
+				else
+					aaapi.cmd("spawnEntry", g_context, item.info.id, g_searchTerm, ezTypeBox.value, "");
+			}
+			else
+			{
+				var scale = oldTransform.scale;
+				if( typeof scale === 'undefined' )
+					scale = "1.0";
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+				
+				var anim = oldTransform.anim;
+				if( typeof anim === 'undefined' )
+					anim = "";
+				
+				var body = oldTransform.body;
+				if( typeof body === 'undefined' )
+					body = "0";
+					
+				var skin = oldTransform.skin;
+				if( typeof skin === 'undefined' )
+					skin = "0";
+
+				// always spawn item for now.
+				if( g_context === "items" )
+					aaapi.cmd("spawnEntry", g_context, item.info.id, g_searchTerm, ezTypeBox.value, modelId, scale, pitch, yaw, roll, offX, offY, offZ, anim, body, skin);
+				else
+					aaapi.cmd("spawnEntry", g_context, item.info.id, g_searchTerm, ezTypeBox.value, "", scale, pitch, yaw, roll, offX, offY, offZ, anim, body, skin);
+			}
+		}
+
+
+		function moveObject()
+		{
+			var oldId = (!!entityInfo.item) ? entityInfo.item.id : entityInfo.model.id;
+			var oldTransform = localStorage.getItem("trans" + oldId);
+			if( !!!oldTransform )
+				oldTransform = {};
+			else
+				oldTransform = JSON.parse(oldTransform);
+
+			//var modelId = oldTransform.modelId;
+			//if( typeof modelId === 'undefined' )
+			//	modelId = "";
+
+			var scale = oldTransform.scale;
+			if( typeof scale === 'undefined' )
+				scale = "1.0";
+
+			var pitch = oldTransform.pitch;
+			if( typeof pitch === 'undefined' )
+				pitch = "0";
+
+			var yaw = oldTransform.yaw;
+			if( typeof yaw === 'undefined' )
+				yaw = "0";
+			
+			var roll = oldTransform.roll;
+			if( typeof roll === 'undefined' )
+				roll = "0";
+			
+			var offX = oldTransform.offX;
+			if( typeof offX === 'undefined' )
+				offX = "0";
+			
+			var offY = oldTransform.offY;
+			if( typeof offY === 'undefined' )
+				offY = "0";
+			
+			var offZ = oldTransform.offZ;
+			if( typeof offZ === 'undefined' )
+				offZ = "0";
+			
+			aaapi.cmd("moveObject", entityIndex, scale, pitch, yaw, roll, offX, offY, offZ);
+
+			document.body.style.display = "none";
+		}
+
+		function deleteObject()
+		{
+			aaapi.cmd("deleteObject", entityIndex);
+			document.body.style.display = "none";
+		}
+
+		function setSlave(value)
+		{
+			aaapi.cmd("setSlaveScreen", objectId, value);
+		}
+
+		if( !!entityInfo )
+		{
+			if( g_context === "items" )
+			{
+				if( entityInfo.object.id !== g_instance.instance.autoplay )
+					document.querySelector("#autoplayOnButton").style.display = "inline-block";
+				else
+					document.querySelector("#autoplayOffButton").style.display = "inline-block";
+			}
+			else
+			{
+				document.querySelector("#wizardButton").style.display = "none";
+			}
+		}
+
+		//if( !!uiBack && uiBack !== "" )
+		//	document.querySelector("#backbutton").style.display = "inline-block";
+
+		function autoplayObject()
+		{
+			var success = aaapi.cmdEx("updateInstance", g_instance.instance.id, ["autoplay", entityInfo.object.id]);
+			if( success )
+			{
+				console.log("Instance updated!");
+				g_instance.instance.autoplay = entityInfo.object.id;
+				document.querySelector("#autoplayOnButton").style.display = "none";
+				document.querySelector("#autoplayOffButton").style.display = "inline-block";
+			}
+			else
+				console.log("Instance update rejected!");
+
+			doClose();
+		}
+
+		function unautoplayObject()
+		{
+			var success = aaapi.cmdEx("updateInstance", g_instance.instance.id, ["autoplay", ""]);
+			if( success )
+			{
+				console.log("Instance updated!");
+				g_instance.instance.autoplay = entityInfo.object.id;
+				document.querySelector("#autoplayOnButton").style.display = "inline-block";
+				document.querySelector("#autoplayOffButton").style.display = "none";
+			}
+			else
+				console.log("Instance update rejected!");
+
+			doClose();
+		}
+	</script>
+
+	<div class="sideList" style="position: absolute; top: 100px; left: 0; text-align: center;">
+		<div style="font-family: Arial; font-size: 20px; font-weight: bold;">Favorite Items</div>
+		<div id="favoriteItemsContainer" class="aaScrollbars" style="border-left: 0; max-height: 784px; width: 240px; overflow-y: auto; overflow-x: hidden;"></div>
+	</div>
+
+	<div class="sideList" style="position: absolute; top: 100px; right: 0; text-align: center;">
+		<div style="font-family: Arial; font-size: 20px; font-weight: bold;"><img src="previousicon.png" style="height: 16px; padding-right: 8px;" onclick="previousPropList();" /><div id="propListTitle" style="display: inline-block;"></div><img src="nexticon.png" style="height: 16px; padding-left: 8px;" onclick="nextPropList();" /></div>
+		<div id="favoritePropsContainer" class="aaScrollbars" style="border-left: 0; max-height: 784px; width: 240px; overflow-y: auto; overflow-x: hidden;"></div>
+	</div>
+
+	<script>
+		var propListTitleElem = document.querySelector("#propListTitle");
+		var favoriteItemsContainerElem = document.querySelector("#favoriteItemsContainer");
+		var favoritePropsContainerElem = document.querySelector("#favoritePropsContainer");
+
+		var propLists = {
+			//"NPCs": ["f1a7d6be", "bce27344", "60e34fe7", "29e1df46", "7146d903", "8fb118d9", "8558b212", "1479e19e", "f8f5ae94", "93bb1053", "74926ebb", "471fb75c", "5a482b8c", "6ffc8085", "693073ca", "4b8e5eaa"],
+			"NPCs": arcadeHud.npcs,
+			"Favorite Props": [],
+			"Last Search": [],
+			"Alphabet": arcadeHud.letters
+			//"Alphabet": ["447d0768", "9f6aafff", "d667c872", "2d84e366", "648984eb", "bf9e2c7c", "f6934bf1", "4c9967e3", "0594006e", "de83a8f9", "978ecf74", "6c6de460", "256083ed", "fe772b7a", "b77a4cf7", "8ea26ee9", "c7af0964", "1cb8a1f3", "55b5c67e", "ae56ed6a", "e75b8ae7", "3c4c2270", "754145fd", "cf4b69ef", "86460e62", "5d51a6f5"]
+		};
+
+		var propListTileHandle;
+		function getNextFavoritePropTile()
+		{
+			var entry = arcadeHud.favorites[this.propListIndex];
+			if( !!!entry )
+			{
+				clearInterval(propListTileHandle);
+				propListTileHandle = null;
+				return false;
+			}
+
+			var needsEnd = false;
+			var usedModel = false;
+			if( !!entry.model && !!!entry.item )
+			{
+				if( !!!arcadeHud.hiddenItems[entry.model] )
+				{
+					var model = aaapi.cmdEx("getLibraryModel", entry.model);
+					if( !!model && model.dynamic != "1")
+					{
+						arcadeHud.createTile(model, favoritePropsContainer, "models");
+						usedModel = true;
+						this.propCount++;
+
+						if( this.propCount > g_librarySearchMax )
+							needsEnd = true;
+					}
+				}
+			}
+			this.propListIndex++;
+
+			if( needsEnd )
+			{
+				clearInterval(propListTileHandle);
+				propListTileHandle = null;
+				return false;
+			}
+
+			if( !usedModel )
+				return getNextFavoritePropTile.call(this);
+			else
+				return true;
+		}
+
+		var propListTileHandle = null;
+		function showPropList(listName, direction)
+		{
+			favoritePropsContainerElem.innerHTML = "";
+
+			var doAnother = false;
+			if( listName === "Last Search" )
+			{
+				var propList = propLists[listName];
+				if( !!!propList )
+					return;
+
+				if( !!propListTileHandle )
+					clearInterval(propListTileHandle);
+
+				var noResults = true;
+				var searchInfo = localStorage.getItem("lastSearchInfo");
+				if( !!searchInfo )
+				{
+					searchInfo = JSON.parse(searchInfo);
+					//setMode(searchInfo.mode, true);
+					//startNewSearch(searchInfo.term, searchInfo.filter, searchInfo.mode);
+
+					var payload = {
+						"term": searchInfo.term,
+						"filter": searchInfo.filter,
+						"mode": searchInfo.mode,
+						"resultCount": 0,
+						"queryId": ""
+					};
+
+					aaapi.cmd("setLibraryBrowserContext", searchInfo.mode, "", searchInfo.term, searchInfo.filter);
+
+					var response = (!!!payload.filter || payload.filter === "") ? aaapi.cmdEx("findFirstLibraryEntry", searchInfo.mode, "title", searchInfo.term) : aaapi.cmdEx("findFirstLibraryEntry", searchInfo.mode, "title", searchInfo.term, "type", searchInfo.filter);
+
+					if( response.success )
+					{
+						noResults = false;
+						payload.queryId = response.queryId;
+
+						if( !!!arcadeHud.hiddenItems[response.entry.info.id] )
+						{
+							arcadeHud.createTile(response.entry, favoritePropsContainer, searchInfo.mode);
+							payload.resultCount++;
+						}
+
+						function nexter()
+						{
+							var needsEnd = false;
+							var response = aaapi.cmdEx("findNextLibraryEntry", this.queryId, this.mode);
+							if( response.success )
+							{
+								if( !!arcadeHud.hiddenItems[response.entry.info.id] )
+								{
+									//clearInterval(propListTileHandle);
+									//propListTileHandle = setInterval(nexter.bind(this), 100);
+									nexter.call(this);
+									return;
+								}
+								else
+								{
+									arcadeHud.createTile(response.entry, favoritePropsContainer, this.mode);
+									this.resultCount++;
+								}
+
+								if( this.resultCount >= g_librarySearchMax )
+									needsEnd = true;
+							}
+							else
+								needsEnd = true;
+
+							if( needsEnd )
+							{
+								clearInterval(propListTileHandle);
+								propListTileHandle = null;
+							}
+						}
+
+						propListTileHandle = setInterval(nexter.bind(payload), 100);
+					}
+				}
+
+				if( noResults )
+				{
+					var noResultsFound = document.createElement("div");
+					noResultsFound.style.cssText = "font-family: Arial; font-weight: bold; margin-left: 20px;";
+					noResultsFound.innerHTML = "No search results found.";
+					favoritePropsContainer.appendChild(noResultsFound);
+				}
+			}
+			else if( listName !== "Favorite Props" )
+			{
+				var propList = propLists[listName];
+				if( !!!propList )
+					return;
+
+				var payload = {
+					"propList": propList,
+					"propListIndex": 0
+				};
+
+				if( !!propListTileHandle )
+					clearInterval(propListTileHandle);
+
+				propListTileHandle = setInterval(function()
+				{
+					var needsEnd = false;
+					var model = aaapi.cmdEx("getLibraryModel", this.propList[this.propListIndex]);
+					if( !!!model )
+						needsEnd = true;
+					else
+					{
+						arcadeHud.createTile(model, favoritePropsContainer, "models");
+						this.propListIndex++;
+
+						if( this.propListIndex >= g_librarySearchMax )
+							needsEnd = true;
+					}
+
+					if( needsEnd )
+					{
+						clearInterval(propListTileHandle);
+						propListTileHandle = null;
+					}
+				}.bind(payload), 100);
+			}
+			else
+			{
+				var payload = {
+					"propListIndex": 0,
+					"propCount": 0
+				};
+
+				if( !!propListTileHandle )
+				{
+					clearInterval(propListTileHandle);
+					propListTileHandle = null;
+				}
+				
+				if( getNextFavoritePropTile.call(payload) )
+				{
+					payload.propCount++;
+					propListTileHandle = setInterval(getNextFavoritePropTile.bind(payload), 100);
+				}
+				else
+				{
+					var noResultsFound = document.createElement("div");
+					noResultsFound.style.cssText = "font-family: Arial; font-weight: bold; margin-left: 20px;";
+					noResultsFound.innerHTML = "No favorite props.";
+					favoritePropsContainer.appendChild(noResultsFound);
+				}
+			}
+
+			localStorage.setItem("arcadeMenuListName", listName);
+			propListTitleElem.innerText = listName;
+		}
+
+		function nextPropList()
+		{
+			var savedListName = localStorage.getItem("arcadeMenuListName");
+
+			var lists = Object.keys(propLists);
+			var currentListName = propListTitleElem.innerText;
+
+			var listIndex;
+			if( currentListName == "" && !!savedListName )
+				listIndex = lists.indexOf(savedListName);
+			else
+				listIndex = lists.indexOf(currentListName) + 1;
+
+			if( listIndex > lists.length-1 || listIndex < 0 )
+				listIndex = 0;
+			var propListName = lists[listIndex];
+			var propList = propLists[propListName];
+			if( !!!propList )
+				return;
+
+			showPropList(propListName, 1);
+		}
+
+		function previousPropList()
+		{
+			var currentListName = propListTitleElem.innerText;
+			var lists = Object.keys(propLists);
+			var listIndex = lists.indexOf(currentListName) - 1;
+			if( listIndex < 0 )
+				listIndex = lists.length-1;
+			var propListName = lists[listIndex];
+			var propList = propLists[propListName];
+			if( !!!propList )
+				return;
+
+			showPropList(propListName, -1);
+		}
+
+		function populateFavorites(favoriteItemsContainer, favoritePropsContainer)
+		{
+			if( !!favoriteItemsContainer )
+				favoriteItemsContainer.innerHTML = "";
+
+			if( !!favoritePropsContainer )
+				favoritePropsContainer.innerHTML = "";
+
+			var entry;
+			var item;
+			var model;
+			var numItems = 0;
+			var numModels = 0;
+			var timeo = 100;
+			for( var i = 0; i < arcadeHud.favorites.length; i++ )
+			{
+				entry = arcadeHud.favorites[i];
+				/*
+				if( !!favoritePropsContainer && !!entry.model && !!!entry.item )
+				{
+					if( numModels < 14 && !!!arcadeHud.hiddenItems[entry.model] )
+					{
+						model = aaapi.cmdEx("getLibraryModel", entry.model);
+						if( !!model && model.dynamic != "1")
+						{
+							setTimeout(function(){
+							arcadeHud.createTile(this.myModel, favoritePropsContainer, "models");
+							}.bind({"myModel": model}), numModels*timeo);
+							numModels++;
+						}
+					}
+				}
+				else */
+				if( !!favoriteItemsContainer && !!entry.item )
+				{
+					if( numItems < g_librarySearchMax && !!!arcadeHud.hiddenItems[entry.item] )
+					{
+						item = aaapi.cmdEx("getLibraryItem", entry.item);
+						if( !!item )
+						{
+							arcadeHud.createTile(item, favoriteItemsContainer, "items");
+							numItems++;
+						}
+					}
+				}
+			}
+
+			if( !!favoriteItemsContainer && numItems === 0 )
+			{
+				var category = "items";
+				var response = aaapi.cmdEx("getFirstLibraryEntry", category);
+				var responseCount = 0;
+				var item;
+				while( response.success && numItems < 14 )
+				{
+					var libraryQueryId = response.queryId;
+					if( !!!arcadeHud.hiddenItems[response.entry.info.id] )
+					{
+						responseCount++;
+						if( category !== "models" || response.entry.dynamic != "1" )
+						{
+							arcadeHud.createTile(response.entry, favoriteItemsContainer, "items");
+							numItems++;
+						}
+					}
+
+					response = aaapi.cmdEx("getNextLibraryEntry", libraryQueryId, category);
+				}
+			}
+
+			/*
+			if( !!favoritePropsContainer && numModels === 0 )
+			{
+				for( var i = 0; i < arcadeHud.defaultModels.length && numModels < 14; i++ )
+				{
+					if( !!!arcadeHud.hiddenItems[arcadeHud.defaultModels[i]] )
+					{
+						model = aaapi.cmdEx("getLibraryModel", arcadeHud.defaultModels[i]);
+						if( model.dynamic != "1")
+						{
+							setTimeout(function(){
+								arcadeHud.createTile(this.myModel, favoritePropsContainer, "models");
+							}.bind({"myModel": model}), numModels*timeo);
+							numModels++;
+						}
+					}
+				}
+			}
+			*/
+		}
+
+		if( !!!entityInfo )
+		{
+			//setTimeout(function(){
+				//populateFavorites(favoriteItemsContainerElem, favoritePropsContainerElem);// }, 1000);
+			//showPropList("NPCs");
+			populateFavorites(document.querySelector("#favoriteItemsContainer"));
+			nextPropList();
+		}
+		else
+		{
+			var sideLists = document.querySelectorAll(".sideList");
+			for( var i = 0; i < sideLists.length; i++ )
+			{
+				sideLists[i].parentNode.removeChild(sideLists[i]);
+			}
+		}
+
+		var existsItemButtonContainerElem = document.querySelector("#existsItemButtonContainer");
+		var saveItemButtonContainerElem = document.querySelector("#saveItemButtonContainer");
+		var itemId = (!!entityInfo && !!entityInfo.item && !!entityInfo.item.id) ? entityInfo.item.id : "";
+
+		var hasEntityItem = (itemId !== "");
+		var isMutatedItem = (hasEntityItem) ? aaapi.cmdEx("isItemMutated", itemId) : false;
+		var isRemoteOnlyItem = (hasEntityItem) ? aaapi.cmdEx("isItemRemoteOnly", itemId) : false;
+		//if( !isRemoteOnlyItem )
+		//	existsItemButtonContainerElem.style.display = "inline-block";
+		var shouldShowSaveItem = (hasEntityItem && (isMutatedItem || isRemoteOnlyItem));
+		if(shouldShowSaveItem)
+			saveItemButtonContainerElem.style.display = "inline-block";
+
+		function saveItemToLibrary()
+		{
+			aaapi.cmd("saveRemoteItemChanges", entityInfo.item.id);
+			doClose();
+		}
+
+		function saveModelToLibrary()
+		{
+			aaapi.cmd("saveRemoteModelChanges", entityInfo.model.id);
+			doClose();
+		}
+
+		if( hasEntityItem )
+		{
+			if( !isRemoteOnlyItem )
+				existsItemButtonContainerElem.style.display = "inline-block";
+		}
+		else if( !hasEntityItem )
+		{
+			var saveModelButtonContainerElem = document.querySelector("#saveModelButtonContainer");
+			var modelId = (!!entityInfo && !!entityInfo.model && !!entityInfo.model.id) ? entityInfo.model.id : "";
+			
+			var hasEntityModel = (modelId !== "");
+			var isMutatedModel = (hasEntityModel) ? aaapi.cmdEx("isModelMutated", modelId) : false;
+			var isRemoteOnlyModel = (hasEntityModel) ? aaapi.cmdEx("isModelRemoteOnly", modelId) : false;
+			if( !isRemoteOnlyModel )
+			{
+				existsItemButtonContainerElem.style.display = "inline-block";
+				existsItemButtonContainerElem.querySelector("img").setAttribute("help", "PROP EXISTS IN YOUR LIBRARY");
+			}
+			var shouldShowSaveModel = (hasEntityModel && (isMutatedModel || isRemoteOnlyModel));
+			if(shouldShowSaveModel)
+				saveModelButtonContainerElem.style.display = "inline-block";
+		}
+
+		if( !!!entityInfo )
+		{
+			var elems = document.querySelectorAll(".onlyIfEntity");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				elems[i].classList.add("forceInvisible");
+			}
+		}
+
+		function editModel()
+		{
+			window.location='asset://ui/editModel.html?id=' + entityInfo.model.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+		}
+
+		function unflagVehicleEntry()
+		{
+			if( !!!entityInfo )
+				return;
+
+			//var isItemMode = true;
+			var entryId = '';
+			if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+				entryId = entityInfo.item.id;
+			else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+				entryId = entityInfo.model.id;
+
+			if( !!entryId && entryId != '' )
+			{
+				// Remove this entry from the vehicle list
+				delete vehiclePresets[entryId];
+				localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+			}
+
+			// reset current values
+			aaapi.cmd("consoleCommand", "vehicle_eye_offset \"0 0 0\"; air_boat_offset \"0 0 0\"; air_boat_angles \"0 0 0\"; air_boat_model \"\"");
+			aaapi.cmd('deactivateInputMode');
+		}
+
+		function flagVehicleEntry()
+		{
+			if( !!!entityInfo )
+				return;
+
+			//var isItemMode = true;
+			var entryId = '';
+			if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+				entryId = entityInfo.item.id;
+			else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+				entryId = entityInfo.model.id;
+
+			var model = aaapi.cmdEx('getLibraryModel', entryId);
+			if( !!model )
+			{
+				if( !!!vehiclePresets[entryId] )
+				{
+					// Add the item to the hide list
+					vehiclePresets[entryId] = {
+						camx: 0,
+						camy: 0,
+						camz: 0,
+						x: 0,
+						y: 0,
+						z: 0,
+						pitch: 0,
+						yaw: 0,
+						roll: 0
+					};
+					localStorage.setItem("vehiclePresets", JSON.stringify(vehiclePresets));
+				}
+
+				var vehiclePreset = vehiclePresets[entryId];
+				aaapi.cmd("consoleCommand", "vehicle_eye_offset \"" + vehiclePreset.camx + " " + vehiclePreset.camy + " " + vehiclePreset.camz + "\"; air_boat_offset \"" + vehiclePreset.x + " " + vehiclePreset.y + " " + vehiclePreset.z + "\"; air_boat_angles \"" + vehiclePreset.pitch + " " + vehiclePreset.yaw + " " + vehiclePreset.roll + "\"; air_boat_model \"" + model.platforms[arcadeHud.platformId].file + "\"");
+			}
+
+			window.location = "options.html?tab=vehicle";
+		}
+
+		if( g_context !== "models" )
+			document.querySelector("#adoptButton").style.display = "none";
+	</script>
+	<style>
+		.forceInvisible
+		{
+			display: none !important;
+		}
+	</style>
+
+	<script>
+		function dropListener(files_in)
+		{
+			var files_out = (Array.isArray(files_in)) ? files_in.join("::") : files_in;
+			window.location.href = "drop.html?files=" + encodeURIComponent(files_out);
+		}
+		//function dropListener(files)
+		//{
+			// BEHAVIOR A: Update the current item's File Target to the dropped file.
+			// TODO: ONLY do this if an individual item is being inspected, NOT while simply in library browse mode.
+			/*if( !!entityInfo && !!entityInfo.item && typeof files != "array" )
+			{
+				console.log("Update item " + entityInfo.item.id + " with " + files);
+				var success = aaapi.cmdEx("updateItem", entityInfo.item.id, ['file', files]);
+				if( success )
+				{
+					console.log("Updated item's file target to: " + files);
+					document.location.reload();
+					return;
+				}
+			}*/
+
+			// BEHAVIOR B: Take us to drop.html and handle a new item creation there.
+			//var files = (typeof files === "array") ? files.join("::") : files;
+			//window.location.href = "drop.html?files=" + files;
+
+			/*var spawnItems = [];
+			var spawnModels = [];
+			var file;
+			var item;
+			var model;
+			for( var i = 0; i < files.length; i++ )
+			{
+				file = files[i];
+				createShortcut(file);
+				break;
+			}*/
+		//}
+
+
+		// determine if junk stuff needs to be figured out.
+		// only if the user has the !cheer command enabled in their twitch options.
+		if( !!entityInfo && !!!entityInfo.item && !!entityInfo.model )
+		{
+			// We have a model.  Figure out if it's already in the junk list (if we need to.)
+			var twitchEnabled = (aaapi.cmdEx("getConVarValue", "twitch_enabled") == '1');
+			if( twitchEnabled == '1' )
+			{
+				var twitchBotEnabled = (aaapi.cmdEx("getConVarValue", "twitch_bot_enabled") == '1');
+				if( twitchBotEnabled )
+				{
+					var model = aaapi.cmdEx('getLibraryModel', entityInfo.model.id);
+					var modelFile = model.platforms[arcadeHud.platformId].file;
+
+					var models = (aaapi.cmdEx("getConVarValue", "junkmodel").toLowerCase()).split('::');
+					if( models.indexOf(modelFile.toLowerCase()) >= 0 )
+					{
+						//junkStuffElem.style.display = 'block';
+						// already exists
+						// unhide UNJUNK
+						document.querySelector('#removeFromJunkButton').classList.remove('ezNoShow');
+
+					}
+					else
+					{
+						//junkStuffElem.style.display = 'block';
+						// doesn't exist yet
+						// unhide JUNK
+						document.querySelector('#addToJunkButton').classList.remove('ezNoShow');
+					}
+				}
+			}
+		}
+
+		function removeFromJunk()
+		{
+			if( !!!entityInfo )
+				return;
+
+			var entryId = '';
+			if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+				entryId = entityInfo.item.id;
+			else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+				entryId = entityInfo.model.id;
+
+			var model = aaapi.cmdEx('getLibraryModel', entryId);
+			if( !!model )
+			{
+				var modelFile = model.platforms[arcadeHud.platformId].file;
+				var modelFileLow = modelFile.toLowerCase();
+
+				var junkModelsRaw = aaapi.cmdEx('getConVarValue', 'junkmodel');
+				var junkModels = junkModelsRaw.split('::');
+				var junkModelsLow = junkModelsRaw.toLowerCase().split('::');
+
+				// first find the match without caring about case
+				var index = junkModelsLow.indexOf(modelFileLow);
+				if( index < 0 )
+					return;
+
+				junkModels.splice(index, 1);
+				aaapi.cmd("consoleCommand", "junkmodel \"" + junkModels.join("::") + "\";");
+				aaapi.cmd("addToastMessage", "Removed From Junk List");
+				aaapi.cmd("deactivateInputMode");
+			}
+		}
+
+		function addToJunk()
+		{
+			if( !!!entityInfo )
+				return;
+
+			var entryId = '';
+			if( !!entityInfo.item && !!entityInfo.item.id && entityInfo.item.id != '' && (!!!entityInfo.model || !!!entityInfo.model.id || entityInfo.model.id != '') )
+				entryId = entityInfo.item.id;
+			else if(!!entityInfo.model && !!entityInfo.model.id && entityInfo.model.id != '')
+				entryId = entityInfo.model.id;
+
+			var model = aaapi.cmdEx('getLibraryModel', entryId);
+			if( !!model )
+			{
+				var modelFile = model.platforms[arcadeHud.platformId].file;
+
+				var junkModels = aaapi.cmdEx('getConVarValue', 'junkmodel');
+				junkModels = junkModels.split('::');
+
+				if( junkModels.indexOf(modelFile) < 0 )
+				{
+					junkModels.unshift(modelFile);
+					aaapi.cmd("consoleCommand", "junkmodel \"" + junkModels.join("::") + "\";");
+					aaapi.cmd("addToastMessage", "Added To Junk List");
+					aaapi.cmd("deactivateInputMode");
+				}
+			}
+		}
+	</script>
+
+	</body>
+</html>

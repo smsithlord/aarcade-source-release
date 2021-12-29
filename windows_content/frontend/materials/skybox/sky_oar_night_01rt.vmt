@@ -1,0 +1,8 @@
+sky
+
+{
+$basetexture "skybox\sky_oar_night_01_rt"
+$nofog 1
+$ignorez 1
+$color "[ 1.2 1.2 1.2 ]"
+}

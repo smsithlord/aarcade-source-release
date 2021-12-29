@@ -1,0 +1,736 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?buster=4b"></link>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+
+			var hoveredReplacementField = '';
+			var hoveredItem = null;
+
+			function dropListener(files_in)
+			{
+				var files_out = (Array.isArray(files_in)) ? files_in.join("%3A%3A") : files_in;	// %3A%3A = ::
+
+				var fileLocation;
+				if( !Array.isArray(files_in) )
+					fileLocation = decodeURIComponent(files_in);
+				else if( files_in.length == 1 )
+					fileLocation = decodeURIComponent(files_in[0]);
+
+				var wasHandled = false;
+				if( !!fileLocation )
+				{
+					if( !!hoveredItem && hoveredReplacementField != '' )
+					{
+						var success = aaapi.cmdEx("updateItem", hoveredItem.info.id, [hoveredReplacementField, fileLocation]);
+						aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+
+						if( success )
+						{
+							hoveredItem[hoveredReplacementField] = fileLocation;
+							//console.log("Item updated!");
+							aaapi.cmd("sendEntryUpdate", "Item", hoveredItem.info.id);
+							aaapi.cmd("deactivateInputMode");
+						}
+						else
+							console.log("Item update rejected!");
+						return;
+					}
+
+ 					var item = aaapi.cmdEx("findLibraryItem", "file", fileLocation);
+					if( !!item )
+					{
+						//console.log("setting to items A");
+						aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+		 				//arcadeHud.spawnItem("items", item.info.id, "", "");
+						aaapi.cmd("spawnItem", item.info.id);
+						wasHandled = true;
+					}
+				}
+
+
+				if( !wasHandled )
+					window.location.href = "drop.html?files=" +  encodeURIComponent(files_out);//files_out;
+			}
+
+			function dropTextListener(text)
+			{
+				var fileLocation = decodeURIComponent(text);
+
+				if( !!hoveredItem && hoveredReplacementField != '' )
+				{
+					var showDropConfirmation = localStorage.getItem("dragDropConfirm");
+					if( showDropConfirmation == "1" )
+					{
+						//aaapi.cmd('objectHover', -1);
+						window.location = 'updateItemConfirmation.html?item=' + encodeURIComponent(hoveredItem.info.id) + '&field=' + encodeURIComponent(hoveredReplacementField) + '&value=' + encodeURIComponent(fileLocation);
+						return;
+					}
+					else {
+						return;
+						var success = aaapi.cmdEx("updateItem", hoveredItem.info.id, [hoveredReplacementField, fileLocation]);
+						aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+
+						if( success )
+						{
+							hoveredItem[hoveredReplacementField] = fileLocation;
+							//console.log("Item updated!");
+							aaapi.cmd("sendEntryUpdate", "Item", hoveredItem.info.id);
+							aaapi.cmd("deactivateInputMode");
+						}
+						else
+							console.log("Item update rejected!");
+						return;
+					}
+				}
+
+				var hittag = "https://store.steampowered.com/app/";
+				var found = fileLocation.indexOf(hittag);
+				if( found >= 0 )
+				{
+					fileLocation = fileLocation.substring(found + hittag.length);
+ 					var item = aaapi.cmdEx("findLibraryItem", "file", fileLocation);
+
+					if( !!item )
+					{
+						//console.log("setting to items A");
+						aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+		 				//arcadeHud.spawnItem("items", item.info.id, "", "");
+						aaapi.cmd("spawnItem", item.info.id);
+					}
+					else
+						window.location.href = "drop.html?text=" + text;
+				}
+				else
+				{
+ 					var item = aaapi.cmdEx("findLibraryItem", "file", fileLocation);
+					if( !!item )
+					{
+						aaapi.cmd("setLibraryBrowserContext", "items", item.info.id, "", "");
+						aaapi.cmd("spawnItem", item.info.id);
+					}
+					else
+						window.location.href = "drop.html?text=" + text;
+						//indow.location.href = "drop.html?files=" + text;
+				}
+			}
+		</script>
+		<script src="asset://ui/hud.js"></script>
+
+		<style>
+			.entryMarkerContainer
+			{
+				z-index: 100000;
+				position: absolute;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+				/*border-width: 2px;
+				border-style: solid;
+				border-radius: 16px;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;*/
+				pointer-events: all;
+				text-align: center;
+				/*background-color: rgba(0, 0, 0, 1.0);
+				color: #ccc;*/
+			}
+
+			.entryMarkerTitle
+			{
+				border-width: 2px;
+				border-style: solid;
+				border-radius: 16px;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				background-color: rgba(0, 0, 0, 1.0);
+				color: #ccc;
+			}
+
+			.entryMarkerFieldsContainer
+			{
+				pointer-events: all;
+				opacity: 0;
+				-webkit-transition: all 0.3s ease-in-out;
+
+			}
+
+			.entryMarkerFieldButton
+			{
+				border: 2px solid white;
+				background-color: rgb(0, 0, 0);
+				padding: 8px;
+				margin: 2px;
+				border-radius: 50%;
+				display: inline-block;
+			}
+
+			.entryMarkerFieldButton:hover
+			{
+				background-color: rgb(80, 80, 80);
+			}
+
+			.entryMarkerFieldTitle
+			{
+				border-width: 2px;
+				border-style: solid;
+				border-radius: 16px;
+				border-color: transparent;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+				visibility: hidden;
+			}
+		</style>
+		<script>
+			//var titleIconHTML = arcadeHud.generateIconHTML("titleicon.png", 18, 18, "aaTextColorTwoHighColor");
+			//var typeIconHTML = arcadeHud.generateIconHTML("typeicon.png", 18, 18, "aaTextColorTwoHighColor");
+			//var appIconHTML = arcadeHud.generateIconHTML("appicon.png", 18, 18, "aaTextColorTwoHighColor");	
+			var fileIconHTML = arcadeHud.generateIconHTML("fileicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var screenIconHTML = arcadeHud.generateIconHTML("screenicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var marqueeIconHTML = arcadeHud.generateIconHTML("marqueeicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var previewIconHTML = arcadeHud.generateIconHTML("previewicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var streamIconHTML = arcadeHud.generateIconHTML("streamicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var downloadIconHTML = arcadeHud.generateIconHTML("downloadicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var referenceIconHTML = arcadeHud.generateIconHTML("referenceicon.png", 18, 18, "aaTextColorTwoHighColor");
+			//var descriptionIconHTML = arcadeHud.generateIconHTML("descriptionicon.png", 18, 18, "aaTextColorTwoHighColor");
+			//var tagsIconHTML = arcadeHud.generateIconHTML("tagsicon.png", 18, 18, "aaTextColorTwoHighColor");
+		
+			var g_opts;
+
+			function getDist(in_posA, in_posB)
+			{
+				var bufPosA = in_posA.split(" ");
+				var posA = {
+					"x": parseFloat(bufPosA[0]),
+					"y": parseFloat(bufPosA[1]),
+					"z": parseFloat(bufPosA[2])
+				};
+
+				var bufPosB = in_posB.split(" ");
+				var posB = {
+					"x": parseFloat(bufPosB[0]),
+					"y": parseFloat(bufPosB[1]),
+					"z": parseFloat(bufPosB[2])
+				};
+//(x2 x1)2 + (y2 y1)2 + (z2 z1)2
+
+				return Math.sqrt(((posB.x - posA.x)*(posB.x - posA.x)) + ((posB.y - posA.y)*(posB.y - posA.y)) + ((posB.z - posA.z)*(posB.z - posA.z)));
+			}
+
+			function clearOldMarker()
+			{
+				if( g_activeEntryMarker )
+				{
+					g_activeEntryMarker.parentNode.removeChild(g_activeEntryMarker);
+					g_activeEntryMarker = null;
+				}
+			}
+
+			var g_playerEyeOrigin;
+
+			function fieldButtonMouseOver(e)
+			{
+				hoveredReplacementField = this.field;
+				this.fieldTitle.innerHTML = "replace " + this.field;
+				this.fieldTitle.style.visibility = "visible";
+			}
+
+			function fieldButtonMouseOut(e)
+			{
+				hoveredReplacementField = '';
+				this.fieldTitle.innerHTML = '&nbsp;';
+				this.fieldTitle.style.visibility = "hidden";
+			}
+
+			function createEntryMarker(entry, pos)
+			{
+				if( !!!g_playerEyeOrigin )
+					g_playerEyeOrigin = aaapi.cmdEx('getPlayerEyeOrigin');
+				clearOldMarker();
+
+				var item = aaapi.cmdEx('getLibraryItem', entry.item);
+				var model = aaapi.cmdEx('getLibraryModel', entry.model);
+				if( entry.item != entry.model )
+					hoveredItem = item;
+				else
+					hoveredItem = null;
+
+				var container = document.createElement("div");
+				if( !!hoveredItem )
+				{
+					container.addEventListener('mouseover', function(e)
+					{
+						// show the item field buttons
+						this.itemFieldsContainer.style.opacity = '1';
+						//hoveredReplacementField = '';
+					}.bind(container));
+					container.addEventListener('mouseout', function(e)
+					{
+						// hide the item field buttons
+						this.itemFieldsContainer.style.opacity = '0';
+						hoveredReplacementField = '';
+					}.bind(container));
+				}
+
+				container.className = "entryMarkerContainer aaTextSizeFontSize"; //aaThemeColorTwoShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				container.entry = entry;
+
+				var dist = getDist(entry.origin, g_playerEyeOrigin);
+				//console.log(dist);
+				var zoomFactor = 150 / dist;//0.3;
+				if( zoomFactor > 1.0 )
+					zoomFactor = 1.0;
+				else if( zoomFactor < 0.2 )
+					zoomFactor = 0.2;
+
+				container.style.zoom = 100 * zoomFactor + "%";
+				container.style.left = pos.x / zoomFactor;
+				container.style.top = pos.y / zoomFactor;
+				//container.style.webkitTransform = "scale(0.2)";
+
+				container.item = item;
+				container.model = model;
+				container.slaveEntry = undefined;
+				container.slaveItem = undefined;
+				container.slaveModel = undefined;
+
+				if( !!hoveredItem )
+				{
+					var fieldTitle = document.createElement("div");
+					fieldTitle.className = "entryMarkerFieldTitle aaThemeColorOneBackgroundColor aaThemeColorOneTextColor";
+					fieldTitle.innerHTML = "&nbsp;";
+					container.appendChild(fieldTitle);
+				}
+
+				var title = document.createElement("div");
+				// NOTE: If this is a screen mirror & it's item is NOT active, then the DisplayTask's item info should be used instead, and even it's Object (in some cases.)
+
+				title.className = "entryMarkerTitle";
+
+				var goodTitle = "";
+				if( !!!item )
+					goodTitle = model.title;
+				else if( !entry.slave )
+					goodTitle = item.title;
+				else
+				{
+					var testTaskId = "auto" + entry.item;
+					var testTask = aaapi.cmdEx('getTaskInfo', testTaskId);
+					if( !!testTask )
+					{
+						goodTitle = item.title;
+					}
+					else
+					{
+						var displayTask = aaapi.cmdEx('getDisplayTaskInfo');
+						if( displayTask )
+						{
+							var displayObject = aaapi.cmdEx('getObject', displayTask.objectId);
+							container.slaveEntry = displayObject;
+							if( !!displayObject )
+							{
+								var displayItem = aaapi.cmdEx('getLibraryItem', displayObject.item);
+								container.slaveItem = displayItem;
+
+								var displayModel = aaapi.cmdEx('getLibraryModel', displayObject.model);
+								container.slaveModel = displayModel;
+
+								if( !!displayItem )
+									goodTitle = displayItem.title;
+							}
+						}
+
+						if( goodTitle === "" )
+							goodTitle = item.title;
+					}
+				}
+
+				//var goodTitle = (!!item) ? item.title : model.title;
+				title.appendChild(document.createTextNode(goodTitle));
+				container.appendChild(title);
+
+				// Add the item field buttons in case the user wants to drop the URL directly into one of the hovered object's item properties.
+				if( !!hoveredItem )
+				{
+					var itemFieldsContainer = document.createElement('div');
+					itemFieldsContainer.className = "entryMarkerFieldsContainer";
+
+					var fileField = document.createElement('div');
+					fileField.innerHTML = fileIconHTML;
+					fileField.className = "entryMarkerFieldButton";
+					fileField.field = 'file';
+					fileField.fieldTitle = fieldTitle;
+					fileField.addEventListener('mouseover', fieldButtonMouseOver.bind(fileField));
+					fileField.addEventListener('mouseout', fieldButtonMouseOut.bind(fileField));
+					itemFieldsContainer.appendChild(fileField);
+
+					var screenField = document.createElement('div');
+					screenField.innerHTML = screenIconHTML;
+					screenField.className = "entryMarkerFieldButton";
+					screenField.field = 'screen';
+					screenField.fieldTitle = fieldTitle;
+					screenField.addEventListener('mouseover', fieldButtonMouseOver.bind(screenField));
+					screenField.addEventListener('mouseout', fieldButtonMouseOut.bind(screenField));
+					itemFieldsContainer.appendChild(screenField);
+
+					var marqueeField = document.createElement('div');
+					marqueeField.innerHTML = marqueeIconHTML;
+					marqueeField.className = "entryMarkerFieldButton";
+					marqueeField.field = 'marquee';
+					marqueeField.fieldTitle = fieldTitle;
+					marqueeField.addEventListener('mouseover', fieldButtonMouseOver.bind(marqueeField));
+					marqueeField.addEventListener('mouseout', fieldButtonMouseOut.bind(marqueeField));
+					itemFieldsContainer.appendChild(marqueeField);
+
+					var previewField = document.createElement('div');
+					previewField.innerHTML = previewIconHTML;
+					previewField.className = "entryMarkerFieldButton";
+					previewField.field = 'preview';
+					previewField.fieldTitle = fieldTitle;
+					previewField.addEventListener('mouseover', fieldButtonMouseOver.bind(previewField));
+					previewField.addEventListener('mouseout', fieldButtonMouseOut.bind(previewField));
+					itemFieldsContainer.appendChild(previewField);
+
+					var streamField = document.createElement('div');
+					streamField.innerHTML = streamIconHTML;
+					streamField.className = "entryMarkerFieldButton";
+					streamField.field = 'stream';
+					streamField.fieldTitle = fieldTitle;
+					streamField.addEventListener('mouseover', fieldButtonMouseOver.bind(streamField));
+					streamField.addEventListener('mouseout', fieldButtonMouseOut.bind(streamField));
+					itemFieldsContainer.appendChild(streamField);
+
+					var downloadField = document.createElement('div');
+					downloadField.innerHTML = downloadIconHTML;
+					downloadField.className = "entryMarkerFieldButton";
+					downloadField.field = 'download';
+					downloadField.fieldTitle = fieldTitle;
+					downloadField.addEventListener('mouseover', fieldButtonMouseOver.bind(downloadField));
+					downloadField.addEventListener('mouseout', fieldButtonMouseOut.bind(downloadField));
+					itemFieldsContainer.appendChild(downloadField);
+
+					var referenceField = document.createElement('div');
+					referenceField.innerHTML = referenceIconHTML;
+					referenceField.className = "entryMarkerFieldButton";
+					referenceField.field = 'reference';
+					referenceField.fieldTitle = fieldTitle;
+					referenceField.addEventListener('mouseover', fieldButtonMouseOver.bind(referenceField));
+					referenceField.addEventListener('mouseout', fieldButtonMouseOut.bind(referenceField));
+					itemFieldsContainer.appendChild(referenceField);
+					//file screen marquee preview stream download reference
+
+					//itemFieldsContainer.appendChild(document.createTextNode('yooo'));
+					container.itemFieldsContainer = itemFieldsContainer;
+					container.appendChild(itemFieldsContainer);	
+				}
+
+/*
+				container.addEventListener("mouseover", function(e)
+				{
+					aaapi.system.objectHover(this.entry.id);
+				}.bind(container), false);
+*/
+				document.body.appendChild(container);
+				g_activeEntryMarker = container;
+			}
+		</script>
+
+		<style>
+			#mouseSlate
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+			}
+
+			.displayTask td
+			{
+				font-weight: 900;
+				/*text-decoration: underline;*/
+				font-style: italic;
+			}
+
+			.aaDownArrow
+			{
+				width: 0; 
+				height: 0; 
+				border-left: 12px solid transparent;
+				border-right: 12px solid transparent;
+
+				border-top-style: solid;
+				border-top-width: 12px;/* solid #555;*/
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="mouseSlate"></div>
+
+		<!--div id="clipboard" style="position: absolute; bottom: 20px; right: 20px;"><img src="ezclipboard.png" /></div-->
+
+		<style>
+			.slot
+			{
+				width: 112px;
+				height: 112px;
+				border: 2px solid black;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
+
+		<script>
+			function unglowall(e)
+			{
+				if( g_glowingObjectId !== -1 )
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}
+
+			var g_glowingObjectId = "";
+			var g_activeEntryMarker = null;
+			var mouseSlate = document.querySelector("#mouseSlate");
+			mouseSlate.addEventListener("mousemove", function(e)
+			{
+				if( !!g_dragObject )
+					return;
+
+				var x = e.clientX;
+				var y = e.clientY;
+				var objectId = aaapi.cmdEx('getObjectUnderCursor', x, y);
+				if( !!objectId )
+				{
+					if( g_glowingObjectId !== objectId )
+					{
+						g_glowingObjectId = objectId;
+						aaapi.cmd('objectHover', objectId);
+
+						var object = aaapi.cmdEx('getObject', objectId);
+						if( !!object )
+						{
+							var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+							if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+							{
+								createEntryMarker(object, posResponse);
+							}
+							else
+							{
+								clearOldMarker();
+							}
+						}
+					}
+				}
+				else
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}, false);
+
+			function lookListener(e)
+			{
+				//if( aaapi.system.getConVarValue("tempfreelook") == "0")
+				//{
+					aaapi.cmd('deactivateInputMode');
+					aaapi.cmd('consoleCommand', "tempfreelook 1");
+				//}
+			}
+
+			function removeLookListeners()
+			{
+				document.removeEventListener("mousemove", lookListener, false);
+				document.removeEventListener("mouseup", lookUpListener, false);
+			}
+
+			function lookUpListener(e)
+			{
+				removeLookListeners();
+			}
+
+			function doNothing()
+			{
+				// nothing
+			}
+
+			var g_wasDragClick = false;
+			var g_dragObject = null;
+			var g_dragTile = null;
+			var g_dragItem = null;
+
+			function tileDrag(e)
+			{
+				if( g_dragTile.style.display === "none" )
+					g_dragTile.style.display = "block";
+				g_dragTile.style.left = e.pageX + "px";
+				g_dragTile.style.top = e.pageY + "px";
+				g_wasDragClick = true;
+			}
+
+			mouseSlate.addEventListener("mousedown", function(e)
+			{
+				if( e.button !== 0 )
+					return;
+
+				if( g_glowingObjectId !== -1 )
+				{
+					var object = aaapi.cmdEx('getObject', g_glowingObjectId);
+					if( !!object )
+					{
+						var mode = "items";
+						var item = aaapi.cmdEx('getLibraryItem', object.item);
+						if( !!!item )
+						{
+							item = aaapi.cmdEx('getLibraryModel', object.item);
+							if( !!item )
+								mode = "models";
+						}
+						
+						if( !!item )
+						{
+							g_dragObject = object;
+							g_dragItem = item;
+
+//function(item, tilesContainer, mode, searchText, clickCallback)
+							var tile = arcadeHud.createTile(g_dragItem, document.body, mode, "", doNothing);
+							tile.style.cssText = "pointer-events: none; position: absolute; -webkit-transition: inherit;";
+							tile.style.display = "none";
+
+							g_dragTile = tile;
+							document.addEventListener("mousemove", tileDrag);
+						}
+					}
+				}
+			}, false);
+
+			function removeDragTile(deleteAlso)
+			{
+				if( !!g_dragObject )
+				{
+					//console.log(JSON.stringify(g_dragObject));
+
+					document.removeEventListener("mousemove", tileDrag);
+
+					g_dragObject = null;
+
+					if( deleteAlso )
+						g_dragTile.parentNode.removeChild(g_dragTile);
+
+					g_dragTile = null;
+					g_dragItem = null;
+				}
+			}
+
+			mouseSlate.addEventListener("mouseup", function(e)
+			{
+				if( e.button !== 0 )
+					return;
+
+				if( !!g_dragObject )
+					removeDragTile(true);
+			}, false);
+/*
+			clipboard.addEventListener("mouseup", function(e)
+			{
+				if( !!!g_dragItem )
+					return;
+
+				if( !!g_dragObject )
+				{
+					clipboard.appendChild(g_dragTile);
+					g_dragTile.style.position = "static";
+					g_dragTile.style.display = "inline-block";
+					g_dragTile.style.pointerEvents = "all";
+					removeDragTile(false);
+				}
+			}, true);
+*/
+			mouseSlate.addEventListener("click", function(e)
+			{
+				if( g_wasDragClick )
+				{
+					g_wasDragClick = false;
+					return;
+				}
+
+				if( !!g_activeEntryMarker )
+				{
+					if( e.button === 0 || e.button === 2)
+					{
+						var entry = g_activeEntryMarker.entry;
+
+						if( !!entry.item )
+						{
+							var usedSlave = false;
+
+							// If we are also a task, fullscreen us instead.
+							var existingInstance = aaapi.cmdEx('getTaskInfo', "auto" + entry.item);
+							if( !!existingInstance )
+							{
+								aaapi.cmd('attemptSelectEntity', existingInstance.entityIndex, true);
+							}
+							else if( entry.slave && g_activeEntryMarker.slaveEntry)
+							{
+								aaapi.cmd('attemptSelectEntity', g_activeEntryMarker.slaveEntry.entity, true);
+							}
+							else
+							{
+								aaapi.cmd('consoleCommand', "quick_remember " + entry.entity);
+							}
+						}
+					}
+					else if(e.button === 1)
+					{
+						var stuff = "&uiback=" + encodeURIComponent("window.location='asset://ui/welcome.html';");
+						var entry = g_activeEntryMarker.entry;
+						window.location = "asset://ui/buildModeContext.html?entity=" + entry.entity + "" + stuff;
+					}
+				}
+				else if(e.button === 1)
+				{
+					showLibrary();
+				}
+			}, false);
+
+
+
+			function lookListener(e)
+			{
+				//if( aaapi.system.getConVarValue("tempfreelook") == "0")
+				//{
+					aaapi.cmd('deactivateInputMode');
+					aaapi.cmd('consoleCommand', "tempfreelook 1");
+				//}
+			}
+
+			function removeLookListeners()
+			{
+				document.removeEventListener("mousemove", lookListener, false);
+				document.removeEventListener("mouseup", lookUpListener, false);
+			}
+
+			function lookUpListener(e)
+			{
+				removeLookListeners();
+			}
+
+			mouseSlate.addEventListener("mousedown", function(e)
+			{
+				if( e.button !== 2 )
+					return;
+
+				document.addEventListener("mousemove", lookListener, false);
+				document.addEventListener("mouseup", lookUpListener, false);
+			}, false);
+		</script>
+	</body>
+</html>

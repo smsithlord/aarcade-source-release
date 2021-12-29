@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players/hat"
+	"$bumpmap" "models\players/hat_normal"
+	"$model" "1"
+}

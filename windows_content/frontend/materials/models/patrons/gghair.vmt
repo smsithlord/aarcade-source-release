@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/gghair"
+	"$bumpmap" "models\patrons/gghair_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

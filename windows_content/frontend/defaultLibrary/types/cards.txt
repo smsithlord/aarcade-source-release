@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-Lp50q9fvK7cnh"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"cards"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"49507e4f"
+		}
+		"title"		"extended_four_player_arcade"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\extended_four_player_arcade.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

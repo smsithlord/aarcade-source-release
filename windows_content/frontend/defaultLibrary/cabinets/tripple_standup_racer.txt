@@ -1,0 +1,25 @@
+"model"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+			"id"		"259ed961"
+		}
+		"title"		"Triple Standup Racer"
+		"keywords"		"Arcade Cabinets"
+		"dynamic"		"1"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\tripple_standup_racer.mdl"
+			}
+		}
+	}
+}

@@ -1,0 +1,41 @@
+"UnlitGeneric"
+{
+	"$model" 1
+
+	//"$angle" 0.0
+	//"$translate" "[0.0 0.0]"
+	//"$center" "[-0.5 -0.5]"
+
+	$color2 "[1.0 1.0 1.0]"
+	"$offset" 0
+	//"$fullalpha" 1.0
+	//"$playerprox" 0.0
+
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	"$additive" 1
+	"$selfillum" 1
+	//"$texture2" "dev/dev_scanline"
+	"$surfaceprop" "glass"
+	"%compileNoLight" 1
+	"%compilepassbullets" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+
+		"Sine"
+		{
+			"sineperiod" 4
+			"sinemin" 0
+			"sinemax" 1.0
+			"timeoffset" "$offset"
+			"resultVar" "$color2"
+		}
+	}
+}

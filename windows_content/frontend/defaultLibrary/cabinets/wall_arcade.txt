@@ -1,0 +1,25 @@
+"model"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+			"id"		"3df84595"
+		}
+		"title"		"Wall Arcade"
+		"keywords"		"Banners"
+		"dynamic"		"1"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\wall_arcade.mdl"
+			}
+		}
+	}
+}

@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MjeSnxcg_N_1E"
+		}
+		"title"		"ZSNES"
+		"file"		"X:\Emulators\ZSNES\zsnesw.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-KtCXxiB-yIQVh"
+		"download"		"http://www.zsnes.com/"
+		"reference"		"http://www.zsnes.com/"
+		"filepaths"
+		{
+			"-ohTuY-Op7CvP6B8h2Ad"
+			{
+				"id"		"-ohTuY-Op7CvP6B8h2Ad"
+				"path"		"X:\Emulators\SNES\Roms\"
+			}
+		}
+	}
+}

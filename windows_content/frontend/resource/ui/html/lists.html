@@ -1,0 +1,46 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+	</head>
+	<body>
+		<!--center>
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="width: 500px; height: 400px;"></div>
+		</center-->
+
+		<script>
+			var interval = 10;
+			var container = document.body;//document.querySelector(".aaWindowPaneContent");
+			var itemList = arcadeHud.favorites;
+			var itemListIndex = -1;
+			function spawnItem()
+			{
+				itemListIndex++;
+				if( itemListIndex < itemList.length )
+				{
+					var item = aaapi.cmdEx("getLibraryItem", itemList[itemListIndex].item);
+					if( !!item && !!!arcadeHud.hiddenItems[item] )
+					{
+						var tile = arcadeHud.createTile(item, container, "items", "", null, 300);//, onTileClick);
+
+						//tile.item = item;
+					}
+
+					setTimeout(spawnItem, interval);
+				}
+			}
+
+			function onTileClick(elem)
+			{
+				console.log(elem.item.title);
+			}
+
+			/*var titleElem = document.querySelector(".aaTitleBar").querySelector(".aaTitleText");
+			var title = itemList.length + " " + titleElem.innerHTML.trim();
+			titleElem.innerHTML = title;*/
+			spawnItem();
+		</script>
+
+	</body>
+</html>

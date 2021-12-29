@@ -1,0 +1,17 @@
+LightmappedGeneric
+{
+$basetexture "glass\da_glass_02"
+$translucent 1
+$nocull 1
+$envmap env_cubemap
+$basealphaenvmapmask
+
+$surfaceprop glass
+
+$crackmaterial "glass\da_glass_02_crack"
+lightmappedgeneric_HDR_dx9
+{
+$envmaptint "[.35 .35 .35]"
+$crackmaterial "glass\da_glass_02_crack"
+}
+}

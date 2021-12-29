@@ -1,0 +1,1365 @@
+<html>
+	<head>
+		<!-- NOTE: Most of the code in this file is obsolete because it was written back when screenshots had 2 very different modes of opening.  They are related to the line with the AAAPI cmdEx commented out: "getOwnObjectId". I should clean this file up substantially later. -->
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			html, body
+			{
+				background-color: transparent;
+			}
+
+			#travelNote
+			{
+				-webkit-transition: opacity 1.0s ease-in-out;
+			}
+
+			.ezActionButton
+			{
+				cursor: pointer;
+				pointer-events: all;
+				vertical-align: middle;
+				border: 2px solid #fff;
+				padding: 8px;
+				border-radius: 50%;
+				background-color: rgb(0, 0, 0);
+				font-family: Arial;
+			}
+
+			.ezActionButton:hover
+			{
+				background-color: rgb(40, 40, 40);
+			}
+
+			#advancedButton
+			{
+				-webkit-transition: opacity 0.5s ease-in-out;
+			}
+
+			#advancedButton:hover
+			{
+				opacity: 0.9 !important;
+			}
+		</style>
+		<!--script>
+			window.location = "wheelspin.html";
+		</script-->
+
+		<script>
+			var tga = new TGA();
+
+			// get some GET params
+			var ownObjectId = arcadeHud.getParameterByName("object");//aaapi.cmdEx("getOwnObjectId");
+			var ownObject = aaapi.cmdEx("getObject", ownObjectId);
+			var ownItem = aaapi.cmdEx("getLibraryItem", ownObject.item);
+			var mapfile = arcadeHud.getParameterByName("mapfile", ownItem.file);//arcadeHud.getParameterByName("mapfile");
+			var mapInfo = aaapi.cmdEx("findMap", mapfile + ".bsp");
+			var mapId;
+			if( !!mapInfo.map )
+				mapId = mapInfo.map.info.id;
+
+			var g_screenshots = (!!mapId) ? aaapi.cmdEx("getAllMapScreenshots", "id" + mapId) : {};
+
+			var spawnEntityName = arcadeHud.getParameterByName("spawn", ownItem.file);//arcadeHud.getParameterByName("spawn");
+			if( !!!spawnEntityName )
+				spawnEntityName = "";
+
+			var givenScreenshot = arcadeHud.getParameterByName("screenshot", ownItem.file);//arcadeHud.getParameterByName("screenshot");
+			if( !!!givenScreenshot || !!!g_screenshots[givenScreenshot] )
+				givenScreenshot = "";
+
+			var givenPosition = arcadeHud.getParameterByName("pos", ownItem.file);//arcadeHud.getParameterByName("pos");
+			if( !!!givenPosition )
+				givenPosition = "";
+
+			//console.log(givenPosition);
+
+			var givenRotation = arcadeHud.getParameterByName("rot", ownItem.file);//arcadeHud.getParameterByName("rot");
+			if( !!!givenRotation )
+				givenRotation = "";
+
+			//console.log(givenRotation);
+
+			var givenLobby = arcadeHud.getParameterByName("lobby", ownItem.file);//arcadeHud.getParameterByName("lobby");
+			if( !!!givenLobby )
+				givenLobby = "";
+
+			//console.log(givenLobby);
+
+			var givenLobbyTitle = arcadeHud.getParameterByName("lobbytitle", ownItem.file);//arcadeHud.getParameterByName("lobbytitle");
+			if( !!!givenLobbyTitle )
+				givenLobbyTitle = "";
+
+			//console.log(givenLobbyTitle);
+
+			var givenLobbyAuthor = arcadeHud.getParameterByName("lobbyauthor", ownItem.file);//arcadeHud.getParameterByName("lobbyauthor");
+			if( !!!givenLobbyAuthor )
+				givenLobbyAuthor = "";
+
+			var givenInstance = arcadeHud.getParameterByName("instance", ownItem.file);//arcadeHud.getParameterByName("instance");
+			if( !!!givenInstance )
+				givenInstance = "";
+
+			//console.log(givenInstance);
+
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			var serverHistory = (localStorage.getItem("serverHistory")) ? JSON.parse(localStorage.getItem("serverHistory")) : {};
+
+			function getMostRecentServerInfo(lobbyId)
+			{
+				if( !!lobbyId && lobbyId != "" )
+					return serverHistory[lobbyId];
+
+				var bestLobbyId;
+				var bestLobbyTime = 0;
+				var testMap = (mapfile + ".bsp").toLowerCase();
+				for( var x in serverHistory )
+				{
+					//console.log(serverHistory[x].mapfile.toLowerCase() + " vs " + testMap);
+					if( !!serverHistory[x].timestamp && serverHistory[x].timestamp > bestLobbyTime && serverHistory[x].mapfile.toLowerCase() == testMap )
+					{
+						bestLobbyTime = serverHistory[x].timestamp;
+						bestLobbyId = x;
+					}
+				}
+
+				var bestLobby = (!!bestLobbyId) ? serverHistory[bestLobbyId] : null;
+				return bestLobby;
+			}
+
+			var g_bestLobby = getMostRecentServerInfo();
+
+			var universeInfo = aaapi.cmdEx("getConnectedSession");
+
+			var objectIconHTML = arcadeHud.generateIconHTML("objecticon.png", 24, 24, "aaThemeColorOneColor");
+			function playNow(mapId)
+			{
+				var universeInfo = aaapi.cmdEx("getConnectedSession");
+				if( !!universeInfo && universeInfo.universe !== "" && universeInfo.instance !== "" )
+				{
+					aaapi.cmd("disconnectSession");
+				}
+
+				var pos = (spawnEntityName === "") ? givenPosition : "";
+				var rot = (spawnEntityName === "") ? givenRotation : "";
+				var screenshotId = givenScreenshot;
+				var instanceId = givenInstance;
+
+				var thumbScreenshotId = mapThumbnailElem.getAttribute("screenshotid");
+				if( thumbScreenshotId !== "" )
+					screenshotId = thumbScreenshotId;
+
+				var hasInstanceToLoad = false;
+				if( spawnEntityName === "" && screenshotId !== "" && !!g_screenshots[screenshotId] && !!g_screenshots[screenshotId].instance && !!g_screenshots[screenshotId].instance.id && !!g_screenshots[screenshotId].map && !!g_screenshots[screenshotId].map.id && isMapInstanceLoadable(g_screenshots[screenshotId].map.id.substring(2), g_screenshots[screenshotId].instance.id.substring(2)) ) // && the instance exists
+				{
+					instanceId = g_screenshots[screenshotId].instance.id.substring(2);
+					mapId = g_screenshots[screenshotId].map.id.substring(2);
+
+					//if( spawnEntityName === "" )
+					//{
+						pos = g_screenshots[screenshotId].body.position;
+						rot = g_screenshots[screenshotId].body.rotation;
+					//}
+				}
+				else
+				{
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!mapHistoryEntry && !isMapInstanceLoadable(mapHistoryEntry.mapId, mapHistoryEntry.instanceId) )
+						mapHistoryEntry = null;
+
+					if( !!mapHistoryEntry )
+					{
+						instanceId = mapHistoryEntry.instanceId;
+					
+						if( spawnEntityName === "" )
+						{
+							pos = mapHistoryEntry.position;
+							rot = mapHistoryEntry.rotation;
+						}
+
+						screenshotId = mapHistoryEntry.screenshotId;
+					}
+					else
+					{
+						var mapInstances = aaapi.cmdEx("getMapInstances", mapId);
+						if( mapInstances.length > 0 )
+						{
+							//instanceId = mapInstances[0].id;
+							//pos = mapHistoryEntry.position;
+							//rot = mapHistoryEntry.rotation;
+
+							window.location = "asset://ui/playInstance.html?id=" + mapId + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "&playmode=sp';");
+						}
+						else
+						{
+							// create our mapHistory entry
+							var mapHistoryEntry = {
+								"mapId": mapId,
+								"instanceId": "",
+								"position": "",
+								"rotation": "",
+								"screenshotId": "",
+								"timestamp": new Date().getTime()
+							};
+
+							// add our entry to the mapHistory
+							mapHistory[mapId] = mapHistoryEntry;
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+							
+							window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + "" + "&pos=" + pos + "&rot=" + rot + "&screenshot=" + "";
+						}
+					}
+				}
+
+				if( true )//(givenInstance !== "" && instanceId === "") || (givenPosition !== "" && pos === "") || (givenPosition !== "" && rot === "") )
+				{
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!!mapHistoryEntry )
+					{
+						// create our mapHistory entry
+						mapHistoryEntry = {
+							"mapId": mapId,
+							"instanceId": instanceId,
+							"position": pos,
+							"rotation": rot,
+							"screenshotId": screenshotId,
+							"timestamp": new Date().getTime()
+						};
+					}
+					else
+					{
+						mapHistoryEntry.mapId = mapId;
+						mapHistoryEntry.instanceId = instanceId;
+						mapHistoryEntry.position = pos;
+						mapHistoryEntry.rotation = rot;
+						mapHistoryEntry.screenshotId = screenshotId;
+						mapHistoryEntry.timestamp = new Date().getTime();
+					}
+
+					// save the mapHistory out
+					localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+//console.log("Screenshot ID: " + screenshotId + " vs InstanceID: " + instanceId);
+					window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId + "&pos=" + pos + "&rot=" + rot + "&screenshot=" + screenshotId;
+				}
+			}
+		</script>
+	</head>
+	<body>
+
+		<img id='image' style='display: none; position: absolute; cursor: pointer; top: 0; left: 0; width: 100%; height: 100%; -webkit-transition: all 0.5s ease-in-out;' src='' />
+
+		<script>
+			var image = document.querySelector('#image');
+
+			var givenObjectId = arcadeHud.getParameterByName('object');
+			var useIntro = arcadeHud.getParameterByName('intro');
+			if( useIntro === '1' )
+				useIntro = true;
+			else
+				useIntro = false;
+
+			var ownScreenshotId = arcadeHud.getParameterByName("screenshot", ownItem.file);
+			var ownScreenshot = aaapi.cmdEx("getScreenshot", ownScreenshotId);
+			if( !!ownScreenshot && !!ownScreenshot.screenshot )
+				ownScreenshot = ownScreenshot.screenshot;
+			else
+				ownScreenshot = null;
+
+			if(  !!!ownScreenshot )
+			{
+				var mapFileName = arcadeHud.getParameterByName("mapfile", ownItem.file);
+				var map = aaapi.cmdEx("findMap", mapFileName + ".bsp");
+				if( !!map && !!map.map )
+				{
+					map = map.map;
+					ownScreenshot = arcadeHud.getBestMapScreenshot(map.info.id);
+					if( !!ownScreenshot )
+						ownScreenshotId = ownScreenshot.id;
+				}
+			}
+
+
+			var worldInfo = aaapi.cmdEx("getWorldInfo");
+			if( !worldInfo.success )
+				worldInfo = null;
+
+			var taskInfo;
+			function teleportNow()
+			{
+				// teleport instead
+				aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+				aaapi.cmd("closeTask", taskInfo.id);
+			}
+
+			function handleAction()
+			{
+				//console.log(worldInfo.instance.id == ownScreenshot.instance.id.substring(2));
+				//if( !!!givenObjectId && (!!!worldInfo || !!!worldInfo.instance || !!!worldInfo.instance.id || !!!ownScreenshot || !!!ownScreenshot.instance || !!!ownScreenshot.instance.id || worldInfo.instance.id != ownScreenshot.instance.id.substring(2)) )// && !aaapi.cmdEx("isFullscreenMode")
+				if( !!!givenObjectId )//&& !aaapi.cmdEx("isFullscreenMode"))
+				{
+					if( !!ownScreenshot )
+					{
+						var posResponse = aaapi.cmdEx("getObjectPosScreenSpace", ownObjectId);
+						var taskId = 'auto' + ownObject.item;
+						taskInfo = aaapi.cmdEx('getTaskInfo', taskId);
+						if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+						{
+							var intro = (!aaapi.cmdEx("isFullscreenMode")) ? 1 : 0;
+							if( intro == 1 )
+							{
+								// THIS NEVER GETS CALLED ANYMORE! OBSOLETE!
+									//console.log("Now close the task...");
+								//setTimeout(function()
+								//{
+									//aaapi.cmd("closeTask", taskInfo.id, true, 'asset://ui/' + ownItem.file + '&object=' + ownObjectId + '&intro=' + intro);
+								//}, 5000);
+							}
+							else
+							{
+								// teleport instead
+								aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+								aaapi.cmd("closeTask", taskInfo.id);
+							}
+						}
+					}
+					else if(ownItem.screen && ownItem.screen != '')
+					{
+						//teleportNow();
+						var posResponse = aaapi.cmdEx("getObjectPosScreenSpace", ownObjectId);
+						var taskId = 'auto' + ownObject.item;
+						taskInfo = aaapi.cmdEx('getTaskInfo', taskId);
+						if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+						{
+							var intro = (!aaapi.cmdEx("isFullscreenMode")) ? 1 : 0;
+							if( intro == 1 )
+							{
+								//console.log("Close task...");
+								//setTimeout(function()
+								//{
+									aaapi.cmd("closeTask", taskInfo.id, true, 'asset://ui/' + ownItem.file + '&object=' + ownObjectId + '&intro=' + intro);
+								//}, 5000);
+							}
+							/*else
+							{
+								// teleport instead
+								aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+								aaapi.cmd("closeTask", taskInfo.id);
+							}*/
+						}
+					}
+					else
+					{
+						var posResponse = aaapi.cmdEx("getObjectPosScreenSpace", ownObjectId);
+						var taskId = 'auto' + ownObject.item;
+						taskInfo = aaapi.cmdEx('getTaskInfo', taskId);
+						if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+						{
+							var intro = (!aaapi.cmdEx("isFullscreenMode")) ? 1 : 0;
+							if( intro == 1 )
+							{
+								//console.log("Close task...");
+								//setTimeout(function()
+								//{
+									aaapi.cmd("closeTask", taskInfo.id, true, 'asset://ui/' + ownItem.file + '&object=' + ownObjectId + '&intro=' + intro);
+								//}, 5000);
+							}
+						}
+					}
+				}
+				else
+				{
+					//console.log("Path b?");
+					// teleport instead
+					aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+					if( !!!givenObjectId )
+					{
+						var taskId = 'auto' + ownObject.item;
+						var taskInfo = aaapi.cmdEx('getTaskInfo', taskId);
+						aaapi.cmd("closeTask", taskInfo.id);
+					}
+					else
+					{
+						aaapi.cmd('deactivateInputMode', true, 'asset://ui/blank.html');
+					}
+				}
+			}
+
+			if( !!givenObjectId )
+			{
+				if( !!ownScreenshot )
+				{
+					if( useIntro  )
+					{
+						var objectInfo = aaapi.cmdEx("getObjectInfo", givenObjectId);
+
+						// pretend like there's no posResponse if we are on the portal cabinet.
+						// FIXME: make this ^ more generic.
+						var posResponse = (objectInfo.model.id != '442ec950') ? aaapi.cmdEx("getObjectPosScreenSpace", givenObjectId) : null;
+						if( !!!posResponse )
+							posResponse = {onScreen: false, x: 0, y: 0};
+						else if( !posResponse.onScreen || posResponse.x < 0 || posResponse.y < 0 )
+						{
+							posResponse.onScreen = false;
+							posResponse.x = 0;
+							posResponse.y = 0;
+						}
+
+						function onReadyToUse()
+						{
+							if( worldInfo.instance.id == ownScreenshot.instance.id.substring(2) )
+							{
+								// teleport instead
+								aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+								setTimeout(function()
+								{
+									image.style.opacity = '0';
+									setTimeout(function()
+									{
+										aaapi.cmd('deactivateInputMode', true, 'asset://ui/blank.html');
+										aaapi.cmd('deactivateInputMode', false);
+									}, 500);
+								}, 100);
+							}
+							else
+							{
+								image.addEventListener('click', function(e)
+								{
+									doTravel();
+								});
+							}
+						}
+
+						function onImageLoaded()
+						{
+							var posResponse = this;
+							// we are really on the screen.
+							var ratio = (window.innerWidth * 1.0) / (window.innerHeight * 1.0);
+							var startWidth = (posResponse.onScreen) ? Math.round(340 * 1) : window.innerWidth;
+							var startHeight = (posResponse.onScreen) ? Math.round(200 * 1) : window.innerHeight;
+							var width = (startWidth < window.innerWidth) ? startWidth + Math.round(ratio) : startWidth;
+							var height = (startHeight < window.innerHeight) ? startHeight + (1/Math.round(ratio)) : startHeight;
+							image.style.opacity = '0';
+							image.style.width = width + 'px';
+							image.style.height = height + 'px';
+							image.style.left = (posResponse.onScreen) ? (posResponse.x-(width/2)) + 'px' : '0px';
+							image.style.top = (posResponse.onScreen) ? (posResponse.y-(height/2)) + 'px' : '0px';
+							image.style.display = 'block';
+							image.offsetWidth;
+							image.style.top = '0';
+							image.style.left = '0';
+							image.style.width = window.innerWidth + 'px';
+							image.style.height = window.innerHeight + 'px';
+							image.style.opacity = '1';
+							setTimeout(function()
+							{
+								onReadyToUse();
+							}, 500);
+						}
+
+						if( !!ownScreenshot )
+						{
+							if( ownScreenshot.hasBigFile != 0 )
+							{
+								image.addEventListener('error', function()
+								{
+									console.log("Failed to load jpg!");
+								});
+								image.addEventListener('load', onImageLoaded.bind(posResponse));
+								image.src = "asset://shots/" + ownScreenshotId + ".jpg";
+							}
+							else
+							{
+								// there is no large version, but there is a small TGA version (probably?)
+								//var tga = new TGA();
+
+								// we will release the render hold after the image has loaded (or failed)
+								image.addEventListener('load', onImageLoaded.bind(posResponse));
+								image.addEventListener('error', function(e)
+								{
+									console.log("Failed to load tga!");
+								});
+								/*var tgaTimeout = setTimeout(function()
+								{
+									console.log("Loading TGA timed out.");
+									setTimeout(function()
+									{
+										handleAction();
+									}, 500);
+								}, 100);*/
+
+								tga.open( "screenshots/" + ownScreenshot.id + ".tga", function()
+								{
+									//clearTimeout(tgaTimeout);
+									image.src = tga.getCanvas().toDataURL('image/jpeg', 0.9);
+								});
+							}
+						}
+						else
+						{
+							console.log("no screenshot given.  todo: support this.");
+						}
+					}
+					else
+					{
+						image.style.cssText = '-webkit-transition: all 0.5s ease-in-out; opacity: 1; width: 100%; height: 100%; position: absolute; left: 0; top: 0;';
+						image.addEventListener('load', function()
+						{
+							// teleport instead
+							aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+							setTimeout(function()
+							{
+								image.style.opacity = '0';
+								setTimeout(function()
+								{
+									if( useIntro )
+									{
+										aaapi.cmd('deactivateInputMode', true, 'asset://ui/blank.html');
+										aaapi.cmd('deactivateInputMode', false);
+									}
+									else
+									{
+										var taskInfo = aaapi.cmdEx('getTaskInfo');
+										if( taskInfo.objectId == givenObjectId )
+											aaapi.cmd("closeTask", taskInfo.id, true, 'asset://ui/blank.html');
+										aaapi.cmd('deactivateInputMode', false);
+									}
+								}, 500);
+							}, 100);
+						});
+					}
+				}
+				else
+				{
+					var objectInfo = aaapi.cmdEx("getObjectInfo", givenObjectId);
+					var objectItem = aaapi.cmdEx("getLibraryItem", objectInfo.item.id);
+
+					if( !!objectItem )
+					{
+						var screenToUse = (!!objectItem.screen && objectItem.screen != '') ? objectItem.screen : 'asset://ui/map.jpg';
+						if( useIntro  )
+						{
+							// pretend like there's no posResponse if we are on the portal cabinet.
+							// FIXME: make this ^ more generic.
+							var posResponse = (objectInfo.model.id != '442ec950') ? aaapi.cmdEx("getObjectPosScreenSpace", givenObjectId) : null;
+
+							if( !!!posResponse )
+								posResponse = {onScreen: false, x: 0, y: 0};
+							else if( !posResponse.onScreen || posResponse.x < 0 || posResponse.y < 0 )
+							{
+								posResponse.onScreen = false;
+								posResponse.x = 0;
+								posResponse.y = 0;
+							}
+
+							function onReadyToUse()
+							{
+								if( !!worldInfo && !!worldInfo.instance && !!worldInfo.instance.id && !!ownScreenshot && !!ownScreenshot.instance && !!ownScreenshot.instance.id && worldInfo.instance.id == ownScreenshot.instance.id.substring(2) )
+								{
+									// teleport instead
+									aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+									setTimeout(function()
+									{
+										image.style.opacity = '0';
+										setTimeout(function()
+										{
+											aaapi.cmd('deactivateInputMode', true, 'asset://ui/blank.html');
+											aaapi.cmd('deactivateInputMode', false);
+										}, 500);
+									}, 100);
+								}
+								else
+								{
+									image.addEventListener('click', function(e)
+									{
+										doTravel();
+									});
+								}
+							}
+
+							function onImageLoaded()
+							{
+								var posResponse = this;
+								// we are really on the screen.
+								var ratio = (window.innerWidth * 1.0) / (window.innerHeight * 1.0);
+								var startWidth = (posResponse.onScreen) ? Math.round(340 * 1) : window.innerWidth;
+								var startHeight = (posResponse.onScreen) ? Math.round(200 * 1) : window.innerHeight;
+								var width = (startWidth < window.innerWidth) ? startWidth + Math.round(ratio) : startWidth;
+								var height = (startHeight < window.innerHeight) ? startHeight + (1/Math.round(ratio)) : startHeight;
+								image.style.opacity = '0';
+								image.style.width = width + 'px';
+								image.style.height = height + 'px';
+								image.style.left = (posResponse.onScreen) ? (posResponse.x-(width/2)) + 'px' : '0px';
+								image.style.top = (posResponse.onScreen) ? (posResponse.y-(height/2)) + 'px' : '0px';
+								image.style.display = 'block';
+								image.offsetWidth;
+								image.style.top = '0';
+								image.style.left = '0';
+								image.style.width = window.innerWidth + 'px';
+								image.style.height = window.innerHeight + 'px';
+								image.style.opacity = '1';
+								setTimeout(function()
+								{
+									onReadyToUse();
+								}, 500);
+							}
+
+							image.addEventListener('error', function()
+							{
+								console.log("Failed to load jpg!");
+							});
+							image.addEventListener('load', onImageLoaded.bind(posResponse));
+							image.src = screenToUse;//objectItem.screen;
+						}
+						else
+						{
+							/*
+							image.style.cssText = '-webkit-transition: all 0.5s ease-in-out; opacity: 1; width: 100%; height: 100%; position: absolute; left: 0; top: 0;';
+							image.addEventListener('load', function()
+							{
+								// teleport instead
+								aaapi.cmd("teleportScreenshot", ownScreenshotId.toLowerCase(), false);
+								setTimeout(function()
+								{
+									image.style.opacity = '0';
+									setTimeout(function()
+									{
+										if( useIntro )
+										{
+											aaapi.cmd('deactivateInputMode', true, 'asset://ui/blank.html');
+											aaapi.cmd('deactivateInputMode', false);
+										}
+										else
+										{
+											var taskInfo = aaapi.cmdEx('getTaskInfo');
+											if( taskInfo.objectId == givenObjectId )
+												aaapi.cmd("closeTask", taskInfo.id, true, 'asset://ui/blank.html');
+											aaapi.cmd('deactivateInputMode', false);
+										}
+									}, 500);
+								}, 100);
+							});*/
+							console.log("ERROR: Non-intro screenshot zooming not supported yet!");
+						}
+					}
+				}
+			}
+			else
+			{
+				if( !!ownScreenshot )
+				{
+					// we have a screenshot to use
+					if( parseInt(ownScreenshot.hasBigFile) != 0 )
+					{
+						// it has a large version to use
+
+						// we will release the render hold after the image has loaded (or failed)
+						image.addEventListener('load', function(e)
+						{
+									//console.log("Yaaaaaaaar Loaded");
+							image.style.display = 'block';
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+						image.addEventListener('error', function(e)
+						{
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+
+						// use the image
+						image.src = "screenshots/" + ownScreenshot.id + ".jpg";
+					}
+					else
+					{
+						// there is no large version, but there is a small TGA version (probably?)
+						//var tga = new TGA();
+
+						// we will release the render hold after the image has loaded (or failed)
+						image.addEventListener('load', function(e)
+						{
+							image.style.display = 'block';
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+						image.addEventListener('error', function(e)
+						{
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+						/*var tgaTimeout = setTimeout(function()
+						{
+							console.log("Loading TGA timed out.");
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						}, 100);*/
+
+						tga.open( "screenshots/" + ownScreenshot.id + ".tga", function()
+						{
+							//clearTimeout(tgaTimeout);
+							image.src = tga.getCanvas().toDataURL('image/jpeg', 0.9);
+						});
+					}
+				}
+				else
+				{
+					//console.log("No screenshot at all. TODO: Fixme.");
+
+					if( ownItem.screen && ownItem.screen != '' )
+					{
+						// we will release the render hold after the image has loaded (or failed)
+						image.addEventListener('load', function(e)
+						{
+							image.style.display = 'block';
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+						image.addEventListener('error', function(e)
+						{
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+
+						// use the image
+						image.src = ownItem.screen;
+					}
+					else
+					{
+						// we will release the render hold after the image has loaded (or failed)
+						image.addEventListener('load', function(e)
+						{
+							image.style.display = 'block';
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+						image.addEventListener('error', function(e)
+						{
+							setTimeout(function()
+							{
+								handleAction();
+							}, 500);
+						});
+
+						// use the image
+						image.src = "asset://ui/map.jpg";
+					}
+				}
+			}
+
+			var loadableChecked = {};
+			var loadableCheckedMapInstances = {};
+			function isMapInstanceLoadable(mapId, instanceId)
+			{
+				var loadableInstance = false;
+				if( loadableChecked.hasOwnProperty(instanceId) )
+					loadableInstance = loadableChecked[instanceId];
+				else if( instanceId != "")
+				{
+					if( !loadableCheckedMapInstances.hasOwnProperty(mapId) )
+					{
+						loadableCheckedMapInstances[mapId] = aaapi.cmdEx("getMapInstances", mapId);
+					}
+					
+					var mapInstances = loadableCheckedMapInstances[mapId];
+					for( var j = 0; j < mapInstances.length; j++ )
+					{
+						if( mapInstances[j].id == instanceId )
+						{
+							loadableInstance = true;
+							break;
+						}
+					}
+
+					loadableChecked[instanceId] = loadableInstance;
+				}
+
+				return loadableInstance;
+			}
+
+			function doTravel()
+			{
+				if( givenLobby != "" )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					aaapi.cmd("joinLobby", givenLobby);
+				}
+				else if( !!!ownScreenshot || !isMapInstanceLoadable(mapId, ownScreenshot.instance.id.substring(2)) )
+				{
+					window.location = "asset://ui/playInstance.html?id=" + mapId;
+					/*
+					//console.log(JSON.stringify(worldInfo.instance.mapId));
+					//return;
+					document.body.style.pointerEvents = 'none';
+					var travelNoteElem = document.querySelector('#travelNote');
+					travelNoteElem.style.display = 'none';
+
+					document.querySelector('#advancedButton').style.display = 'none';
+					document.querySelector('#mpinfo').style.display = 'none';
+
+					travelNoteElem.offsetWidth;
+console.log("MapID: " + mapId);
+console.log("Instance: " + givenInstance);
+console.log("Position: " + givenPosition);
+console.log("Rotation: " + givenRotation);
+return;
+					aaapi.cmd('setRenderHold', true);
+					window.location = "asset://ui/loading.html?map=" + encodeURIComponent(mapId) + "&instance=" + encodeURIComponent(givenInstance) + "&pos=" + encodeURIComponent(givenPosition) + "&rot=" + encodeURIComponent(givenRotation) + "&screenshot=";// + ownScreenshotId;
+					*/
+				}
+				else if( worldInfo.instance.id != ownScreenshot.instance.id.substring(2) )
+				{
+					document.body.style.pointerEvents = 'none';
+					var travelNoteElem = document.querySelector('#travelNote');
+					travelNoteElem.style.display = 'none';
+
+					document.querySelector('#advancedButton').style.display = 'none';
+					document.querySelector('#mpinfo').style.display = 'none';
+
+					travelNoteElem.offsetWidth;
+
+					aaapi.cmd('setRenderHold', true);
+					window.location = "asset://ui/loading.html?map=" + encodeURIComponent(ownScreenshot.map.id.substring(2)) + "&instance=" + encodeURIComponent(ownScreenshot.instance.id.substring(2)) + "&pos=" + encodeURIComponent(ownScreenshot.body.position) + "&rot=" + encodeURIComponent(ownScreenshot.body.rotation) + "&screenshot=" + ownScreenshotId;
+				}
+				else
+				{
+					aaapi.cmd("travelByScreenshot", ownScreenshotId);
+				}
+			}
+		</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		<div style="display: none; pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;" id="menuSlate">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Go to the next area?", "", true, true, "", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			var cogIconHTML = arcadeHud.generateIconHTML("searchicon.png", 32, 32, "aaTextColorOneColor");
+			var mpIconHTML = arcadeHud.generateIconHTML("mpicon.png", 32, 32, "aaTextColorOneColor");
+		</script>
+
+		<div>
+			<div id="mapThumbnail" screenshotid="" class="aaThemeColorTwoInverseShadedBorderColor" style="width: 240px; height: 134px; margin-left: auto; margin-right: auto; border-style: solid; border-width: 2px; display: none;"></div>
+
+			<div class="aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" style="text-align: center;">
+				<script>
+					document.write(mapfile);
+				</script>
+			</div>
+			<table style="width: 100%;" cellspacing="0" cellpadding="2">
+				<tr>
+					<td>
+						<div id="onePlayerButton" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" style="width: 86%;" onclick="answeredYes();" help="Quick-load in SINGLEPLAYER mode.">
+							1-Player
+						</div>
+					</td>
+					<td>
+						<div id="instancesButton" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific instance..." onclick="showInstances('sp');">
+							<script>
+								var iconHTML = arcadeHud.generateIconHTML("instanceicon.png", 32, 32, "aaTextColorOneColor");
+								document.write(iconHTML);
+							</script>
+						</div>
+					</td>
+				</tr>
+				<!-- tr>
+					<td style="height: 30px;"></td>
+					<td></td>
+				</tr -->
+				<tr>
+					<td colspan="2">
+						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" onclick="aaapi.cmd('deactivateInputMode');" />
+					</td>
+				</tr>
+				<tr>
+					<td style="height: 8px;" colspan="2">
+						<hr class="aaThemeColorTwoBorderColor" />
+						<div class="aaOnlyIfUniverseNotConnected" id="showMoreButton" style="position: relative; top: -16px; font-family: arial; font-size: 12px; font-weight: bold; letter-spacing: 0.2em; text-align: center; opacity: 0.5;" onclick="showMore(this);"><div style="position: absolute; text-align: center; width: 100%;" class="aaTextColorTwoColor">SHOW MORE</div></div>
+					</td>
+				</tr>
+			</table>
+			<table id="moreTable" style="width: 100%;" cellspacing="0" cellpadding="2">
+				<!--  class="aaOnlyIfUniverseConnected" tr>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="width: 86%;" help="Quick-load and HOST in MULTIPLAYER mode." onclick="quickJoin();">
+							<script>
+								document.write(mpIconHTML + " Host");
+							</script>
+						</div>
+					</td>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific instance..." onclick="showInstances('mp');">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td>
+				</tr -->
+				<tr>
+					<td>
+						<div id="joinButton" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" id="joinButton" style="width: 86%;" help="Quick-join the last MULTIPLAYER server that you visited on this map." onclick="quickJoin();">
+
+							<div style="white-space: nowrap;">
+								<div style="display: inline;">
+									<script>
+										document.write(mpIconHTML);
+									</script>
+								</div>
+
+								<div style="display: inline;">Join</div>
+								<div id="byBlock" style="display: none;">
+									<div style="white-space: nowrap; max-width: 170px; overflow-x: hidden; text-overflow: ellipsis; display: inline-block; font-size: 10px;" id="lastServerTitle"></div><div style="display: inline-block; font-size: 10px; padding-left: 4px; padding-right: 4px;">by</div><div style="white-space: nowrap; max-width: 100px; overflow-x: hidden; text-overflow: ellipsis; display: inline-block; font-size: 10px;" id="lastServerAuthor"></div>
+								</div>
+							</div>
+
+						</div>
+					</td>
+					<td>
+						<div id="searchButton" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Search for MULTIPLAYER servers that are running this map." onclick="showServers();">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td>
+					<!--td colspan="2">
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="width: 89%;" help="Search for MULTIPLAYER servers that are running this map." onclick="showServers();">
+							<script>
+								document.write(mpIconHTML + " Servers");
+							</script>
+						</div>
+					</td-->
+					<!-- td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific server...">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td -->
+				</tr>
+			</table>
+			<!-- input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" onclick="aaapi.cmd('deactivateInputMode');" / -->
+		</div>
+
+		<!-- div style="display: none;">
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Yes" onclick="answeredYes();" />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="No" onclick="answeredNo();" />
+		</div -->
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+
+			function showInstances(playMode)
+			{
+				if( mapId !== "" )
+				{
+					window.location = "asset://ui/playInstance.html?id=" + mapId + "&spawn=" + spawnEntityName + "&playmode=" + playMode + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "';");
+				}
+			}
+
+			function answeredYes()
+			{
+				//console.log("Do map transition with: " + mapfile + " and " + spawnEntityName);
+
+				//var mapInfo = aaapi.cmdEx("findMap", mapfile + ".bsp");
+				if( mapId !== "" )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					playNow(mapId);
+				}
+				else
+					aaapi.cmd("deactivateInputMode");
+			}
+
+			function answeredNo()
+			{
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			var mapThumbnailElem = document.querySelector("#mapThumbnail");
+
+			var mapImage = document.createElement("div");
+			mapImage.className = "mapImage";
+			mapImage.style.cssText = "width: 240px; height: 135px;";
+
+			function compareIds(testId, baseId)
+			{
+				var intTestId = Number(testId);
+				var intBaseId = Number(baseId);
+				
+				if( testId === baseId || (!isNaN(intTestId) && !isNaN(intBaseId) && intTestId === intBaseId) )
+					return true;
+				else
+					return false;
+			}
+
+			//var g_screenshots = aaapi.cmdEx("getAllMapScreenshots", "id" + mapId);
+			var screenshotKeys = Object.keys(g_screenshots);
+			var screenshots = [];
+			for( i = 0; i < screenshotKeys.length; i++ )
+			{
+				screenshot = g_screenshots[screenshotKeys[i]];
+				//if( screenshot.map.file === mapName + ".bsp" )
+				//if( screenshot.map.id === mapInfo.map.info.id )
+				if( compareIds(screenshot.map.id, "id" + mapInfo.map.info.id) || compareIds(screenshot.map.id, mapInfo.map.info.id) )
+					screenshots.push(screenshot);
+			}
+
+			if( screenshots.length > 0 )
+			{
+				var screenshot;
+				if(givenScreenshot !== "" && !!g_screenshots[givenScreenshot] && isMapInstanceLoadable(g_screenshots[givenScreenshot].map.id, g_screenshots[givenScreenshot].instance.id))
+				{
+					screenshot = g_screenshots[givenScreenshot];
+				}
+				else
+				{
+					//screenshot = screenshots[0];
+
+					var mapId = screenshots[0].map.id.substring(2);
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!mapHistoryEntry && mapHistoryEntry.screenshotId !== "" && !!g_screenshots[mapHistoryEntry.screenshotId])
+					{
+						screenshot = g_screenshots[mapHistoryEntry.screenshotId];
+						//mapThumbnailElem.setAttribute("screenshotid", mapHistoryEntry.screenshotId);
+					}
+				}
+
+				if( !!screenshot )
+				{
+					mapThumbnailElem.setAttribute("screenshotid", screenshot.id);
+
+					if( givenPosition !== "" )
+						givenPosition = screenshot.position;
+
+					if( givenRotation !== "" )
+						givenRotation = screenshot.rotation;
+
+					mapImage.screenshot = screenshot;
+
+					mapImage.style.cssText = "width: 240px; height: 135px;";
+					tga.open( "screenshots/" + screenshot.id + ".tga", function()
+					{
+						var elem = tga.getCanvas();
+						elem.style.cssText = "width: 240px; height: 135px;";
+						this.appendChild(elem);
+						this.parentNode.style.display = "block";
+					}.bind(mapImage));
+				}
+			}
+
+			mapThumbnailElem.appendChild(mapImage);
+
+			function quickHost()
+			{
+				console.log("host_next_map");
+				/*
+				// first, check for *any* lobby, owned by this user, that already is hosting this arcade.
+				//var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+				var wolrdInfo = aaapi.cmdEx("getWorldInfo");
+				var currentInstanceId = wolrdInfo.instance.id;
+
+				// if a lobby with currentInstanceId, owned by this user, already exists, then we will automatically UPDATE the server instead.  It is unlikely any user will need to host 2 different versions of the same arcade instance at the same time.
+				rootRef.child("lobbies").once("value", function(snapshot)
+				{
+					var lobbyValue = lobbyElem.value;
+					var titleValue = titleElem.value;
+
+					var val = snapshot.val();
+					for( var x in val )
+					{
+						if( val[x].instance === currentInstanceId && val[x].owner === localUserId )
+						{
+							console.log("Found existing persistent server, created by you, running this instance, so replacing it with your current host version.");
+							lobbyValue = x;
+							break;
+						}
+					}
+
+					// first, check if our session name is valid
+					var letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					var alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					if( !aaapi.cmdEx("alphabetSafe", lobbyValue[0], letters) || !aaapi.cmdEx("alphabetSafe", lobbyValue, alphabet) )
+					{
+						console.log("YOOOO! Your title is whack, yo. (Only 0-9 and a-z please.)");
+						return;
+					}
+
+					// then continue
+					var success = aaapi.cmdEx("updateInstance", worldInfo.instance.id, ["title", titleValue]);
+					if( success )
+					{
+						// first save our changes
+						var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
+						cmd += " aamp_persistent " + isPersistentElem.inputOption.value + ";";
+						cmd += " cloud_assets_upload " + syncCustomModelsElem.inputOption.value + ";";
+						cmd += " aamp_lobby_id \"" + lobbyValue + "\";";
+						cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
+						aaapi.cmd("consoleCommand", cmd);
+
+						if( spawnEntityName !== "" )
+							aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+
+						// then start hosting
+						window.location = 'asset://ui/hostSessionProgress.html';
+					}
+				});
+				*/
+			}
+
+			function quickJoin()
+			{
+				if( !!g_bestLobby )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					aaapi.cmd("joinLobby", g_bestLobby.lobby);
+				}
+				else if( !!givenLobby && givenLobby != '' )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					aaapi.cmd("joinLobby", givenLobby);
+				}
+				else
+				{
+					showServers();
+				}
+			}
+
+			function showServers()
+			{
+				window.location = "asset://ui/hostSession.html?tab=servers&mapfile=" + mapfile + "&spawn=" + spawnEntityName + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "';");
+			}
+
+			function showMore(elem)
+			{
+				elem.style.display = "none";
+				document.querySelector("#moreTable").style.display = "table";
+			}
+
+			if( !!g_bestLobby )
+			{
+				document.querySelector("#lastServerTitle").appendChild(document.createTextNode(g_bestLobby.title));
+				document.querySelector("#lastServerAuthor").appendChild(document.createTextNode(g_bestLobby.author));
+				var elem = document.querySelector("#joinButton");
+				elem.style.paddingTop = "2px";
+				elem.style.paddingBottom = "2px";
+				
+				document.querySelector("#byBlock").style.display = "block";
+			}
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+
+
+
+
+
+
+
+
+		<div id="mpinfo" style="opacity: 0; pointer-events: none; position: absolute; left: 0; top: 0; right: 0;">
+			<table style="width: 100%; height: 100px;">
+				<tr ><td valign="middle" align="center">
+					<div style="display: block; font-size: 70px; font-family: Arial; letter-spacing: 0.1em; font-style: italic; font-weight: bold; text-shadow: 5px 5px 5px rgba(0, 0, 0, 0.8); border-radius: 90px; padding: 24px;">
+						<div>MULTIPLAYER</div>
+						<div style="font-size: 24px; display: inline-block; background-color: rgba(0, 0, 0, 0.8); border-radius: 90px; padding: 12px;">
+							<div style="display: inline-block;" id="lobbyTitle">Untitle Lobby</div> by <div style="display: inline-block;" id="lobbyAuthor">Unknown Author</div>
+						</div>
+					</div>
+				</td></tr>
+			</table>
+		</div>
+
+
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+			<table style="width: 100%; height: 100%;">
+				<tr ><td valign="middle" align="center">
+					<div id="travelNote" style="display: inline-block; font-size: 90px; font-family: Arial; letter-spacing: 0.2em; font-style: italic; font-weight: bold; text-shadow: 5px 5px 5px rgba(0, 0, 0, 0.8); background-color: rgba(0, 0, 0, 0.8); border-radius: 90px; padding: 24px; opacity: 0.0;">Click to Travel</div>
+				</td></tr>
+			</table>
+		</div>
+
+		<div id="advancedButton" style="opacity: 0; pointer-events: none; position: absolute; left: 0; right: 0; bottom: 0;">
+			<table style="width: 100%; height: 100px;">
+				<tr ><td valign="middle" align="center">
+					<img class="ezActionButton helpNote" help="Advanced Travel Options" onclick="showAdvanced();" style="width: 32px; height: 32px;" src="ellipsis.png" />
+				</td></tr>
+			</table>
+		</div>
+
+		<script>
+
+			var advancedButtonElem = document.querySelector("#advancedButton");
+			var muteTravelNotice = false;
+			function showAdvanced()
+			{
+				muteTravelNotice = true;
+				advancedButtonElem.style.display = 'none';
+
+				document.querySelector('#travelNote').style.display = 'none';
+				document.querySelector("#menuSlate").style.display = "block";
+			}
+
+			function clickToTravelNotice()
+			{
+				var travelNoteElem = document.querySelector('#travelNote');
+				travelNoteElem.style.opacity = 0.9;
+				setTimeout(function()
+				{
+					travelNoteElem.style.opacity = 0;
+				}, 1000);
+			}
+
+			var hideAdvancedButtonHandle;
+			var lastTravelNoticed = (new Date()).getTime();
+			var mpInfoElem = document.querySelector('#mpinfo');
+			document.addEventListener('mousemove', function(e)
+			{
+				if( muteTravelNotice )
+					return;
+
+				if( givenLobby != '' && mpInfoElem.style.opacity == '0' )
+				{
+					mpInfoElem.style.opacity = '0.9';
+					var elem = document.querySelector('#lobbyTitle');
+					elem.innerHTML = '';
+					elem.appendChild(document.createTextNode(givenLobbyTitle));
+
+					elem = document.querySelector('#lobbyAuthor');
+					elem.innerHTML = '';
+					elem.appendChild(document.createTextNode(givenLobbyAuthor));
+
+					//.style.display = 'none';
+					//document.querySelector("#moreTable").style.display = "table";
+					showMore(document.querySelector("#showMoreButton"));
+				}
+
+				if( advancedButtonElem.style.opacity == '0' )
+				{
+					advancedButtonElem.style.opacity = '0.9';
+
+					if( !!hideAdvancedButtonHandle )
+						clearTimeout(hideAdvancedButtonHandle);
+
+					hideAdvancedButtonHandle = setTimeout(function()
+					{
+						advancedButtonElem.style.opacity = '0';
+					}, 4000);
+				}
+
+				var curTime = (new Date()).getTime();
+				if( curTime - lastTravelNoticed > 4000 )
+				{
+					lastTravelNoticed = curTime;
+					clickToTravelNotice();
+				}
+			});
+		</script>
+
+
+
+		<script>
+			if( !!givenLobby && givenLobby != "" )
+			{
+				var elem = document.querySelector("#lastServerTitle");
+				elem.innerHTML = '';
+				elem.appendChild(document.createTextNode(givenLobbyTitle));
+
+				elem = document.querySelector("#lastServerAuthor");
+				elem.innerHTML = '';
+				elem.appendChild(document.createTextNode(givenLobbyAuthor));
+
+				elem = document.querySelector("#joinButton");
+				elem.style.paddingTop = "2px";
+				elem.style.paddingBottom = "2px";
+
+				elem.setAttribute('help', 'Join this multiplayer server.');
+				
+				document.querySelector("#byBlock").style.display = "block";
+
+				document.querySelector("#travelNote").innerHTML = "Click to Join";
+
+				elem = document.querySelector("#onePlayerButton");
+				elem.classList.remove('aaThemeColorOneHoverShadedBackground');
+				elem.classList.remove('aaTextColorOneColor');
+				elem.classList.remove('aaThemeColorOneLowBorderColor');
+				elem.classList.add('aaThemeColorTwoHoverShadedBackground');
+				elem.classList.add('aaTextColorTwoColor');
+				elem.classList.add('aaThemeColorTwoLowBorderColor');
+
+				elem = document.querySelector("#instancesButton");
+				elem.classList.remove('aaThemeColorOneHoverShadedBackground');
+				elem.classList.remove('aaTextColorOneColor');
+				elem.classList.remove('aaThemeColorOneLowBorderColor');
+				elem.classList.add('aaThemeColorTwoHoverShadedBackground');
+				elem.classList.add('aaTextColorTwoColor');
+				elem.classList.add('aaThemeColorTwoLowBorderColor');
+
+				elem = document.querySelector("#joinButton");
+				elem.classList.remove('aaThemeColorTwoHoverShadedBackground');
+				elem.classList.remove('aaTextColorTwoColor');
+				elem.classList.remove('aaThemeColorTwoLowBorderColor');
+				elem.classList.add('aaThemeColorOneHoverShadedBackground');
+				elem.classList.add('aaTextColorOneColor');
+				elem.classList.add('aaThemeColorOneLowBorderColor');
+
+				elem = document.querySelector("#searchButton");
+				elem.classList.remove('aaThemeColorTwoHoverShadedBackground');
+				elem.classList.remove('aaTextColorTwoColor');
+				elem.classList.remove('aaThemeColorTwoLowBorderColor');
+				elem.classList.add('aaThemeColorOneHoverShadedBackground');
+				elem.classList.add('aaTextColorOneColor');
+				elem.classList.add('aaThemeColorOneLowBorderColor');
+			}
+			else if( !!!g_bestLobby || g_bestLobby == '' )
+			{
+				document.querySelector("#joinButton").setAttribute('help', 'Search for MULTIPLAYER servers that are running this map.');
+			}
+		</script>
+
+
+	</body>
+</html>

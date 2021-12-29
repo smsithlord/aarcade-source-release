@@ -1,0 +1,18 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"Proxies"
+	{
+		"AANumberStat"
+		{
+			"type" "library_maps"
+			"digit" "0"
+			"resultVar" "$frame"
+		}
+	}
+}

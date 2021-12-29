@@ -1,0 +1,242 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+			//var objectInfo = aaapi.cmdEx('getObject', arcadeHud.getParameterByName("objectId"));
+			var givenModelName =  arcadeHud.getParameterByName("modelFile");
+			if( !!!givenModelName )
+				givenModelName = '';
+			var givenMaterialName =  arcadeHud.getParameterByName("materialFile");
+			if( !!!givenMaterialName )
+				givenMaterialName = '';
+			var adoptModelId =  arcadeHud.getParameterByName("modelId");
+			if( !!!adoptModelId )
+				adoptModelId = '';
+			var model = (adoptModelId != '') ? aaapi.cmdEx('getLibraryModel', adoptModelId) : null;
+		</script>
+		<style>
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+				cursor: pointer;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Adopt Asset", "", true, true, "", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+
+				<div class="ezTemplateContainer" id="coinCollectContainer">
+					<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+						<tr class="helpNote" help="The model or material to adopt. Models SHOULD be prefixed with models/ and end with .mdl.  However, materials should NOT be prefixed with materials/ nor should they end with .vmt.">
+							<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+								Asset Name:
+							</td>
+							<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+								<input type="text" class="aaTextSizeFontSize" value="" placeholder="" id="asset" style="width: 420px; vertical-align: bottom;" />
+							</td>
+							<!--td style="width: 1%; white-space: nowrap;">
+								<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="pickModel();" help="Pick the model under your crosshair.">
+									<script>
+										document.write(arcadeHud.generateIconHTML("3dmodelicon.png", 18, 18, "aaTextColorTwoHighColor"));
+									</script>
+								</div> 
+								<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="pickMaterial();" help="Pick the material under your crosshair.">
+									<script>
+										document.write(arcadeHud.generateIconHTML("materialicon.png", 18, 18, "aaTextColorTwoHighColor"));
+									</script>
+								</div>
+							</td-->
+						</tr>
+						<tr class="helpNote" help="The sub-folder name, inside of aarcade_user/custom, to create & save the asset files to. By default, the sub-folder name will be 'adopted'.">
+							<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+								Sub-Folder Name:
+							</td>
+							<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+								<input type="text" class="aaTextSizeFontSize" value="" placeholder="adopted" id="saveFolderName" style="width: 420px;" />
+							</td>
+							<!--td>
+							</td-->
+						</tr>
+					</table>
+				</div>
+			</div>
+
+			<br />
+
+			<!-- View Instructions
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="View Instructions" onclick="window.location='asset://ui/importLegacyContentWizard.html';" help="Learn more about importing Early Access content." />
+			-->
+
+			<!-- OK -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Adopt Asset Files" onclick="adoptAsset();" help="Create a COPY of all files required for this asset into your specified sub-folder." />
+
+			<!--input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="display: none;" value="Update Quest" onclick="createQuest(true);" help="Update this quest & restart the quest system." id="updateQuestButton" /-->
+
+			<!-- Quit -->
+			<!--input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Close Redux Now" onclick="aaapi.cmd('quit');" help="Closes AArcade so you can re-launch in Legacy Mode." /-->
+
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var saveFolderNameElem = document.querySelector("#saveFolderName");
+			var assetFileElem = document.querySelector("#asset");
+			if( !!model )
+				assetFileElem.value = model.platforms[arcadeHud.platformId].file;
+			else if( givenModelName != '')
+				assetFileElem.value = givenModelName;
+			else if( givenMaterialName != '')
+				assetFileElem.value = givenMaterialName;
+
+			function adoptAsset()
+			{
+				if( assetFileElem == '' )
+					return;
+				
+				var assetModel = aaapi.cmdEx("findLibraryModel", "file", assetFileElem.value);
+				var goodSaveFolderName = saveFolderNameElem.value;
+				if( goodSaveFolderName == '' )
+					goodSaveFolderName = "adopted";
+
+				if( !!!assetModel )
+				{
+					var conCommand = "adopt_material \"" + assetFileElem.value + "\" \"" + goodSaveFolderName + "\";";
+					aaapi.cmd("consoleCommand", conCommand);
+				}
+				else
+				{
+					var conCommand = "adopt_model \"" + assetFileElem.value + "\" \"" + goodSaveFolderName + "\";";
+					aaapi.cmd("consoleCommand", conCommand);
+				}
+
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			function pickModel()
+			{
+				var modelUnderCrosshair = aaapi.cmdEx("getModelUnderCrosshair");
+				if( modelUnderCrosshair != '' )
+					assetFileElem.value = modelUnderCrosshair;
+			}
+
+			function pickMaterial()
+			{
+				var materialUnderCrosshair = aaapi.cmdEx("getMaterialUnderCrosshair");
+				if(materialUnderCrosshair != '')
+					assetFileElem.value = materialUnderCrosshair;
+			}
+		</script>
+
+	</body>
+</html>

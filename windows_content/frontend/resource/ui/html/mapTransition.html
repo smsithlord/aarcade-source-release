@@ -1,0 +1,523 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+
+			// get some GET params
+			var mapfile = arcadeHud.getParameterByName("mapfile");
+			var mapInfo = aaapi.cmdEx("findMap", mapfile + ".bsp");
+			var mapId = mapInfo.map.info.id;
+			var g_screenshots = aaapi.cmdEx("getAllMapScreenshots", "id" + mapId);
+
+			var spawnEntityName = arcadeHud.getParameterByName("spawn");
+			if( !!!spawnEntityName )
+				spawnEntityName = "";
+
+			var givenScreenshot = arcadeHud.getParameterByName("screenshot");
+			if( !!!givenScreenshot || !!!g_screenshots[givenScreenshot] )
+				givenScreenshot = "";
+
+			var givenPosition = arcadeHud.getParameterByName("pos");
+			if( !!!givenPosition )
+				givenPosition = "";
+
+			//console.log(givenPosition);
+
+			var givenRotation = arcadeHud.getParameterByName("rot");
+			if( !!!givenRotation )
+				givenRotation = "";
+
+			//console.log(givenRotation);
+
+			var givenLobby = arcadeHud.getParameterByName("lobby");
+			if( !!!givenLobby )
+				givenLobby = "";
+
+			//console.log(givenLobby);
+
+			var givenLobbyTitle = arcadeHud.getParameterByName("lobbytitle");
+			if( !!!givenLobbyTitle )
+				givenLobbyTitle = "";
+
+			//console.log(givenLobbyTitle);
+
+			var givenInstance = arcadeHud.getParameterByName("instance");
+			if( !!!givenInstance )
+				givenInstance = "";
+
+			//console.log(givenInstance);
+
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			var serverHistory = (localStorage.getItem("serverHistory")) ? JSON.parse(localStorage.getItem("serverHistory")) : {};
+
+			function getMostRecentServerInfo(lobbyId)
+			{
+				if( !!lobbyId && lobbyId != "" )
+					return serverHistory[lobbyId];
+
+				var bestLobbyId;
+				var bestLobbyTime = 0;
+				var testMap = (mapfile + ".bsp").toLowerCase();
+				for( var x in serverHistory )
+				{
+					//console.log(serverHistory[x].mapfile.toLowerCase() + " vs " + testMap);
+					if( !!serverHistory[x].timestamp && serverHistory[x].timestamp > bestLobbyTime && serverHistory[x].mapfile.toLowerCase() == testMap )
+					{
+						bestLobbyTime = serverHistory[x].timestamp;
+						bestLobbyId = x;
+					}
+				}
+
+				var bestLobby = (!!bestLobbyId) ? serverHistory[bestLobbyId] : null;
+				return bestLobby;
+			}
+
+			var g_bestLobby = getMostRecentServerInfo();
+
+			var universeInfo = aaapi.cmdEx("getConnectedSession");
+
+			var objectIconHTML = arcadeHud.generateIconHTML("objecticon.png", 24, 24, "aaThemeColorOneColor");
+			function playNow(mapId)
+			{
+				var universeInfo = aaapi.cmdEx("getConnectedSession");
+				if( !!universeInfo && universeInfo.universe !== "" && universeInfo.instance !== "" )
+				{
+					aaapi.cmd("disconnectSession");
+				}
+
+				var pos = (spawnEntityName === "") ? givenPosition : "";
+				var rot = (spawnEntityName === "") ? givenRotation : "";
+				var screenshotId = givenScreenshot;
+				var instanceId = givenInstance;
+
+				var thumbScreenshotId = mapThumbnailElem.getAttribute("screenshotid");
+				if( thumbScreenshotId !== "" )
+					screenshotId = thumbScreenshotId;
+
+				var hasInstanceToLoad = false;
+				if( spawnEntityName === "" && screenshotId !== "" && !!g_screenshots[screenshotId] && !!g_screenshots[screenshotId].instance && !!g_screenshots[screenshotId].instance.id && !!g_screenshots[screenshotId].map && !!g_screenshots[screenshotId].map.id ) // && the instance exists
+				{
+					instanceId = g_screenshots[screenshotId].instance.id.substring(2);
+					mapId = g_screenshots[screenshotId].map.id.substring(2);
+
+					//if( spawnEntityName === "" )
+					//{
+						pos = g_screenshots[screenshotId].body.position;
+						rot = g_screenshots[screenshotId].body.rotation;
+					//}
+				}
+				else
+				{
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!mapHistoryEntry )
+					{
+						instanceId = mapHistoryEntry.instanceId;
+					
+						if( spawnEntityName === "" )
+						{
+							pos = mapHistoryEntry.position;
+							rot = mapHistoryEntry.rotation;
+						}
+
+						screenshotId = mapHistoryEntry.screenshotId;
+					}
+					else
+					{
+						var mapInstances = aaapi.cmdEx("getMapInstances", mapId);
+						if( mapInstances.length > 0 )
+						{
+							//instanceId = mapInstances[0].id;
+							//pos = mapHistoryEntry.position;
+							//rot = mapHistoryEntry.rotation;
+
+							window.location = "asset://ui/playInstance.html?id=" + mapId + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "&playmode=sp';");
+						}
+						else
+						{
+							// create our mapHistory entry
+							var mapHistoryEntry = {
+								"mapId": mapId,
+								"instanceId": "",
+								"position": "",
+								"rotation": "",
+								"screenshotId": "",
+								"timestamp": new Date().getTime()
+							};
+
+							// add our entry to the mapHistory
+							mapHistory[mapId] = mapHistoryEntry;
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+							
+							window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + "" + "&pos=" + pos + "&rot=" + rot + "&screenshot=" + "";
+						}
+					}
+				}
+
+				if( true )//(givenInstance !== "" && instanceId === "") || (givenPosition !== "" && pos === "") || (givenPosition !== "" && rot === "") )
+				{
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!!mapHistoryEntry )
+					{
+						// create our mapHistory entry
+						mapHistoryEntry = {
+							"mapId": mapId,
+							"instanceId": instanceId,
+							"position": pos,
+							"rotation": rot,
+							"screenshotId": screenshotId,
+							"timestamp": new Date().getTime()
+						};
+					}
+					else
+					{
+						mapHistoryEntry.mapId = mapId;
+						mapHistoryEntry.instanceId = instanceId;
+						mapHistoryEntry.position = pos;
+						mapHistoryEntry.rotation = rot;
+						mapHistoryEntry.screenshotId = screenshotId;
+						mapHistoryEntry.timestamp = new Date().getTime();
+					}
+
+					// save the mapHistory out
+					localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+//console.log("Screenshot ID: " + screenshotId + " vs InstanceID: " + instanceId);
+					window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId + "&pos=" + pos + "&rot=" + rot + "&screenshot=" + screenshotId;
+				}
+			}
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Go to the next area?", "", true, true, "", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			var cogIconHTML = arcadeHud.generateIconHTML("searchicon.png", 32, 32, "aaTextColorOneColor");
+			var mpIconHTML = arcadeHud.generateIconHTML("mpicon.png", 32, 32, "aaTextColorOneColor");
+		</script>
+
+		<div>
+			<div id="mapThumbnail" screenshotid="" class="aaThemeColorTwoInverseShadedBorderColor" style="width: 240px; height: 134px; margin-left: auto; margin-right: auto; border-style: solid; border-width: 2px; display: none;"></div>
+
+			<div class="aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" style="text-align: center;">
+				<script>
+					document.write(mapfile);
+				</script>
+			</div>
+			<table style="width: 100%;" cellspacing="0" cellpadding="2">
+				<tr>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" style="width: 86%;" onclick="answeredYes();" help="Quick-load in SINGLEPLAYER mode.">
+							1-Player
+						</div>
+					</td>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific instance..." onclick="showInstances('sp');">
+							<script>
+								var iconHTML = arcadeHud.generateIconHTML("instanceicon.png", 32, 32, "aaTextColorOneColor");
+								document.write(iconHTML);
+							</script>
+						</div>
+					</td>
+				</tr>
+				<!-- tr>
+					<td style="height: 30px;"></td>
+					<td></td>
+				</tr -->
+				<tr>
+					<td colspan="2">
+						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" onclick="aaapi.cmd('deactivateInputMode');" />
+					</td>
+				</tr>
+				<tr>
+					<td style="height: 8px;" colspan="2">
+						<hr class="aaThemeColorTwoBorderColor" />
+						<div class="aaOnlyIfUniverseNotConnected" style="position: relative; top: -16px; font-family: arial; font-size: 12px; font-weight: bold; letter-spacing: 0.2em; text-align: center; opacity: 0.5;" onclick="showMore(this);"><div style="position: absolute; text-align: center; width: 100%;" class="aaTextColorTwoColor">SHOW MORE</div></div>
+					</td>
+				</tr>
+			</table>
+			<table id="moreTable" style="width: 100%;" cellspacing="0" cellpadding="2" class="aaOnlyIfUniverseConnected">
+				<!-- tr>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="width: 86%;" help="Quick-load and HOST in MULTIPLAYER mode." onclick="quickJoin();">
+							<script>
+								document.write(mpIconHTML + " Host");
+							</script>
+						</div>
+					</td>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific instance..." onclick="showInstances('mp');">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td>
+				</tr -->
+				<tr>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" id="joinButton" style="width: 86%;" help="Quick-join the last MULTIPLAYER server that you visited on this map." onclick="quickJoin();">
+
+							<div style="white-space: nowrap;">
+								<div style="display: inline;">
+									<script>
+										document.write(mpIconHTML);
+									</script>
+								</div>
+
+								<div style="display: inline;">Join</div>
+								<div id="byBlock" style="display: none;">
+									<div style="white-space: nowrap; max-width: 170px; overflow-x: hidden; text-overflow: ellipsis; display: inline-block; font-size: 10px;" id="lastServerTitle"></div><div style="display: inline-block; font-size: 10px; padding-left: 4px; padding-right: 4px;">by</div><div style="white-space: nowrap; max-width: 100px; overflow-x: hidden; text-overflow: ellipsis; display: inline-block; font-size: 10px;" id="lastServerAuthor"></div>
+								</div>
+							</div>
+
+						</div>
+					</td>
+					<td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Search for MULTIPLAYER servers that are running this map." onclick="showServers();">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td>
+					<!--td colspan="2">
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="width: 89%;" help="Search for MULTIPLAYER servers that are running this map." onclick="showServers();">
+							<script>
+								document.write(mpIconHTML + " Servers");
+							</script>
+						</div>
+					</td-->
+					<!-- td>
+						<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="min-width: 0; padding-left: 0; padding-right: 0;" help="Choose a specific server...">
+							<script>
+								document.write(cogIconHTML);
+							</script>
+						</div>
+					</td -->
+				</tr>
+			</table>
+			<!-- input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" onclick="aaapi.cmd('deactivateInputMode');" / -->
+		</div>
+
+		<!-- div style="display: none;">
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Yes" onclick="answeredYes();" />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="No" onclick="answeredNo();" />
+		</div -->
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+
+			function showInstances(playMode)
+			{
+				if( mapId !== "" )
+				{
+					window.location = "asset://ui/playInstance.html?id=" + mapId + "&spawn=" + spawnEntityName + "&playmode=" + playMode + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "';");
+				}
+			}
+
+			function answeredYes()
+			{
+				//console.log("Do map transition with: " + mapfile + " and " + spawnEntityName);
+
+				//var mapInfo = aaapi.cmdEx("findMap", mapfile + ".bsp");
+				if( mapId !== "" )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					playNow(mapId);
+				}
+				else
+					aaapi.cmd("deactivateInputMode");
+			}
+
+			function answeredNo()
+			{
+				aaapi.cmd("deactivateInputMode");
+			}
+
+			var mapThumbnailElem = document.querySelector("#mapThumbnail");
+
+			var mapImage = document.createElement("div");
+			mapImage.className = "mapImage";
+			mapImage.style.cssText = "width: 240px; height: 135px;";
+
+			function compareIds(testId, baseId)
+			{
+				var intTestId = Number(testId);
+				var intBaseId = Number(baseId);
+				
+				if( testId === baseId || (!isNaN(intTestId) && !isNaN(intBaseId) && intTestId === intBaseId) )
+					return true;
+				else
+					return false;
+			}
+
+			//var g_screenshots = aaapi.cmdEx("getAllMapScreenshots", "id" + mapId);
+			var screenshotKeys = Object.keys(g_screenshots);
+			var screenshots = [];
+			for( i = 0; i < screenshotKeys.length; i++ )
+			{
+				screenshot = g_screenshots[screenshotKeys[i]];
+				//if( screenshot.map.file === mapName + ".bsp" )
+				//if( screenshot.map.id === mapInfo.map.info.id )
+				if( compareIds(screenshot.map.id, "id" + mapInfo.map.info.id) || compareIds(screenshot.map.id, mapInfo.map.info.id) )
+					screenshots.push(screenshot);
+			}
+
+			if( screenshots.length > 0 )
+			{
+				var screenshot;
+				if(givenScreenshot !== "" && !!g_screenshots[givenScreenshot] )
+				{
+					screenshot = g_screenshots[givenScreenshot];
+				}
+				else
+				{
+					//screenshot = screenshots[0];
+
+					var mapId = screenshots[0].map.id.substring(2);
+					var mapHistoryEntry = mapHistory[mapId];
+					if( !!mapHistoryEntry && mapHistoryEntry.screenshotId !== "" && !!g_screenshots[mapHistoryEntry.screenshotId])
+					{
+						screenshot = g_screenshots[mapHistoryEntry.screenshotId];
+						//mapThumbnailElem.setAttribute("screenshotid", mapHistoryEntry.screenshotId);
+					}
+				}
+
+				if( !!screenshot )
+				{
+					mapThumbnailElem.setAttribute("screenshotid", screenshot.id);
+
+					if( givenPosition !== "" )
+						givenPosition = screenshot.position;
+
+					if( givenRotation !== "" )
+						givenRotation = screenshot.rotation;
+
+					mapImage.screenshot = screenshot;
+
+					mapImage.style.cssText = "width: 240px; height: 135px;";
+					tga.open( "screenshots/" + screenshot.id + ".tga", function()
+					{
+						var elem = tga.getCanvas();
+						elem.style.cssText = "width: 240px; height: 135px;";
+						this.appendChild(elem);
+						this.parentNode.style.display = "block";
+					}.bind(mapImage));
+				}
+			}
+
+			mapThumbnailElem.appendChild(mapImage);
+
+			function quickHost()
+			{
+				console.log("host_next_map");
+				/*
+				// first, check for *any* lobby, owned by this user, that already is hosting this arcade.
+				//var connectedUniverse = aaapi.cmdEx("getConnectedSession");
+				var wolrdInfo = aaapi.cmdEx("getWorldInfo");
+				var currentInstanceId = wolrdInfo.instance.id;
+
+				// if a lobby with currentInstanceId, owned by this user, already exists, then we will automatically UPDATE the server instead.  It is unlikely any user will need to host 2 different versions of the same arcade instance at the same time.
+				rootRef.child("lobbies").once("value", function(snapshot)
+				{
+					var lobbyValue = lobbyElem.value;
+					var titleValue = titleElem.value;
+
+					var val = snapshot.val();
+					for( var x in val )
+					{
+						if( val[x].instance === currentInstanceId && val[x].owner === localUserId )
+						{
+							console.log("Found existing persistent server, created by you, running this instance, so replacing it with your current host version.");
+							lobbyValue = x;
+							break;
+						}
+					}
+
+					// first, check if our session name is valid
+					var letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					var alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+					if( !aaapi.cmdEx("alphabetSafe", lobbyValue[0], letters) || !aaapi.cmdEx("alphabetSafe", lobbyValue, alphabet) )
+					{
+						console.log("YOOOO! Your title is whack, yo. (Only 0-9 and a-z please.)");
+						return;
+					}
+
+					// then continue
+					var success = aaapi.cmdEx("updateInstance", worldInfo.instance.id, ["title", titleValue]);
+					if( success )
+					{
+						// first save our changes
+						var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
+						cmd += " aamp_persistent " + isPersistentElem.inputOption.value + ";";
+						cmd += " cloud_assets_upload " + syncCustomModelsElem.inputOption.value + ";";
+						cmd += " aamp_lobby_id \"" + lobbyValue + "\";";
+						cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
+						aaapi.cmd("consoleCommand", cmd);
+
+						if( spawnEntityName !== "" )
+							aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+
+						// then start hosting
+						window.location = 'asset://ui/hostSessionProgress.html';
+					}
+				});
+				*/
+			}
+
+			function quickJoin()
+			{
+				if( !!g_bestLobby )
+				{
+					aaapi.cmd("consoleCommand", "next_player_spawn_override \"" + spawnEntityName + "\"");
+					aaapi.cmd("joinLobby", g_bestLobby.lobby);
+				}
+				else
+				{
+					showServers();
+				}
+			}
+
+			function showServers()
+			{
+				window.location = "asset://ui/hostSession.html?tab=servers&mapfile=" + mapfile + "&spawn=" + spawnEntityName + "&uiback=" + encodeURIComponent("window.location='asset://ui/mapTransition.html?spawn=" + spawnEntityName + "&mapfile=" + mapfile + "';");
+			}
+
+			function showMore(elem)
+			{
+				elem.style.display = "none";
+				document.querySelector("#moreTable").style.display = "table";
+			}
+
+			if( !!g_bestLobby )
+			{
+				document.querySelector("#lastServerTitle").appendChild(document.createTextNode(g_bestLobby.title));
+				document.querySelector("#lastServerAuthor").appendChild(document.createTextNode(g_bestLobby.author));
+				var elem = document.querySelector("#joinButton");
+				elem.style.paddingTop = "2px";
+				elem.style.paddingBottom = "2px";
+				
+				document.querySelector("#byBlock").style.display = "block";
+			}
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+	</body>
+</html>

@@ -1,0 +1,24 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MkbulFoFIlciy"
+		}
+		"title"		"Kawaks"
+		"file"		"X:\Emulators\Kawaks\WinKawaks.exe"
+		"commandformat"		"$SHORTFILE"
+		"type"		"-ohTuY-L6iUsEGOn2jn4"
+		"filepaths"
+		{
+			"-om88gxKJAeLlX8hVlJ7"
+			{
+				"id"		"-om88gxKJAeLlX8hVlJ7"
+				"path"		"X:\Emulators\Arcade\roms\"
+			}
+		}
+	}
+}

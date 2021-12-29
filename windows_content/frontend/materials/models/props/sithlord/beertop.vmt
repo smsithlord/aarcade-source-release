@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\props\sithlord/beertop"
+	"$model" "1"
+	"$envmap" "env_cubemap"
+	"$envmaptint" "[.3 .3 .3]"
+}

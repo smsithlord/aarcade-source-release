@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-K1TlLlKit3VFv"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"wii"
+		"priority"		"1"
+		"fileformat"		"/(.iso)$/i"
+	}
+}

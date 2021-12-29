@@ -1,0 +1,22 @@
+"map"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"id"		"2a0290e4"
+			"created"		"0"
+			"owner"		"local"
+			"removed"		"0"
+		}
+		"title"		"Meta Shine"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"file"		"meta_shine.bsp"
+			}
+		}
+	}
+}

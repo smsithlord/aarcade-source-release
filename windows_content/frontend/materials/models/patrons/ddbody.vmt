@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/ddbody"
+	"$bumpmap" "models\patrons/ddbody_normal"
+	"$model" "1"
+}

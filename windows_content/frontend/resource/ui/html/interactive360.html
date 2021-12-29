@@ -1,0 +1,70 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+
+		/*
+
+			1. Retrieve the current list of screenshots for the map.
+			2. Take an interactive screenshot.
+			3. Wait for a new screenshot to be detected.
+			4. Use that screenshot's ID as the base ID for the rest of the screens.
+			5. Orient to the next screenshot's angles.
+			6. Take the next screenshot: baseID + "_" + sideName.
+			7. Increment side index.
+			8. If side index is < 5, jump to step 5.
+			9. Results are 
+
+			NOTE: The 6 cubemap screenshots should be saved into a panos/ folder by using a new parameter on the takeScreenshot aaapi call.
+			These 6 pano shots should use combined meta data so that there's only 1 JS file and 1 HTML file in the panos/ folder.
+
+			NOTE 2: Panos will not work for local users because they must be uploaded to a web host somewhere for three.js to work right.
+		*/
+
+
+			var currentPanoIndex = -1;
+			function takeScreenshot()
+			{
+				/*
+				var g_oldScreenshotId = getFreshScreenshot();
+				if( !!g_oldScreenshotId && !!g_oldScreenshotId.id )
+					g_oldScreenshotId = g_oldScreenshotId.id;
+				else
+					g_oldScreenshotId = "";
+				*/
+
+				var nextPanoIndex = currentPanoIndex + 1;
+				var goodPanoId = mapName + "_pano" + i + "_0";
+				aaapi.cmd("takeScreenshot", goodId);
+
+				// set an interval until we do get a new screenshot
+				g_screenshotDetectedinterval = setInterval(function()
+				{
+					var freshScreenshot = getFreshScreenshot();
+
+					if( freshScreenshot.id != g_oldScreenshotId )
+					{
+						clearTimeout(g_screenshotDetectedinterval);
+						g_screenshotDetectedinterval = null;
+
+						window.location='arcadesnap.html?id=' + freshScreenshot.id;
+					}
+				}, 1000);
+			}
+
+			function orientCamera()
+			{
+				//document.body.style.backgroundColor = "#000000";
+				aaapi.cmd("consoleCommand", "setang 0 0 0");
+
+				takeScreenshot();
+			}
+		</script>
+	</head>
+	<body>
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		
+		<input type="button" value="yadda" onclick="orientCamera();" />
+	</body>
+</html>

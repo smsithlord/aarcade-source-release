@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/sshair"
+	"$bumpmap" "models\patrons/sshair_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

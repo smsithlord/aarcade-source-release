@@ -1,0 +1,71 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Embedded Apps", "", true, true, "window.location='asset://ui/addons.html';", "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<!-- Libretro Framework -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Libretro" onclick="window.location='asset://ui/libretroConfig.html';" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens." /><br />
+
+			<!-- Steamworks Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steamworks" onclick="window.location='asset://ui/steamworksBrowserConfig.html';" help="The Steamworks web browser is what displays web content on the in-game screens." /><br />
+
+			<!-- Awesomium Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Awesomium" onclick="window.location='asset://ui/awesomiumConfig.html';" help="Awesomium is what displays the AArcade HUD & UI." />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+
+
+
+		<div class="hudContent" style="display: none; width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/addons.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Embedded Apps
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.cmd('deactivateInputMode');" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+<!--
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>-->
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroConfig.html';" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens.">Libretro Framework</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/steamworksBrowserConfig.html';" help="The Steamworks web browser is what displays web content on the in-game screens.">Steamworks Web Browser</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/awesomiumConfig.html';" help="Awesomium is what displays the AArcade HUD & UI.">Awesomium Web Browser</div>
+			<!-- <div class="mainButton disabledButton">Purge</div> -->
+
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

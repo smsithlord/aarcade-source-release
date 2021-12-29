@@ -1,0 +1,5192 @@
+<html>
+	<head>
+		<title>Network</title>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+
+		<style>
+			body
+			{
+				overflow: hidden;
+			}
+		</style>
+
+		<script src="asset://ui/hud.js?a=b1"></script>
+		<script src="asset://ui/tga.js"></script>
+
+		<script src="scripts/metaverse.js?bust=29"></script>
+		<script src="scripts/md5.min.js"></script>
+		<script src="firebasefull.js?buster=13"></script>
+		<!--<script src="firebase.js"></script>-->
+		<!--<script src="chatbot.js?buster=25"></script>
+		<script src="https://cdn.firebase.com/js/client/2.3.2/firebase.js"></script>-->
+
+		<script>
+			// GLOBAL HELPERS
+			function pad(num)
+			{
+				var size = 4;
+				var goodNum = "000" + num;
+				return goodNum.substr(goodNum.length-size);
+			}
+
+			function ExtractYouTubeId(trailerURL)
+			{
+				if( typeof trailerURL === "undefined" )
+					return trailerURL;
+
+				var youtubeid;
+				if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+				{
+					youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+					var found = youtubeid.indexOf("&");
+					if( found > -1 )
+					{
+						youtubeid = youtubeid.substring(0, found);
+					}
+				}
+				else
+				{
+					var found = trailerURL.indexOf("youtu.be/");
+					if( found != -1 )
+					{
+						youtubeid = trailerURL.substring(found+9);
+
+						found = youtubeid.indexOf("&");
+						if( found != -1 )
+						{
+							youtubeid = youtubeid.substring(0, found);
+						}
+					}
+				}
+
+				return youtubeid;
+			}
+		</script>
+
+		<script>
+			// GLOBALS
+			var g_verbose = false;
+			var g_quickConnectInfo;
+			//var g_lobbyIndex = 0;
+			var g_tga = new TGA();
+
+			// clear out any cached panos that are left over
+			var g_panoIndex = pad(0);
+			var tempCachedPanoName = "cachedPano" + g_panoIndex;
+			while( localStorage[tempCachedPanoName] !== undefined )
+			{
+				localStorage.removeItem(tempCachedPanoName);
+				g_panoIndex = pad(parseInt(g_panoIndex) + 1);
+				tempCachedPanoName = "cachedPano" + g_panoIndex;
+			}
+
+			// fetch the local user's banned user list
+			var g_userBans = localStorage.getItem("userBans");
+			if( !!g_userBans )
+				g_userBans = JSON.parse(g_userBans);
+			else
+				g_userBans = {};
+
+
+			// keep a list of users so it can be displayed in the HUD
+			/*
+			var g_socialUserNames = localStorage.getItem("socialUserNames");
+			if( !!g_socialUserNames )
+				g_socialUserNames = JSON.parse(g_socialUserNames);
+			else
+				g_socialUserNames = {};
+*/
+			function eventHandler(eventName, eventData)
+			{
+				console.log(eventName + ": " + JSON.stringify(eventData));
+			}
+
+			var g_avatarURL = "";
+			var g_metaverse = new Metaverse(eventHandler);
+			var g_defaultAddress = g_metaverse.quickJoinAddress;
+			var g_defaultUniverse = "-Kup2PfwTmkeeEtKNd7p";
+			var g_pendingInstanceEntries = {};	// the stuff we spawn in mid-game
+			var g_uniqueModels;
+			var g_uniqueObjects;
+			var g_uniqueItems;
+			var g_uniqueTypes;
+			var g_uniqueApps;
+			var g_freshObjects;	// this gets filled up then turned into undefined.
+			var g_numUniqueObjects;
+			var g_isHostInitComplete = false;
+
+			var g_deferredNetworkUpdates = [];	// To avoid flooding the C++ with entry msgs.
+			var g_incomingNetworkDependencies = {};	// For when receiving entries from the network.
+			/*
+				ENTRY_ID = an array of dependency IDs
+			*/
+		</script>
+
+		<script>
+			var g_okayToForceResolve = false;
+			function onPanoAdded()
+			{
+				aaapi.cmd("addToastMessage", "360 screenshot synced to the universe.");
+			}
+
+			function onKicked(user)
+			{
+				aaapi.cmd("addToastMessage", "You have lost your connection to the server.");
+				aaapi.cmd("disconnected");
+				delete g_metaverse.universeRef;
+			}
+			
+			function isOwnInitialObject(id)
+			{
+				if( !!g_uniqueObjects )
+				{
+					// FIXME: Also should check if we are the server or client
+					// (when clients are able to spawn things too)
+					return (!!g_uniqueObjects[id]);
+				}
+				else
+					return false;
+			}
+
+			function attemptEmptyTheQueue()
+			{
+				if( !g_okayToForceResolve )
+					return;
+
+				if( g_deferredNetworkUpdates.length === 0 )
+				{
+					var count = 0;
+
+					// force resolving unresolved stuff (for now)
+					// TODO: Should have a timeout to this happening.
+					// The reason there are unresolved updates is because of erroneous types or other issues in the host's library.
+
+					var updatesToForce = {};
+
+					var dependencyKeys = Object.keys(g_incomingNetworkDependencies);
+					//for( var i = 0; i < dependencyKeys.length; i++ )
+					for( var i = dependencyKeys.length-1; i >= 0; i-- )
+					{
+						if( !!!g_incomingNetworkDependencies[dependencyKeys[i]] )
+							continue;
+						count++;
+
+						var entry = g_incomingNetworkDependencies[dependencyKeys[i]];
+						var entryType = Object.keys(entry)[0];
+
+//console.log(entryType + "(" + Object.keys(g_metaverse.library[entryType]).length + "): " + JSON.stringify(entryId));
+
+						entry = g_metaverse.library[entryType][dependencyKeys[i]];
+						//console.log(JSON.stringify(entry));
+						if( !!!entry )
+							continue;
+
+						if( entry.hasOwnProperty("current") )
+							entry = entry.current;
+
+						g_incomingNetworkDependencies[dependencyKeys[i]] = null;
+
+						var pload = {};
+						pload[entryType] = {entry: entry};
+						spawnEntry(pload);
+					}
+					
+					console.log("Empty queue. " + count + " unresolved updates forced.");
+					//if(!!g_deferredNetworkUpdates)
+					//	g_deferredNetworkUpdates = [];//g_deferredNetworkUpdates.shift();
+					//g_incomingNetworkDependencies = {};
+					//g_alreadyChecked = {};
+				}
+			}
+
+			var clientUpdateCallbacker = {};
+			clientUpdateCallbacker.giveNextUpdate = function (starterMode)
+			{
+				if( g_deferredNetworkUpdates.length === 0 )	// check for bug case (not needed?)
+					return;
+
+				if( !!!starterMode || starterMode !== "starter" )
+				{
+					g_deferredNetworkUpdates.shift();	// remove the one that just got added
+
+					if( g_deferredNetworkUpdates.length === 0 )
+					{
+						attemptEmptyTheQueue();
+						return;	// if nothing is left, do nothing.
+					}
+				}
+
+				//console.log("Updates remaining: " + Object.keys(g_deferredNetworkUpdates).length);
+
+				var deferredEntry = g_deferredNetworkUpdates[0];
+				//console.log(JSON.stringify(deferredEntry));
+				var entryType = Object.keys(deferredEntry)[0];
+				deferredEntry = deferredEntry[entryType];
+
+				if( entryType === "objects" )
+				{
+					var entry = deferredEntry.entry;//.current;
+
+					if( !!!deferredEntry.updateMask || deferredEntry.updateMask === 0 )	// new object
+					{
+						var payload = ["entryCreated", entryType, entry.info.id];
+
+						// ORDER: ITEM, MODEL, ORIGIN, ANGLES, SCALE(float), SLAVE(bool), CHILD(bool), PARENTOBJECT
+						payload.push(entry.item);
+						payload.push(entry.model);
+						payload.push(entry.origin);
+						payload.push(entry.angles);
+						payload.push(entry.scale);
+						payload.push(entry.slave);
+						payload.push(entry.child);
+						payload.push(entry.parentObject);
+						payload.push(entry.anim);
+						// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+						aaapi.cmd.apply(null, payload);
+					}
+					else	// update for existing object
+					{
+						// NOTE: u really only have to give the fields that CHANGED.
+						aaapi.cmd("networkEvent", 'objectUpdated', false, false, deferredEntry.updateMask, entry.info.id, entry.item, entry.model, entry.slave, entry.child, entry.parentObject, entry.scale, entry.origin, entry.angles, entry.anim);
+					}
+				}
+				else if( entryType === "models" )
+				{
+					var entry = deferredEntry.entry;
+					if( !!entry )
+					{
+						var payload = ["entryCreated", entryType, entry.info.id];
+
+						// ORDER: dynamic(BOOL), keywords, file, download, mountIds, workshopIds, preview, screen, title
+						payload.push(entry.dynamic);
+						payload.push(entry.keywords);
+						payload.push(entry.platforms[arcadeHud.platformId].file);
+						payload.push(entry.platforms[arcadeHud.platformId].mountIds);
+						payload.push(entry.platforms[arcadeHud.platformId].workshopIds);
+						payload.push(entry.preview);
+						payload.push(entry.screen);
+						payload.push(entry.title);
+						// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+						aaapi.cmd.apply(null, payload);
+					}
+				}
+				else if( entryType === "items" )
+				{
+					var entry = deferredEntry.entry;;//.current;
+					if( !!entry )
+					{
+						var payload = ["entryCreated", entryType, entry.info.id];
+
+						// ORDER: app, description, download, file, marquee, preview, reference, screen, stream, title, type
+						payload.push(entry.app);
+						payload.push(entry.description);
+						payload.push(entry.download);
+						payload.push(entry.file);
+						payload.push(entry.marquee);
+						payload.push(entry.preview);
+						payload.push(entry.reference);
+						payload.push(entry.screen);
+						payload.push(entry.stream);
+						payload.push(entry.title);
+						payload.push(entry.type);
+						// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+						aaapi.cmd.apply(null, payload);
+					}
+				}
+				else if( entryType === "types" )
+				{
+					var entry = deferredEntry.entry;;
+
+					var payload = ["entryCreated", entryType, entry.info.id];
+
+					// ORDER: fileformat, priority, title, titleformat
+					payload.push(entry.fileformat);
+					payload.push(entry.priority);
+					payload.push(entry.title);
+					payload.push(entry.titleformat);
+					// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+					aaapi.cmd.apply(null, payload);
+				}
+				else if( entryType === "apps" )
+				{
+					var entry = deferredEntry.entry;;//.current;
+
+					var payload = ["entryCreated", entryType, entry.info.id];
+
+					// ORDER: title, file, commandformat, type, download, reference
+					// filepaths is not included. TODO: reality check on these fields.
+					payload.push(entry.title);
+					payload.push(entry.file);
+					payload.push(entry.commandformat);
+					payload.push(entry.type);
+					payload.push(entry.download);
+					payload.push(entry.reference);
+					// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+					aaapi.cmd.apply(null, payload);
+				}
+
+				//g_deferredNetworkUpdates.shift();
+			};
+
+			function spawnEntry(entryObject)
+			{
+
+				g_deferredNetworkUpdates.push(entryObject);
+				//console.log("Spawn entry pushed: " + Object.keys(entryObject)[0]);
+
+				if( g_deferredNetworkUpdates.length === 1 )
+				{
+					// send the update right now.
+					clientUpdateCallbacker.giveNextUpdate("starter");
+				}
+				// otherwise, wait for the callback.
+			}
+
+			var g_alreadyChecked = {};
+			function checkNetworkEntriesResolved(entryId)
+			{
+				if( !!g_alreadyChecked[entryId] )
+					return;
+				g_alreadyChecked[entryId] = true;
+
+				// if there are, remove this entry ID from their wait list, and if their wait list is empty after that, then send the now resolved entry to the C++ too!
+				// TODO: work
+				// NOTE: each g_incomingNetworkDependencies element is an ARRAY of {ENTRY_TYPE: ARRAY_OF_DEPENDENCY_IDS}
+
+				var foundAtIndex;
+				var entryType;
+				var dependencies;
+				var keyz = Object.keys(g_incomingNetworkDependencies);
+				//for( var x in g_incomingNetworkDependencies )
+				for( var i = 0; i < keyz.length; i++ )
+				{
+					if( !!!g_incomingNetworkDependencies[keyz[i]] )//[x] )
+						continue;
+
+					entryType = Object.keys(g_incomingNetworkDependencies[keyz[i]])[0];
+					dependencies = g_incomingNetworkDependencies[keyz[i]][entryType];
+
+					foundAtIndex = dependencies.indexOf(entryId);
+
+					if(foundAtIndex >= 0)
+					{
+						dependencies.splice(foundAtIndex, 1);
+					}
+
+					if(dependencies.length === 0)
+					{
+						// Send this entry to the C++.
+						var entry = g_metaverse.library[entryType][keyz[i]];
+						if( !!entry && !!entry.current )
+							entry = entry.current;
+
+						if( !!!entry )
+						{
+							console.log("WARNING: Invalid object.  Spawn aborted.");
+							console.log(entryType + "(" + Object.keys(g_metaverse.library[entryType]).length + "): " + entryId);
+						}
+						else
+						{
+						//if( entryType === "objects")
+//console.log(entryType + "(" + Object.keys(g_metaverse.library[entryType]).length + "): " + JSON.stringify(entryId));
+							var pload = {};
+							pload[entryType] = {entry: entry};
+							spawnEntry(pload);//{entryType: entry});
+						}
+
+						g_incomingNetworkDependencies[keyz[i]] = null;
+
+						if( !!entry )
+						{
+							// determine if anything else was waiting on THIS entry.
+							checkNetworkEntriesResolved(keyz[i]);
+						}
+					}
+				}
+			}
+
+//var g_testerr = false;
+			function onEntryChanged(mode, entry, fields, isNew)
+			{
+				if(!!!aampNetwork || aampNetwork.isHost)
+				{
+					var category = mode.toLowerCase() + "s";
+					if( !!!entry )
+						return;
+
+					var isOwnNewEntry = false;
+					if( !!g_pendingInstanceEntries[entry.info.id] )
+					{
+						delete g_pendingInstanceEntries[entry.info.id];
+						isOwnNewEntry = true;
+					}
+
+					// Object mode needs to check for the case of us quick hosting...
+					var isQuickHostObject = false;
+					if( mode === "Object" && !g_isHostInitComplete && g_freshObjects !== undefined )
+					{
+						if( g_numUniqueObjects === undefined )
+							g_numUniqueObjects = Object.keys(g_uniqueObjects).length;
+						
+						if( !!g_uniqueObjects[entry.info.id] && !!!g_freshObjects[entry.info.id] )
+						{
+							g_freshObjects[entry.info.id] = true;
+							isQuickHostObject = true;
+
+							if( Object.keys(g_freshObjects).length === g_numUniqueObjects )
+							{
+								console.log("Finished Receiving Object Data");
+
+								delete g_uniqueModels;
+								delete g_uniqueObjects;
+								delete g_uniqueItems;
+								delete g_uniqueTypes;
+								delete g_uniqueApps;
+								delete g_numUniqueObjects;
+								delete g_freshObjects;
+
+								// We are all finished "going live" and ready to invite people to the session.
+								g_isHostInitComplete = true;
+							}
+						}
+					}
+
+					if( (!isOwnNewEntry && Object.keys(fields).length > 0) || isQuickHostObject)
+					{
+						if( mode === "Object" )
+						{
+							if( !isQuickHostObject )
+							{
+								var updateMask = 0x0;
+								var maskMap = {
+									"item": 0x1,
+									"model": 0x2,
+									"slave": 0x4,
+									"child": 0x8,
+									"parentObject": 0x10,
+									"scale": 0x20,
+									"origin": 0x40,
+									"angles": 0x80,
+									"anim": 0x100
+								};
+
+								var updateData = {};
+								for( var x in g_metaverse.defaultObject )
+								{
+									if( !!fields[x] )
+									{
+										updateData[x] = fields[x];
+										updateMask |= maskMap[x];
+									}
+									else
+										updateData[x] = "";//g_metaverse.defaultObject[x];
+								}
+
+								// NOTE: Don't need to send everything, only need to send changed.
+								aaapi.cmd("networkEvent", 'objectUpdated', (entry.info.owner === g_metaverse.localUser.id), isQuickHostObject, updateMask, entry.info.id, entry.item, entry.model, entry.slave, entry.child, entry.parentObject, entry.scale, entry.origin, entry.angles, entry.anim);
+							}
+							else if( g_isHostInitComplete )
+							{
+								var uniqueModelKeys = Object.keys(g_uniqueModels);
+								var uniqueAppKeys = Object.keys(g_uniqueApps);
+								var uniqueTypeKeys = Object.keys(g_uniqueTypes);
+								var uniqueItemKeys = Object.keys(g_uniqueItems);
+								var uniqueObjectKeys = Object.keys(g_uniqueObjects);
+								
+								aaapi.cmd("networkEvent", "modelCreate", "", uniqueModelKeys.length, uniqueModelKeys.length);
+								
+								aaapi.cmd("networkEvent", "appCreate", "", uniqueAppKeys.length, uniqueAppKeys.length);
+
+								aaapi.cmd("networkEvent", "typeCreate", "", uniqueTypeKeys.length, uniqueTypeKeys.length);
+
+								aaapi.cmd("networkEvent", "itemCreate", "", uniqueItemKeys.length, uniqueItemKeys.length);
+
+								aaapi.cmd("networkEvent", "objectCreate", "", uniqueObjectKeys.length, uniqueObjectKeys.length);
+
+								aaapi.cmd("networkEvent", "instanceObjectCreate", "", "", uniqueObjectKeys.length, uniqueObjectKeys.length);
+
+								onHostReady();
+							}
+
+							if( !isQuickHostObject )
+							{
+								if( isNew )
+									console.log("New " + mode.toLowerCase() + " added: " + JSON.stringify(Object.keys(fields)));
+								else
+									console.log(mode + " changed: " + JSON.stringify(fields));
+							}
+						}
+						else
+						{
+							console.log("UNHANDLED " + mode.toLowerCase() + " update: " + JSON.stringify(Object.keys(fields)));
+						}
+					}
+				}
+				else	// if client
+				{
+					var category = mode.toLowerCase() + "s";
+					if( !!!entry )
+						return;
+
+					if( isNew )
+					{
+						// ALL fields
+						//var entryCreatedParams = ["entryCreated", category, ALL_FIELD_VALUES_ONLY];
+						//aaapi.cmd.apply(null, entryCreatedParams);
+/*
+						if( category === "objects" )
+						{
+							var payload = ["entryCreated", category];
+
+							// ORDER: ITEM, MODEL, ORIGIN, ANGLES, SCALE(float), SLAVE(bool), CHILD(bool), PARENTOBJECT
+							payload.push(entry.item);
+							payload.push(entry.model);
+							payload.push(entry.origin);
+							payload.push(entry.angles);
+							payload.push(entry.scale);
+							payload.push(entry.slave);
+							payload.push(entry.child);
+							payload.push(entry.parentObject);
+							// ALSO ADD IN ANY REQUIRED INFO FIELDS HERE (when they start being needed)!!
+
+							aaapi.cmd.apply(null, payload);
+						}*/
+
+						// DEPENDENCY LOGIC
+						// 1. Generate a list of network dependencies (will not always be 100% depth until the rest of the data entries are received).
+						// 2. Check if all network dependencies are resolved.
+						// 3(a). If they are, call AHairyPussy()
+						// 3(b). If they are NOT resolved, then add/adjust their entry in g_incomingNetworkDependencies.
+
+						//var dependencies;
+						if( category === "models" )
+						{
+							// dependencies are: none
+							// this model has no unresolved dependencies.
+
+							// entry is ready to be sent to the C++
+							var pload = {};
+							pload["models"] = {entry: entry};
+							spawnEntry(pload);
+
+							// determine if anything else was waiting on THIS entry.
+							checkNetworkEntriesResolved(entry.info.id);
+						}
+						else if( category === "types" )
+						{
+							// dependencies are: none
+							// this type has no unresolved dependencies.
+
+							// entry is ready to be sent to the C++
+							var pload = {};
+							pload["types"] = {entry: entry};
+							spawnEntry(pload);
+
+							// determine if anything else was waiting on THIS entry.
+							checkNetworkEntriesResolved(entry.info.id);
+						}
+						else if( category === "apps" )
+						{
+							// dependencies are: type
+console.log("APP DETECTED: " + JSON.stringify(entry));
+							if( entry.type !== "" && !!!g_metaverse.library.types[entry.type] )
+							{
+								// waiting on TYPE
+								if( !!!g_incomingNetworkDependencies[entry.info.id] )
+									g_incomingNetworkDependencies[entry.info.id] = {};
+
+								if( !!!g_incomingNetworkDependencies[entry.info.id][category] )
+									g_incomingNetworkDependencies[entry.info.id][category] = [];
+
+								g_incomingNetworkDependencies[entry.info.id][category].push(entry.type);
+							}
+							else
+							{
+								// this app has no unresolved dependencies.
+
+								// entry is ready to be sent to the C++
+								var pload = {};
+								pload[category] = {entry: entry};
+								spawnEntry(pload);
+
+								// determine if anything else was waiting on THIS entry.
+								checkNetworkEntriesResolved(entry.info.id);
+							}
+						}
+						else if( category === "objects" )
+						{
+							// dependencies are: item, model
+
+							var noDependencies = true;
+
+							// ITEM
+							if( entry.item !== "" && !!!g_metaverse.library.items[entry.item] )
+							{
+								noDependencies = false;
+								// waiting on ITEM
+								if( !!!g_incomingNetworkDependencies[entry.info.id] )
+									g_incomingNetworkDependencies[entry.info.id] = {};
+
+								if( !!!g_incomingNetworkDependencies[entry.info.id][category] )
+									g_incomingNetworkDependencies[entry.info.id][category] = [];
+
+								g_incomingNetworkDependencies[entry.info.id][category].push(entry.item);
+							}
+
+							// MODEL
+							if( entry.model !== "" && !!!g_metaverse.library.models[entry.model] )
+							{
+								noDependencies = false;
+								// waiting on MODEL
+								if( !!!g_incomingNetworkDependencies[entry.info.id] )
+									g_incomingNetworkDependencies[entry.info.id] = {};
+
+								if( !!!g_incomingNetworkDependencies[entry.info.id][category] )
+									g_incomingNetworkDependencies[entry.info.id][category] = [];
+
+								g_incomingNetworkDependencies[entry.info.id][category].push(entry.model);
+							}
+
+							if( noDependencies )
+							{
+								// this object has no unresolved dependencies.
+
+								// entry is ready to be sent to the C++
+								var pload = {};
+								pload[category] = {entry: entry};
+								spawnEntry(pload);
+
+								// determine if anything else was waiting on THIS entry.
+								checkNetworkEntriesResolved(entry.info.id);
+							}
+						}
+						else if( category === "items" )
+						{
+							// dependencies are: type, app
+
+							var noDependencies = true;
+
+							// TYPE
+							if( entry.type !== "" && !!!g_metaverse.library.types[entry.type] )
+							{
+								noDependencies = false;
+								// waiting on TYPE
+								if( !!!g_incomingNetworkDependencies[entry.info.id] )
+									g_incomingNetworkDependencies[entry.info.id] = {};
+
+								if( !!!g_incomingNetworkDependencies[entry.info.id][category] )
+									g_incomingNetworkDependencies[entry.info.id][category] = [];
+
+								g_incomingNetworkDependencies[entry.info.id][category].push(entry.type);
+							}
+
+/* Apps are never received from the server, so don't wait for them. (this will have to be changed once apps get better support)
+							// APP
+							if( entry.app !== "" && !!!g_metaverse.library.apps[entry.app] )
+							{
+								noDependencies = false;
+								// waiting on APP
+								if( !!!g_incomingNetworkDependencies[entry.info.id] )
+									g_incomingNetworkDependencies[entry.info.id] = {};
+
+								if( !!!g_incomingNetworkDependencies[entry.info.id][category] )
+									g_incomingNetworkDependencies[entry.info.id][category] = [];
+
+								g_incomingNetworkDependencies[entry.info.id][category].push(entry.app);
+							}
+*/
+
+							if( noDependencies )
+							{
+								// this object has no unresolved dependencies.
+
+								// entry is ready to be sent to the C++
+								var pload = {};
+								pload[category] = {entry: entry};
+								spawnEntry(pload);
+
+								// determine if anything else was waiting on THIS entry.
+								checkNetworkEntriesResolved(entry.info.id);
+							}
+						}
+					}
+					else
+					{
+						var entryId = entry.info.id;
+
+						if( category !== "objects" )
+						{
+							console.log("TODO: Received entry update for non-object.  Ignoring, for now.");
+							return;
+						}
+
+						if( !!fields.item )
+						{
+							console.log("TODO: Received object update with changed item.  Ignoring, for now.");
+							return;
+						}
+
+						// mode, entry, fields, isNew
+						// We are a client handling a change to an object that the host made.
+						var fieldKeys = Object.keys(fields);
+						if( fieldKeys.length < 1 )
+						{
+							console.log("Received empty object update.");
+							return;
+						}
+
+						var updateMask = 0x0;
+						var maskMap = {
+							"item": 0x1,
+							"model": 0x2,
+							"slave": 0x4,
+							"child": 0x8,
+							"parentObject": 0x10,
+							"scale": 0x20,
+							"origin": 0x40,
+							"angles": 0x80,
+							"anim": 0x100
+						};
+
+						//var updateData = {};
+						for( var x in g_metaverse.defaultObject )
+						{
+							if( !!fields[x] )
+							{
+								//updateData[x] = fields[x];
+								updateMask |= maskMap[x];
+							}
+							//else
+							//	updateData[x] = "";//g_metaverse.defaultObject[x];
+						}
+
+						// entry is ready to be sent to the C++
+						var pload = {};
+						pload[category] = {updateMask: updateMask, entry: entry};
+						spawnEntry(pload);
+
+						// determine if anything else was waiting on THIS entry.
+						checkNetworkEntriesResolved(entryId);
+
+						//var entryId = entry.info.id;
+						// NOTE: Don't need to send everything, only need to send changed.
+						// NOTE 2: That 2nd "false" down there is if it's an initial object or not.  However, clients cannot determine if an object is initial or not yet (hence the shiddy spawning objects progress bar while joining servers.)
+						//aaapi.cmd("networkEvent", 'objectUpdated', false, false, updateMask, entryId, updateData.item, updateData.model, updateData.slave, updateData.child, updateData.parentObject, updateData.scale, updateData.origin, updateData.angles, updateData.anim);
+					}
+				}
+			}
+
+			function onSessionEnded()
+			{
+				console.log("Session is over.");
+				aaapi.cmd("networkEvent", "sessionEnded");
+
+				var connectedSessionInfo = aaapi.cmdEx("getConnectedSession");
+				//aaapi.cmd("restartNetwork");
+				if( !!connectedSessionInfo && !connectedSessionInfo.isHost )
+				{
+					setTimeout(function()
+					{
+						aaapi.cmd("disconnectSession");
+						aaapi.cmd("deactivateInputMode");
+						aaapi.cmd("disconnect");
+					}, 100);
+				}
+				/*else
+				{
+					setTimeout(function()
+					{
+						window.location.reload();
+					}, 100);
+				}*/
+			}
+
+			function onUserSessionUpdated(userId, userSession, oldSession, fields)
+			{
+				var fieldKeys = Object.keys(fields);
+				if( fieldKeys.length < 1 || !!!userSession.transform || !!!userSession.transform.body || !!!userSession.transform.body.origin || userSession.transform.body.origin === "" )
+				{
+					//console.log("Received empty session from user: " + userId);
+					return;
+				}
+
+				var updateMask = 0x0;
+				var maskMap = {
+					"userId": 0x1,
+					"sessionId": 0x2,
+					"displayName": 0x4,
+					"item": 0x8,
+					"object": 0x10,
+					"say": 0x20,
+					"bodyOrigin": 0x40,
+					"bodyAngles": 0x80,
+					"headOrigin": 0x100,
+					"headAngles": 0x200,
+					"mouseX": 0x400,
+					"mouseY": 0x800,
+					"web": 0x1000,
+					"avatar": 0x2000,
+					"state": 0x4000,
+					"launched": 0x8000,
+					"twitchChannel": 0x10000,
+					"twitchLive": 0x20000
+				};
+
+				var updateData = {};
+				updateData.userId = userId;
+				updateMask |= maskMap["userId"];
+				updateData.sessionId = userSession.id;
+				updateMask |= maskMap["sessionId"];
+
+				for( var x in g_metaverse.defaultSession )
+				{
+					if( !!fields[x] )
+					{
+						updateData[x] = fields[x];
+
+						if( x === "transform" )
+						{
+							updateMask |= maskMap["bodyOrigin"];
+							updateMask |= maskMap["bodyAngles"];
+							updateMask |= maskMap["headOrigin"];
+							updateMask |= maskMap["headAngles"];
+
+							// overwrite with full transform
+							updateData.transform = userSession.transform;
+						}
+						else if( x === "mouse" )
+						{
+							updateMask |= maskMap["mouseX"];
+							updateMask |= maskMap["mouseY"];
+						}
+						else if( x === "twitch" )
+						{
+							updateMask |= maskMap["channel"];
+							updateMask |= maskMap["live"];
+						}
+						else
+							updateMask |= maskMap[x];
+					}
+					else
+						updateData[x] = g_metaverse.defaultSession[x];
+				}
+
+				aaapi.cmd("networkEvent", "userSessionUpdated", updateMask, updateData.userId, updateData.sessionId, updateData.displayName, updateData.item.id, updateData.object.id, updateData.say.text, updateData.transform.body.origin, updateData.transform.body.angles, updateData.transform.head.origin, updateData.transform.head.angles, updateData.mouse.x, updateData.mouse.y, updateData.web.url, updateData.avatar.url, updateData.state.id, updateData.launched.id, updateData.twitch.channel, updateData.twitch.live);
+
+				if( updateMask & 0x20 )
+				{
+					//console.log("Process lobby text...");
+					if( !!userSession && !!userSession.say && userSession.say.text !== "" )
+					{
+						//console.log(JSON.stringify(userSession));
+						var sayEntry = {
+							"user": userSession.id,
+							"displayName": userSession.displayName,
+							"avatar": "",//userSession.avatar.url,
+							"text": userSession.say.text
+						};
+
+						aampNetwork.addToSessionChatLog(sayEntry);
+					}
+				}
+			}
+
+			function onInstanceUserAdded(userId, userSession)
+			{
+				//console.log("A user has joined the session.");
+
+				aaapi.cmd("networkEvent", "instanceUserAdded", userId, userSession.id, userSession.displayName);
+
+				// send our display name
+				//aaapi.cmd("networkEvent", "userSessionUpdated", 0x4, userId, "", updateData.displayName, "", "", "", "", "", "", "", "", "", "");
+			}
+
+			function onInstanceUserRemoved(user)
+			{
+				//console.log("A user has left the session.");
+				aaapi.cmd("networkEvent", "instanceUserRemoved", user.id);
+			}
+
+			function generateTypeData(uniqueType)
+			{
+				var typeData = {
+					"fileformat": uniqueType.fileformat,
+					"titleformat": uniqueType.titleformat,
+					"title": uniqueType.title,
+					"priority": parseInt(uniqueType.priority)
+				};
+
+				if( !!!typeData.fileformat || typeData.fileformat === "" )
+					typeData.fileformat = g_metaverse.defaultType.fileformat.default;
+
+				if( !!!typeData.titleformat || typeData.titleformat === "" )
+					typeData.titleformat = g_metaverse.defaultType.titleformat.default;
+
+				if( !!!typeData.title || typeData.title === "" )
+					typeData.title = "Unnamed Type";
+
+				if( typeof typeData.priority !== "number" || isNaN(typeData.priority) )
+					typeData.priority = parseInt(g_metaverse.defaultType.priority.default);
+
+				return typeData;
+			}
+
+			function generateModelData(uniqueModel)
+			{
+				var modelData = {
+					"title": uniqueModel.title,
+					"keywords": uniqueModel.keywords,
+					"dynamic": parseInt(uniqueModel.dynamic),
+					"screen": uniqueModel.screen,
+					"preview": uniqueModel.preview,
+					"platforms":
+					{
+						"-KJvcne3IKMZQTaG7lPo":
+						{
+							"id": arcadeHud.platformId,
+							"download": uniqueModel.platforms[arcadeHud.platformId].download,
+							"file": uniqueModel.platforms[arcadeHud.platformId].file,
+							"mountIds": uniqueModel.platforms[arcadeHud.platformId].mountIds,
+							"workshopIds": uniqueModel.platforms[arcadeHud.platformId].workshopIds
+						}
+					}
+				};
+
+				if( !!!modelData.title || modelData.title === "" )
+					modelData.title = "Unnamed Model";
+
+				if( !!!modelData.keywords )
+					modelData.keywords = "";
+
+				if( typeof modelData.dynamic !== "number" || isNaN(modelData.dynamic) )
+					modelData.dynamic = parseInt(g_metaverse.defaultModel.dynamic.default);
+
+				if( !!!modelData.screen )
+					modelData.screen = "";
+
+				if( !!!modelData.preview )
+					modelData.preview = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].download || modelData.platforms[arcadeHud.platformId].download === "" )
+					modelData.platforms[arcadeHud.platformId].download = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].file || modelData.platforms[arcadeHud.platformId].file === "" )
+					modelData.platforms[arcadeHud.platformId].file = "models\\icons\\missing.mdl";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].mountIds || modelData.platforms[arcadeHud.platformId].mountIds === "" )
+					modelData.platforms[arcadeHud.platformId].mountIds = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].workshopIds || modelData.platforms[arcadeHud.platformId].workshopIds === "" )
+					modelData.platforms[arcadeHud.platformId].workshopIds = "";
+
+				// mute local file locations
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["screen"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = modelData[privateFields[i]];
+					if( privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							modelData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return modelData;
+			}
+
+			function generateAppData(uniqueApp)
+			{
+				var appData = {
+					"title": uniqueApp.title,
+					"file": uniqueApp.file,
+					"commandformat": uniqueApp.commandformat,
+					"type": uniqueApp.type,
+					"download": uniqueApp.download,
+					"reference": uniqueApp.reference,
+					"screen": uniqueApp.screen,
+					"description": uniqueApp.description,
+					"filepaths": 
+					{
+						/*
+						PATH_ID:
+						{
+							"id": PATH_ID,
+							"path": PATH,
+							"extensions": EXTENSIONS
+						}
+						*/
+					}
+				};
+
+				// add filepaths
+				var filePath;
+				var appDataFilePath;
+				var filePathKeys = (!!uniqueApp.filepaths) ? Object.keys(uniqueApp.filepaths) : [];
+				for( var i = 0; i < filePathKeys.length; i++ )
+				{
+					filePath = uniqueApp.filepaths[filePathKeys[i]];
+
+					appDataFilePath = {
+						"id": filePath.id,
+						"path": "X:/Path/",//filePath.path,	muted
+						"extensions": filePath.extensions
+					};
+
+					if( !!!appDataFilePath.path || appDataFilePath.path === "" )
+						appDataFilePath.path = g_metaverse.defaultApp.filepaths.path.default;
+
+					if( !!!appDataFilePath.extensions || appDataFilePath.extensions === "" )
+						appDataFilePath.extensions = g_metaverse.defaultApp.filepaths.extensions.default;
+
+					appData.filepaths[filePath.id] = appDataFilePath;
+				}
+
+				if( !!!appData.title || appData.title === "" )
+					appData.title = "Unnamed App";
+
+				if( !!!appData.file || appData.file === "" )
+					appData.file = g_metaverse.defaultApp.file.default;
+
+				if( !!!appData.commandformat || appData.commandformat === "" )
+					appData.commandformat = g_metaverse.defaultApp.commandformat.default;
+
+				if( !!!appData.type || appData.type === "" )
+					appData.type = g_metaverse.defaultApp.type.default;
+
+				if( !!!appData.download || appData.download === "" )
+					appData.download = g_metaverse.defaultApp.download.default;
+
+				if( !!!appData.reference || appData.reference === "" )
+					appData.reference = g_metaverse.defaultApp.reference.default;
+
+				// mute local file locations
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["file", "screen"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = appData[privateFields[i]];
+					if( !!privateData && privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							appData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return appData;
+			}
+
+			function generateItemData(uniqueItem)
+			{
+				var itemData = {
+					"title": uniqueItem.title,
+					"description": uniqueItem.description,
+					"file": uniqueItem.file,
+					"type": uniqueItem.type,
+					"app": uniqueItem.app,
+					"reference": uniqueItem.reference,
+					"preview": uniqueItem.preview,
+					"download": uniqueItem.download,
+					"stream": uniqueItem.stream,
+					"screen": uniqueItem.screen,
+					"marquee": uniqueItem.marquee//,
+					//"model": uniqueItem.model
+				};
+
+				if( !!!itemData.title || itemData.title === "" )
+					itemData.title = g_metaverse.defaultItem.title.default;
+
+				if( !!!itemData.description || itemData.description === "" )
+					itemData.description = g_metaverse.defaultItem.description.default;
+
+				if( !!!itemData.file || itemData.file === "" )
+					itemData.file = g_metaverse.defaultItem.file.default;
+
+				if( !!!itemData.type || itemData.type === "" )
+					itemData.type = g_metaverse.defaultItem.type.default;
+
+				if( !!!itemData.app || itemData.app === "" )
+					itemData.app = g_metaverse.defaultItem.app.default;
+
+				if( !!!itemData.reference || itemData.reference === "" )
+					itemData.reference = g_metaverse.defaultItem.reference.default;
+
+				if( !!!itemData.preview || itemData.preview === "" )
+					itemData.preview = g_metaverse.defaultItem.preview.default;
+
+				if( !!!itemData.download || itemData.download === "" )
+					itemData.download = g_metaverse.defaultItem.download.default;
+
+				if( !!!itemData.stream || itemData.stream === "" )
+					itemData.stream = g_metaverse.defaultItem.stream.default;
+
+				if( !!!itemData.screen || itemData.screen === "" )
+					itemData.screen = g_metaverse.defaultItem.screen.default;
+
+				if( !!!itemData.marquee || itemData.marquee === "" )
+					itemData.marquee = g_metaverse.defaultItem.marquee.default;
+
+				// mute local file locations for: file, screen, & marquee
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["file", "screen", "marquee"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = itemData[privateFields[i]];
+					if( privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							itemData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return itemData;
+			}
+
+			function metaverseConnect(address, callback, rootRefOverride)
+			{
+				g_metaverse.connect(g_metaverse.quickJoinAddress, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not connect to " + g_metaverse.quickJoinAddress);
+						return;
+					}
+					else
+					{
+						window.aampNetwork.rootRef = this.rootRef;
+						callback();
+					}
+				}.bind(g_metaverse), rootRefOverride);
+			}
+
+			function universeJoin(universe, userId, callback)
+			{
+				g_metaverse.joinUniverse(universe, userId, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not join universe " + universe);
+						return;
+					}
+					else
+						callback();
+				}.bind(g_metaverse));
+			}
+
+			function universeNewUser(user, passcode, callback, failCallback)
+			{
+				g_metaverse.createUser({
+					"username": user,
+					"passcode": passcode/*,
+					"displayName": displayName*/
+				}, function(data)
+				{
+					if( !!!data )
+					{
+						console.log("ERROR: Failed to create user.");
+						failCallback();
+					}
+					else
+					{
+						callback();
+					}
+				}, user);
+			}
+
+			function universeLogin(user, passcode, displayName, callback, failCallback)
+			{
+				//console.log(user + " " + passcode);
+				g_metaverse.logIn(user, passcode, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not login to universe.");
+						failCallback();
+						return;
+					}
+					else
+						callback();
+				}.bind(g_metaverse), user, displayName, g_avatarURL);	// last param is userId override. Steam users have same username as userId. (For now at least.  By including the userId given by steam as the userId override, this is future-proofed for when users are actually able to change their usernames to easier-to-remember stuff.)
+			}
+
+			function onHostReady()
+			{
+				function obtainLobby(lobbyIndex)
+				{
+					var goodLobby = g_quickConnectInfo.lobby;
+					if( typeof lobbyIndex === "undefined" )
+						lobbyIndex = 1;
+					else
+						lobbyIndex++;
+
+					if( lobbyIndex > 1 )
+						goodLobby += lobbyIndex;
+
+					var lobbyRef = g_metaverse.rootRef.child("lobbies").child(goodLobby);
+
+					lobbyRef.once("value", function(snapshot)
+					{
+						var lobbyVal = snapshot.val();
+						if( !!lobbyVal && (lobbyVal.owner !== g_quickConnectInfo.user || lobbyVal.universe !== g_quickConnectInfo.universe || lobbyVal.instance !== g_quickConnectInfo.instance) )
+							obtainLobby.call(this, lobbyIndex);
+						else
+						{
+							var updatePayload = {};
+							updatePayload["id"] = goodLobby;
+							updatePayload["universe"] = g_quickConnectInfo.universe;
+							updatePayload["instance"] = g_quickConnectInfo.instance;
+							updatePayload["isPublic"] = g_quickConnectInfo.isPublic;
+							updatePayload["isPersistent"] = g_quickConnectInfo.isPersistent;
+							updatePayload["owner"] = g_quickConnectInfo.user;
+							/* disable tunes for now
+							updatePayload["tunes"] = {
+								"library": {}
+							};
+
+							var tunes = {};
+							var tunesResponse = aaapi.cmdEx("getNearestObjectToPlayerLook", "models");
+							var queryId = tunesResponse.queryId;
+
+							var count = 0;
+							var max = 20;
+							var tune;
+							while( tunesResponse.success && count < max)
+							{
+								tune = tunesResponse.entry;
+
+								if( !!tune.itemId )
+								{
+									var tuneItem = aaapi.cmdEx("getLibraryItem", tune.itemId);
+
+									if( !!tuneItem && ExtractYouTubeId(tuneItem.file) )
+									{
+										updatePayload.tunes.library[tune.itemId] = {"title": tuneItem.title, "file": tuneItem.file};
+
+										count++;
+									}
+								}
+
+								tunesResponse = aaapi.cmdEx("getNextNearestObjectToPlayerLook", queryId, "models");
+							}
+							*/
+
+							//console.log(JSON.stringify(updatePayload.tunes));
+
+							g_metaverse.rootRef.child("lobbies").child(goodLobby).update(updatePayload);
+							if( !g_quickConnectInfo.isPersistent )
+							{
+								g_metaverse.rootRef.child("lobbies").child(goodLobby).onDisconnect().remove();
+							}
+						
+							g_quickConnectInfo.lobby = goodLobby;
+							aaapi.cmd("networkEvent", "hostReady", g_quickConnectInfo.address, g_quickConnectInfo.universe, g_quickConnectInfo.instance, g_metaverse.sessionRef.key, g_quickConnectInfo.lobby, g_quickConnectInfo.isPublic, g_quickConnectInfo.isPersistent, g_quickConnectInfo.lobbyPassword);
+
+							if( aampNetwork.social )
+							{
+								var arcadeTitle = "Singleplayer";
+								var mapTitle = "";
+								var worldInfo = aaapi.cmdEx("getWorldInfo");
+								if( !!worldInfo )
+								{
+									var instance = worldInfo.instance;
+									if( !!instance )
+									{
+										if( !!g_quickConnectInfo )
+										{
+											if( g_quickConnectInfo.isPublic )
+												arcadeTitle = "Multiplayer";
+											else
+												arcadeTitle = "Private";
+										}
+										
+										var map = worldInfo.map;
+										if( !!map )
+											mapTitle = map.platforms[arcadeHud.platformId].file;
+									}
+								}
+
+								if( g_quickConnectInfo.isPublic && g_quickConnectInfo.lobbyPassword === "" )
+									aampNetwork.setSocialPresence(g_quickConnectInfo.user, g_quickConnectInfo.universe, g_quickConnectInfo.instance, mapTitle, arcadeTitle);
+								else
+									aampNetwork.setSocialPresence(g_quickConnectInfo.user, "private", "private", mapTitle, arcadeTitle);
+							}
+							//onLobbyObtained.call(this);
+						}
+					}.bind(this));
+				}
+
+				// Set metrics
+				g_quickConnectInfo.metrics.lastModified = firebase.database.ServerValue.TIMESTAMP;
+				var uniqueObjectKeys = Object.keys(g_uniqueObjects);
+				g_quickConnectInfo.metrics.numObjects = uniqueObjectKeys.length;
+
+				if( !g_quickConnectInfo.metrics.uniqueVisitors.hasOwnProperty(g_quickConnectInfo.user) )
+				{
+					g_quickConnectInfo.metrics.numVisitors++;
+					g_quickConnectInfo.metrics.uniqueVisitors[g_quickConnectInfo.user] = 1;
+					g_quickConnectInfo.metrics.rating++;
+					g_quickConnectInfo.metrics.numVotes++;
+				}
+
+				g_quickConnectInfo.metrics.visits++;
+
+				arcadeHud.onConnectionMetricsUpdate(g_quickConnectInfo.metrics);
+
+				g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").set(g_quickConnectInfo.metrics).then(function()
+				{
+					// Asset Request Listeners
+					g_metaverse.universeRef.child("requests").onDisconnect().remove();
+					g_metaverse.universeRef.child("requests").on("child_added", assetManager.onAssetRequestAdded);
+
+					obtainLobby();
+				});
+			}
+		</script>
+
+		<script>
+			var aampTwitch = {
+				username: "",
+				server: 'irc-ws.chat.twitch.tv',
+				port: 443,
+				boolTagNames: ['mod', 'subscriber', 'turbo'],	// for decoding twitch tags
+				webSocket: null,
+				channels: {},
+				pendingJoin: [],
+				pendingSay: [],
+				didFailLogin: false,
+				resetChannelStates: function()
+				{		
+					// grab our inter-tab memory
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+						twitchChannels = JSON.parse(twitchChannels);
+					else
+						twitchChannels = {};
+
+					for( var x in twitchChannels )
+						twitchChannels[x] = -1;
+
+					// update our inter-tab memory
+					localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+				},
+				open: function(username, channel, text)
+				{
+					if( username === "" )// || channel === "" || text === "" )
+						return;
+
+					this.didFailLogin = false;
+					this.resetChannelStates();
+
+					//aaapi.cmd("addToastMessage", 'Opening connection to Twitch chat...');
+
+					// is there a channel to join?
+					if( !!channel && channel !== "" )
+					{
+						if( !!this.channels[channel] ) // is this channel already joined?
+						{
+							// is there text to say?
+							if( !!text && text !== "" )
+							{
+								// say our text now.
+								this.say(username, channel, text);
+							}
+						}
+						else if( this.pendingJoin.indexOf(channel) >= 0 ) // is this channel already pending?
+						{
+							// is there text to say?
+							if( !!text && text !== "" )
+							{
+								if( !!!this.pendingSay[channel] )
+									this.pendingSay[channel] = [];
+
+								// put it on this channel's pending say queue.
+								this.pendingSay[channel].push({username: username, text: text});
+							}
+						}
+						else
+						{
+							// put it onto the pending join queue
+							this.pendingJoin.push(channel);
+
+							// is there text to say?
+							if( !!text && text !== "" )
+							{
+								if( !!!this.pendingSay[channel] )
+									this.pendingSay[channel] = [];
+
+								// put it on this channels pending say queue.
+								this.pendingSay[channel].push({username: username, text: text});
+							}
+						}
+					}
+
+					if( !!!this.webSocket || this.webSocket === this.webSocket.CLOSED )
+					{
+						//aaapi.cmd("addToastMessage", 'Opening connection to Twitch chat...');
+						this.username = username;
+						this.webSocket = new WebSocket('wss://' + this.server + ':' + this.port + '/', 'irc');
+						this.webSocket.onmessage = this.onMessage.bind(this);
+						this.webSocket.onerror = this.onError.bind(this);
+						this.webSocket.onclose = this.onClose.bind(this);
+						this.webSocket.onopen = this.onOpen.bind(this);
+					}
+				},
+				authenticate: function(username, token)
+				{
+					if (this.webSocket !== null && this.webSocket.readyState === 1)
+					{
+						this.webSocket.send('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership');
+						this.webSocket.send('PASS ' + token);
+						this.webSocket.send('NICK ' + username);
+					}
+				},
+				join: function(username, channel)
+				{
+					if( !!this.channels[channel] )
+					{
+						//console.log("NOTICE: You are already in that Twitch room.");
+						return;
+					}
+					else if( this.pendingJoin.indexOf(channel) >= 0 )
+						return;
+
+					if(!!!this.webSocket || this.webSocket.readyState === this.webSocket.CLOSED)
+					{
+						this.open(username, channel, null);
+						return;
+					}
+
+					this.webSocket.send('JOIN ' + channel);
+				},
+				leave: function(username, channel)
+				{
+					delete this.channels[channel];
+					var index = this.pendingJoin.indexOf(channel);
+					if( index >= 0 )
+						this.pendingJoin.splice(index, 1);
+
+					index = this.pendingSay.indexOf(channel);
+					if( index >= 0 )
+						this.pendingSay.splice(index, 1);
+
+					// grab our inter-tab memory
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+					{
+						twitchChannels = JSON.parse(twitchChannels);
+
+						if( twitchChannels.hasOwnProperty(channel) )
+						{
+							delete twitchChannels[channel];
+							// update our inter-tab memory
+							localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+						}
+					}
+
+					this.onPartChannel(username, channel);
+
+					if( !!this.webSocket )
+						this.webSocket.send('PART ' + channel);
+				},
+				onPartChannel: function(username, channel)
+				{
+					// grab our inter-tab memory
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+						twitchChannels = JSON.parse(twitchChannels);
+					else
+						twitchChannels = {};
+
+					// update our inter-tab memory
+					if( twitchChannels.hasOwnProperty(channel) )
+					{
+						delete twitchChannels[channel];
+						localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+					}
+					console.log("Done parting.");
+				},
+				onOpen: function()
+				{
+					// so we do not store token...
+					aaapi.cmd("twitchAuthenticate");
+
+					// this.authenticate is the callback.
+				},
+				close: function()
+				{
+					this.resetChannelStates();
+
+					if( !!this.webSocket )
+						this.webSocket.close();
+				},
+				onClose: function()
+				{
+					this.resetChannelStates();
+
+					var willReconnect = (aaapi.cmdEx("getConVarValue", "twitch_enabled") === "1" && !aaapi.cmdEx("isPaused") && !this.didFailLogin );
+
+					aaapi.cmd("addToastMessage", 'Twitch Chat Disconnected');	
+					//this.webSocket.removeListener('error', this.onMessage);
+					this.webSocket.onmessage = null;
+					this.webSocket.onerror = null;
+					this.webSocket.onclose = null;
+					this.webSocket.onopen = null;
+					this.webSocket = null;
+					if( willReconnect )
+						this.pendingJoin = [Object.keys(this.channels)];
+					else
+					{
+						this.pendingJoin = [];
+						this.username = "";
+					}
+
+					this.pendingSay = [];
+					this.channels = {};
+
+					if( willReconnect )
+						this.open(this.username);
+				},
+				onError: function(message)
+				{
+					aaapi.cmd("addToastMessage", 'Twitch connection error: ' + message);
+				},
+				addToChatLog: function(channel, sayEntry)
+				{
+					// find the chat log for this channel
+					var twitchChatLog = localStorage.getItem('twitchChatLog' + channel);
+					if( !!twitchChatLog )
+						twitchChatLog = JSON.parse(twitchChatLog);
+					else
+						twitchChatLog = [];
+
+					// trim it to max chat entires
+					var maxChat = 50;
+					if( twitchChatLog.length > maxChat-1 )
+						twitchChatLog.splice(0, 1);//maxChat - (twitchChatLog.length-maxChat-1));
+
+					// push us to the tail
+                    twitchChatLog.push(sayEntry);
+
+					// save the chat log
+                    localStorage.setItem('twitchChatLog' + channel, JSON.stringify(twitchChatLog));
+				},
+				onChatMessage: function(chatMessage)
+				{
+					var botCommand = "";
+					if( botCommand === "" && chatMessage.message.indexOf("!map") === 0 )
+                	{
+                		if( aaapi.cmdEx("getConVarValue", "twitch_bot_enabled") === "1" )
+                		{
+                			var twitchConfig = aaapi.cmdEx("getTwitchConfig");
+                			if( !!twitchConfig.channel && !!chatMessage.channel && twitchConfig.live && twitchConfig.channel.toLowerCase() === chatMessage.channel.toLowerCase() )
+                				botCommand = "!map";
+                		}
+                	}
+
+                	if( botCommand === "" && chatMessage.message.indexOf("!linx") === 0 )
+                	{
+                		if( aaapi.cmdEx("getConVarValue", "twitch_bot_enabled") === "1" )
+                		{
+                			var twitchConfig = aaapi.cmdEx("getTwitchConfig");
+                			if( !!twitchConfig.channel && !!chatMessage.channel && twitchConfig.live && twitchConfig.channel.toLowerCase() === chatMessage.channel.toLowerCase() )
+                				botCommand = "!linx";
+                		}
+                	}
+                	else if( botCommand === "" && chatMessage.message.indexOf("!cheer") === 0 )
+                	{
+                		if( aaapi.cmdEx("getConVarValue", "twitch_bot_enabled") === "1" )
+                		{
+                			var twitchConfig = aaapi.cmdEx("getTwitchConfig");
+                			if( !!twitchConfig.channel && !!chatMessage.channel && twitchConfig.live && twitchConfig.channel.toLowerCase() === chatMessage.channel.toLowerCase() )
+                				botCommand = "!cheer";
+                		}
+                	}
+
+                	if( botCommand === "!map" )
+        			{
+						var mapTitle;
+						var worldInfo = aaapi.cmdEx("getWorldInfo");
+						if( !!worldInfo )
+						{
+							var instance = worldInfo.instance;
+							if( !!instance )
+							{
+								var map = worldInfo.map;
+								if( !!map )
+									mapTitle = map.title;
+							}
+						}
+
+						var text = "";
+						if( !!mapTitle )
+							text = 'The current map is ' + mapTitle;
+						else
+							text = 'There is no map currently loaded.';
+
+	                    this.webSocket.send('PRIVMSG ' + twitchConfig.channel + ' :/me ' + text);
+	                    this.onChatMessage({username: 'TwitchBot', tags: {}, badges: {}, message: text, channel: twitchConfig.channel});
+					}
+                	else if( botCommand === "!cheer" )
+        			{
+        				var selfer = {
+        					count: 0,
+        					max: 3
+        				};
+
+        				var cheerText = chatMessage.message;
+        				cheerText = (cheerText.length > 7) ? cheerText.substring(7) : "";
+
+        				cheerText = encodeURIComponent(cheerText);
+
+        				if( cheerText == '' )
+    						aaapi.cmd('botCheer');
+    					else
+    						aaapi.cmd('botCheer', cheerText);
+
+    					selfer.text = cheerText;
+
+    					selfer.count += 1;
+    					if( selfer.count < selfer.max )
+    					{
+	        				selfer.handle = setInterval(function()
+	        				{
+		        				//if( this.text != '' )
+		    						aaapi.cmd('botCheer');
+		    					//else
+		    						//aaapi.cmd('botCheer', this.text);
+
+	        					this.count += 1;
+	        					if( this.count >= this.max )
+	        						clearInterval(this.handle);
+	        				}.bind(selfer), 333);
+	        			}
+        			}
+                	else if( botCommand === "!linx" )
+        			{
+	                    var displayItem;
+	                    var displayTask = aaapi.cmdEx("getDisplayTaskInfo");
+	                    if( displayTask )
+	                    {
+	                        var displayObject = aaapi.cmdEx("getObject", displayTask.objectId);
+	                        if( !!displayObject )
+	                            displayItem = aaapi.cmdEx("getLibraryItem", displayObject.item);
+	                    }
+
+						var text = "";
+	                    if( !!displayItem )
+	                    {
+	                        var youTubeId = arcadeHud.extractYouTubeId(displayItem.file);
+	                        var youTubePlaylistId = arcadeHud.extractYouTubePlaylistId(displayItem.file);
+
+	                        var goodFileURL;
+	                        if( !!youTubeId && !!youTubePlaylistId )
+	                            goodFileURL = displayItem.file;
+	                        else if(!!youTubeId)
+	                            goodFileURL = "https://youtu.be/" + youTubeId;
+	                        else
+	                        {
+	                            if( !!displayItem.file && displayItem.file.toLowerCase().indexOf("http") === 0 )
+	                                goodFileURL = displayItem.file;
+	                            else if( !!displayItem.reference && displayItem.reference.toLowerCase().indexOf("http") === 0 )
+	                                goodFileURL = displayItem.reference;
+	                        }
+
+	                        var goodPreviewURL;
+	                        if( !!displayItem.preview && displayItem.preview !== "")
+	                        {
+	                            youTubeId = arcadeHud.extractYouTubeId(displayItem.preview);
+	                            youTubePlaylistId = arcadeHud.extractYouTubePlaylistId(displayItem.preview);
+
+	                            if( !!youTubeId && !!youTubePlaylistId )
+	                                goodPreviewURL = displayItem.preview;
+	                            else if(!!youTubeId)
+	                                goodPreviewURL = "https://youtu.be/" + youTubeId;
+	                        }
+
+	                        if( !!!goodFileURL && (parseInt(displayItem.file)+"") == displayItem.file && parseInt(displayItem.file) > 0 )
+	                            goodFileURL = "http://store.steampowered.com/app/" + displayItem.file + "/";
+
+	                        if( !!!goodFileURL && !!goodPreviewURL )
+	                        {
+	                            goodFileURL = goodPreviewURL;
+	                            goodPreviewURL = null;
+	                        }
+
+	                        if( !!goodFileURL )
+	                        {
+	                            var previewStuff = (!!goodPreviewURL && goodPreviewURL !== "" && goodPreviewURL !== goodFileURL) ? " - " + goodPreviewURL : "";
+
+	                            text = displayItem.title + " - " + goodFileURL + previewStuff;
+	                        }
+	                        else
+	                        	text = displayItem.title;
+	                    }
+	                    else
+	                    	text = 'There is nothing selected.';
+	                        
+	                    this.webSocket.send('PRIVMSG ' + twitchConfig.channel + ' :/me ' + text);
+	                    this.onChatMessage({username: 'TwitchBot', tags: {}, badges: {}, message: text, channel: twitchConfig.channel});
+					}
+					else
+					{
+						if( chatMessage.username !== "System")
+							aaapi.cmd("addToastMessage", chatMessage.username + ": " + chatMessage.message);
+
+						// the generic AArcade "say" object
+						var sayEntry = {
+							"user": chatMessage.username,
+							"displayName": (!!chatMessage.tags['display-name'] && chatMessage.tags['display-name'] !== "") ? chatMessage.tags['display-name'] : chatMessage.username,
+							"avatar": "",
+							"text": chatMessage.message
+						};
+
+						this.addToChatLog(chatMessage.channel, sayEntry);
+						this.updateChannelTime(chatMessage.channel);
+					}
+				},
+				updateChannelTime: function(channel)
+				{
+					// grab our inter-tab memory
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+						twitchChannels = JSON.parse(twitchChannels);
+					else
+						twitchChannels = {};
+
+					// update our inter-tab memory
+					twitchChannels[channel] = (new Date()).getTime();
+					localStorage.setItem("twitchChannels", JSON.stringify(twitchChannels));
+				},
+				onChannelHosted: function(hostingChannel, hostedChannel)
+				{
+					if( !!hostedChannel && hostedChannel !== '' )
+						this.say("System", hostingChannel, hostingChannel + ' is hosting ' + hostedChannel);
+					else
+						this.say("System", hostingChannel, hostingChannel + ' has exited host mode');
+				},
+				onJoinedRoom: function(channel, username, displayName)
+				{
+					//if( username === this.username && (!this.channels.hasOwnProperty(channel) || this.channels[channel] >= 0)
+					if( username === this.username && !!!this.channels[channel])
+					{
+						this.channels[channel] = true;
+						//aaapi.cmd("addToastMessage", 'Joined Twitch Chat ' + channel);
+						this.say('System', channel, 'You (' + displayName + ') joined ' + channel);
+
+						this.updateChannelTime(channel);
+
+						// now it's time to process any pending says...					
+						var pendingSays = this.pendingSay[channel];
+						if(!!pendingSays)
+						{
+							var pendingSay;
+							for(var i = 0; i < pendingSays.length; i++)
+							{
+								pendingSay = pendingSays[i];
+								this.say(pendingSay.username, channel, pendingSay.text);
+							}
+
+							delete this.pendingSay[channel];
+						}
+					}
+					else
+					{
+						if( aaapi.cmdEx("getConVarValue", "twitch_joinedexited_enabled") === "1" )
+							this.say('System', channel, displayName + ' has joined ' + channel);
+					}
+				},
+				onLeftRoom: function(channel, username, displayName)
+				{
+					if( !!!displayName || displayName === "" )
+						displayName = username;
+
+					if( username === this.username )
+						aaapi.cmd("addToastMessage", 'Left Twitch Chat ' + channel);
+					else
+					{
+						if( aaapi.cmdEx("getConVarValue", "twitch_joinedexited_enabled") === "1" )
+						{
+							this.say('System', channel, displayName + ' has left ' + channel);
+							this.updateChannelTime(channel);
+						}
+					}
+				},
+				onAuthenticated: function(username)
+				{
+					// now it's time to process any pending room joins...
+					var pendingJoin = this.pendingJoin;
+					this.pendingJoin = [];
+					for( var i = 0; i < pendingJoin.length; i++ )
+						this.join(username, pendingJoin[i]);
+				},
+				parseMessage: function (rawMessage)
+				{
+					var parsedMessage = {
+						message: null,
+						tags: null,
+						command: null,
+						original: rawMessage,
+						channel: null,
+						username: null
+					};
+
+					if(rawMessage[0] === '@')
+					{
+						var tagIndex = rawMessage.indexOf(' '),
+						userIndex = rawMessage.indexOf(' ', tagIndex + 1),
+						commandIndex = rawMessage.indexOf(' ', userIndex + 1),
+						channelIndex = rawMessage.indexOf(' ', commandIndex + 1),
+						messageIndex = rawMessage.indexOf(':', channelIndex + 1);
+
+						parsedMessage.tags = rawMessage.slice(0, tagIndex);
+						parsedMessage.username = rawMessage.slice(tagIndex + 2, rawMessage.indexOf('!'));
+						parsedMessage.command = rawMessage.slice(userIndex + 1, commandIndex);
+						parsedMessage.channel = rawMessage.slice(commandIndex + 1, channelIndex);
+//console.log(parsedMessage.command);
+						var testerIndex = parsedMessage.channel.indexOf("\\r\\n");
+						if( testerIndex >= 0 )
+							parsedMessage.channel = parsedMessage.channel.substring(0, testerIndex);
+						parsedMessage.message = rawMessage.slice(messageIndex + 1);
+					}
+					//else if(typeof rawMessage.startsWith === 'function' && rawMessage.startsWith("PING"))
+					else if( rawMessage.indexOf('PING') === 0)
+					{
+						parsedMessage.command = "PING";
+						parsedMessage.message = rawMessage.split(":")[1];
+					}
+					else
+					{
+						var msgFields = rawMessage.split(":")[1].split(" ");
+						//console.log("Field is: " + msgFields[1]);
+						if( msgFields[1] === "001" )
+							this.onAuthenticated(msgFields[2].trim());
+						else if( msgFields[1] === "353" )	// names list
+						{
+							//var users = rawMessage.trim().split(":");//.split(" ");
+							//console.log(JSON.stringify(users));
+						}
+						else if( msgFields[1] === "366" )	// end of names list
+						{
+							//var users = rawMessage.trim().split(":");//.split(" ");
+							//console.log(JSON.stringify(users));
+						}
+						else if( msgFields[1] === "JOIN" )
+						{
+							var split = msgFields[0].trim().split("!");
+							var user = split[0];
+							var display = split[1].split("@")[0];
+							this.onJoinedRoom(msgFields[2].trim(), user, display);
+						}
+						else if( msgFields[1] === "PART" )
+						{
+							var split = msgFields[0].trim().split("!");
+							var user = split[0];
+							this.onLeftRoom(msgFields[2].trim(), user, "");
+						}
+						else if( msgFields[1] === "NOTICE" )
+						{
+							var msg = rawMessage.split(":")[2].trim().toLowerCase();//.split(" ");
+							if( msg === "login authentication failed" )
+							{
+								aaapi.cmd("addToastMessage", "Twitch Login Failed");
+								this.didFailLogin = true;
+							}
+							/*
+							var split = msgFields[0].trim().split("!");
+							var user = split[0];
+							this.onLeftRoom(msgFields[2].trim(), user, "");
+							*/
+						}
+						else if( msgFields[1] === "HOSTTARGET" )
+						{
+							var hostingChannel = msgFields[2];
+							var hostedChannel = rawMessage.split(":")[2].split(" ")[0];
+							if( hostedChannel === '-' )
+								hostedChannel = "";
+							else
+								hostedChannel = '#' + hostedChannel;
+
+							this.onChannelHosted(hostingChannel, hostedChannel);
+							/*
+							var split = msgFields[0].trim().split("!");
+							var user = split[0];
+							this.onLeftRoom(msgFields[2].trim(), user, "");
+							*/
+						}
+						else if( rawMessage.indexOf("CAP * ACK") >= 0 )
+						{
+							// login worked, but we catch that on globaluserstate instead.
+						}
+						else
+							console.log("Unhandled: " + rawMessage);
+					}
+
+					return parsedMessage;
+				},
+				onTwitchChatConnected: function()
+				{
+					// time to auto-join channels...
+
+					// grab what ever tabs were last open...
+					var twitchChannels = localStorage.getItem("twitchChannels");
+					if( !!twitchChannels )
+						twitchChannels = JSON.parse(twitchChannels);
+					else
+						twitchChannels = {};
+
+					// make sure the auto-join channels are in there
+					var twitchAutoChannels = localStorage.getItem("twitchAutoChannels");
+					if( !!twitchAutoChannels )
+						twitchAutoChannels = JSON.parse(twitchAutoChannels);
+					else
+						twitchAutoChannels = {};
+
+					for( var x in twitchAutoChannels )
+						twitchChannels[x] = true;
+
+					// remove our own channel, if its in the bunch...
+					var twitchConfig = aaapi.cmdEx("getTwitchConfig");
+					if( twitchConfig.channel !== "" && !!twitchChannels[twitchConfig.channel] )
+						delete twitchChannels[twitchConfig.channel];
+
+					// join our own channel 1st
+					if( twitchConfig.channel !== "" )
+						aaapi.cmd("joinTwitchChannel", twitchConfig.channel);
+
+					// now join the rest
+					for( var x in twitchChannels )
+						aaapi.cmd("joinTwitchChannel", x);
+				},
+				onMessage: function(message)
+				{
+					if(!!!message)
+						return;
+
+					if( JSON.stringify(message.data).indexOf('GLOBALUSERSTATE') >= 0 )
+					{
+						//console.log(JSON.stringify(message.data));
+						console.log("Twtch chat connected!!");
+						aaapi.cmd("addToastMessage", "Twitch Chat Connected");
+						this.onTwitchChatConnected();
+						return;
+					}
+
+					var parsed = this.parseMessage(message.data);
+					if( !!!parsed )
+						return;
+
+					if( !!parsed.command )
+						parsed.command = parsed.command.trim();
+//console.log(parsed.command);
+					if(parsed.command === 'PING')	// server discs you if you don't respond.
+						this.webSocket.send('PONG :' + parsed.message);
+					else if(false && parsed.command === "GLOBALUSERSTATE" )
+					{
+						console.log("Twtch chat connected!!");
+						aaapi.cmd("addToastMessage", "Twitch Chat Connected");
+						this.onTwitchChatConnected();
+                    	//if( true ) // FIXME: need to actually detect that this is a SUCCESS msg.
+                    	//{
+                    		//console.log("Got a " + parsed.command + " command.");
+                    		//this.onAuthenticated(parsed.username);
+                    	//}
+					}
+					else if(parsed.command === "USERSTATE")
+					{
+                    	if( true ) // FIXME: need to actually detect that this is a SUCCESS msg.
+                    	{
+                    		//console.log("Got a " + parsed.command + " command.");
+                    		//this.onAuthenticated(parsed.username);
+                    	}
+					}
+					else if(parsed.command === "RECONNECT")
+					{
+						aaapi.cmd("closeTwitchConnection");
+						aaapi.cmd("openTwitchConnection");
+					}
+					else if(parsed.command === "ROOMSTATE")
+                    {
+                    	//console.log("Got a ROOMSTATE command.");
+                    	/*
+                    	if( true ) // FIXME: need to actually detect that this is a SUCCESS msg.
+                    	{
+                    		this.onJoinedRoom(parsed.channel);
+                    	}
+                    	*/
+                    }
+					else if(parsed.command === 'PRIVMSG')
+					{
+						// extract the badges & tags into a data struct
+						var tags = {};
+						var badges = {};
+						if( parsed.tags[0] === "@" )
+						{
+							var tagsData = parsed.tags.substring(1).split(';');
+
+							var tagName;
+							var tagData;
+							var badgesData;
+							var badgeData;
+							var badge;
+							for( var i = 0; i < tagsData.length; i++ )
+							{
+								tagData = tagsData[i].split('=');
+
+								if( tagData.length === 2 )
+								{
+									tagName = tagData[0];
+									if( tagName === 'badges' )
+									{
+										badgesData = tagData[1].split(',');
+
+										for( var j = 0; j < badgesData.length; j++ )
+										{
+											badgeData = badgesData[j].split('/');
+											if( badgeData.length === 2 )
+												badges[badgeData[0]] = (badgeData[1] === "1");
+										}
+
+									}
+									else if( this.boolTagNames.indexOf(tagName) >= 0 )
+										tags[tagName] = (tagData[1] === "1");
+									else
+										tags[tagName] = tagData[1];
+								}
+							}
+						}
+
+						// build the enhanced chat message
+						var chatMessage = {
+							username: parsed.username.trim(),
+							message: parsed.message.trim(),
+							tags: tags,
+							channel: parsed.channel,
+							badges: badges
+						};
+
+						// process this enhanced chat message
+						this.onChatMessage(chatMessage);
+                    }
+                },
+				/*getTwitchChatLog: function()
+				{
+					// fetch the current log
+					var twitchChatLog = localStorage.getItem("twitchChat");
+					if( !!twitchChatLog )
+						twitchChatLog = JSON.parse(twitchChatLog);
+					else
+						twitchChatLog = [];
+
+					// trim it to max chat entires
+					var maxChat = 50;
+					if( twitchChatLog.length > maxChat )
+						twitchChatLog = twitchChatLog.splice(twitchChatLog.length-maxChat);
+
+					return twitchChatLog;
+				},*/
+				say: function(username, channel, text)
+				{
+					if(!!!this.webSocket || this.webSocket.readyState === this.webSocket.CLOSED)
+						this.open(username, channel, text);
+					else
+					{
+						if( username !== "System" )
+						{
+							// send the text to the Twitch server
+							this.webSocket.send('PRIVMSG ' + channel + ' :' + text);
+
+							// we do not receive PRIVMSGs that we send out, so stimulate ourselves...
+							// build the enhanced chat message
+						}
+
+						var chatMessage = {
+							username: username,//"You",	// TODO: Replace this with DISPLAY-NAME
+							message: text,
+							tags: {},
+							channel: channel,
+							badges: {}
+						};
+
+						//this.updateChannelTime(channel);
+
+						// process this enhanced chat message
+						this.onChatMessage(chatMessage);
+					}
+				}
+			};
+
+			var g_socialMsgsDisabled = true;
+			var aampNetwork = {
+				"isHost": false,
+				"sessionChatLog": [],
+				"socialChatLog": [],
+				//"twitchChatLog": [],
+				"socialPendingTimeouts": {},
+				"socialUser": "",
+				"socialDisplayName": "",
+				"socialAvatarUrl": "",
+				"socialUniverse": "",
+				"socialInstance": "",
+				"socialMapFile": "",
+				"socialArcadeTitle": "",
+				"rootRef": undefined,
+				"social": false,
+				"socialUsers": {},
+				"dictionary":
+				{
+					"models":
+					{
+						"toLocalId":
+						{
+
+						},
+						"toRemoteId":
+						{
+
+						}
+					}
+				},
+				"addToSessionChatLog": function(sayEntry)
+				{
+					this.fetchSessionChat();
+
+					// trim it to max chat entires
+					var maxChat = 50;
+					if( this.sessionChatLog.length > maxChat-1 )
+						this.sessionChatLog.splice(0, 1);//maxChat - (this.sessionChatLog.length-maxChat-1));
+					
+					this.sessionChatLog.push(sayEntry);
+					localStorage.setItem("sessionChat", JSON.stringify(this.sessionChatLog));
+					localStorage.setItem("sessionChatTime", (new Date()).getTime());
+				},
+				"fetchSessionChat": function()
+				{
+					// fetch session chat log
+					this.sessionChatLog = localStorage.getItem("sessionChat");
+					if( !!this.sessionChatLog )
+						this.sessionChatLog = JSON.parse(this.sessionChatLog);
+					else
+						this.sessionChatLog = [];
+				},
+				"setSocialPresence": function(user, universe, instance, mapFile, arcadeTitle)
+				{
+					if( !!!this.rootRef || !this.social )
+						return;
+
+					this.socialUniverse = universe;
+					this.socialInstance = instance;
+					this.socialMapFile = mapFile;
+					this.socialArcadeTitle = arcadeTitle;
+
+					this.rootRef.child("social").child("users").child(user).update({"universe": universe, "instance": instance, "mapFile": mapFile, "arcadeTitle": arcadeTitle}, function()
+					{
+						// do nothing
+						//console.log("Social lobby updated.");
+					}.bind(this));
+				},
+				"socialSetLobby": function(user, lobby)
+				{
+					if( !!!this.rootRef || !this.social )
+						return;
+
+					this.rootRef.child("social").child("users").child(user).update({"lobby": lobby}, function()
+					{
+						// do nothing
+						//console.log("Social lobby updated.");
+					}.bind(this));
+				},
+				"socialCount": function()
+				{
+					var count = Object.keys(this.socialUsers).length;
+					aaapi.cmd("reportSocialCount", count);
+				},
+				"socialSay": function(user, text)
+				{
+					if( !!!this.rootRef )
+						return;
+
+					this.rootRef.child("social").child("users").child(user).update({"chat": text}, function()
+					{
+						// do nothing
+						//console.log("Spoke into social chat.");
+					}.bind(this));
+/*
+					// first, add our say text to the session chat log
+					if( text !== this.lastSocialSay )
+					{
+						this.lastSocialSay = text;
+
+						if( text !== "" )
+						{
+							var sayEntry = {
+								"user": user,
+								"displayName": this.socialDisplayName,
+								"avatar": this.socialAvatarUrl,
+								"text": text
+							};
+
+							aampNetwork.socialChatLog.push(sayEntry);
+							localStorage.setItem("socialChat", JSON.stringify(aampNetwork.socialChatLog));
+						}
+					}*/
+				},
+				"addToSocialChatLog": function(sayEntry)
+				{
+					this.fetchSocialChat();
+
+					// trim it to max chat entires
+					var maxChat = 50;
+					if( this.socialChatLog.length > maxChat-1 )
+						this.socialChatLog.splice(0, 1);//maxChat - (this.socialChatLog.length-maxChat-1));
+
+					this.socialChatLog.push(sayEntry);
+					localStorage.setItem("socialChat", JSON.stringify(this.socialChatLog));
+					localStorage.setItem("socialChatTime", (new Date()).getTime());
+				},
+				"fetchSocialChat": function()
+				{
+					this.socialChatLog = localStorage.getItem("socialChat");
+					if( !!this.socialChatLog )
+						this.socialChatLog = JSON.parse(this.socialChatLog);
+					else
+						this.socialChatLog = [];
+				},
+				"onSocialUserInstanceChange": function(socialUser)
+				{
+					if( socialUser.instance !== "" )
+					{
+						if(socialUser.instance === "private")
+						{
+							var text = " has joined a private session.";
+							aaapi.cmd("socialChatMsg", "bot", "System", socialUser.displayName + text);
+
+							var sayEntry = {
+								"user": "bot",
+								"displayName": "System",
+								"avatar": "",
+								"text": socialUser.displayName + text
+							};
+
+							aampNetwork.addToSocialChatLog(sayEntry);
+						}
+						else
+						{
+							var text = " has joined a public session.";
+							aaapi.cmd("socialChatMsg", "bot", "System", socialUser.displayName + text);
+
+							var sayEntry = {
+								"user": "bot",
+								"displayName": "System",
+								"avatar": "",
+								"text": socialUser.displayName + text
+							};
+
+							aampNetwork.addToSocialChatLog(sayEntry);
+						}/*
+						else
+						{
+							var userId = socialUser.userId;
+							var displayName = socialUser.displayName;
+							g_metaverse.libraryRef.child("instances").child(socialUser.instance).child("current").once("value", function(instanceSnapshot)
+							{
+								var instanceData = instanceSnapshot.val();
+								var mapId = instanceData.map;
+								var passwordHash = instanceData.password;
+								var title = instanceData.title;
+
+								g_metaverse.libraryRef.child("instances").child(socialUser.instance).child("users").once("value", function(usersSnapshot)
+								{
+									var usersData = usersSnapshot.val();
+									var numUsers = Object.keys(usersData).length;
+
+									g_metaverse.libraryRef.child("maps").child(mapId).child("current").once("value", function(mapSnapshot)
+									{
+										var mapData = mapSnapshot.val();
+										var mapTitle = mapData.title;
+										var mapFile = mapData.platforms[arcadeHud.platformId].file;
+										if( mapFile.toLowerCase().indexOf(".bsp") === mapFile.length-4 )
+											mapFile = mapFile.substring(0, mapFile.length-4);
+
+										g_socialUserNames[userId].map
+										g_socialUserNames[userId] = childVal;//.displayName;
+										localStorage.setItem("socialUserNames", JSON.stringify(g_socialUserNames));
+
+										var text = " has joined a public session.";
+										aaapi.cmd("socialChatMsg", "bot", "System", displayName + text);
+
+										var sayEntry = {
+											"user": "bot",
+											"displayName": "System",
+											"avatar": "",
+											"text": displayName + text
+										};
+
+										aampNetwork.addToSocialChatLog(sayEntry);
+									}.bind(this));
+								}.bind(this);
+							}.bind(this));
+						}*/
+					}
+					else
+					{
+						// did the user quit? is he at a map transition? did he exit to the main menu?
+					}
+				},
+				"socialJoin": function(avatarUrl, club, user, displayName, lobby)
+				{
+					g_avatarUrl = avatarUrl;
+					
+					if( !!this.rootRef && this.social )
+					{
+						console.log("Already connected to social.");
+						return;
+					}
+
+					if( g_socialMsgsDisabled )
+					{
+						setTimeout(function(){ g_socialMsgsDisabled = false; }, 2000);
+					}
+
+					this.socialUsers = {};
+					localStorage.setItem("socialUsers", JSON.stringify(this.socialUsers));
+					this.socialUser = user;
+					this.socialDisplayName = displayName;
+					this.socialAvatarUrl = g_avatarUrl;
+
+					this.rootRef = createFirebaseGlobal();//;new Firebase("https://metaverse.firebaseio.com/");
+					
+					var arcadeTitle = "Singleplayer";
+					var mapTitle = "";
+					var worldInfo = aaapi.cmdEx("getWorldInfo");
+					if( !!worldInfo )
+					{
+						var instance = worldInfo.instance;
+						if( !!instance )
+						{
+							if( !!g_quickConnectInfo )
+							{
+								if( g_quickConnectInfo.isPublic )
+									arcadeTitle = "Multiplayer";
+								else
+									arcadeTitle = "Private";
+							}
+
+							var map = worldInfo.map;
+							if( !!map )
+								mapTitle = map.platforms[arcadeHud.platformId].file;
+						}
+					}
+
+					// add us to the user list
+					var data = {
+						"userId": user,
+						"displayName": displayName,
+						"lobby": (!!lobby) ? lobby : "",
+						"universe": "",
+						"instance": "",
+						"chat": "",
+						"avatar": g_avatarUrl,
+						"mapFile": mapTitle,
+						"arcadeTitle": arcadeTitle
+					};
+
+					this.rootRef.child("social").child("users").child(user).onDisconnect().remove();
+					this.rootRef.child("social").child("users").child(user).update(data, function()
+					{
+						this.social = true;
+						this.rootRef.child("social").child("users").on("child_added", function(childSnapshot, prevChildKey)
+						{
+							var childVal = childSnapshot.val();
+							var childKey = childSnapshot.key;
+
+							//g_socialUserNames[childKey] = childVal;//.displayName;
+							//localStorage.setItem("socialUserNames", JSON.stringify(g_socialUserNames));
+
+							if( !!aampNetwork.socialPendingTimeouts[childKey] )
+							{
+								clearTimeout(aampNetwork.socialPendingTimeouts[childKey]);
+								delete aampNetwork.socialPendingTimeouts[childKey];
+							}
+							else if( !g_socialMsgsDisabled )
+							{
+								if( childKey !== this.socialUser && !!!this.socialUsers[childKey] )
+								{
+									aaapi.cmd("socialChatMsg", "bot", "Sytem", childVal.displayName + " has joined social.");
+								}
+
+								var sayEntry = {
+									"user": "bot",
+									"displayName": "System",
+									"avatar": "",
+									"text": childVal.displayName + " has joined social."
+								};
+
+								this.addToSocialChatLog(sayEntry);
+							}
+
+							this.rootRef.child("social").child("users").child(childKey).on("value", function(snapshot)
+								{
+									var val = snapshot.val();
+									var key = snapshot.key;
+									var oldUser = this.socialUsers[key];
+									if( val )
+									{
+										if( !!!oldUser )
+										{
+											this.socialUsers[key] = val;
+										}
+										else
+										{
+											// there is an old user, let's find out what's changed...
+											for( var x in oldUser )
+											{
+												if( oldUser[x] !== val[x] )
+												{
+													//console.log(x + ": " + JSON.stringify(val[x]));
+
+													if( x === "chat" )
+													{
+														if( !g_socialMsgsDisabled )
+														{
+															aaapi.cmd("socialChatMsg", val.userId, val.displayName, val.chat);
+
+															var sayEntry = {
+																"user": val.userId,
+																"displayName": val.displayName,
+																"avatar": "",
+																//"avatar": this.socialAvatarUrl,
+																"text": val.chat
+															};
+
+															aampNetwork.addToSocialChatLog(sayEntry);
+														}
+													}/*
+													else if( x === "mapFile" )
+													{
+														if( !!g_socialUserNames[val.userId] )
+														{
+															g_socialUserNames[val.userId].mapFile = val.mapFile;
+															localStorage.setItem("socialUserNames", JSON.stringify(g_socialUserNames));
+														}
+													}*/
+													/*
+													else if( x === "instance" )
+													{
+														//this.onSocialUserInstanceChange(val);
+													}*/
+												}
+											}
+											this.socialUsers[key] = val;
+										}
+										localStorage.setItem("socialUsers", JSON.stringify(this.socialUsers));
+									}
+									else
+									{
+										//console.log("User has left social.");
+										/*
+										delete g_socialUserNames[key];
+										localStorage.setItem("socialUserNames", JSON.stringify(g_socialUserNames));
+										*/
+										aampNetwork.socialPendingTimeouts[key] = setTimeout(function()
+										{
+											if( this.key !== this.socialUser )
+											{
+												aaapi.cmd("socialChatMsg", "bot", "Sytem", this.displayName + " has left social.");
+											}
+
+											var sayEntry = {
+												"user": "bot",
+												"displayName": "System",
+												"avatar": "",
+												"text": this.displayName + " has left social."
+											};
+
+											aampNetwork.addToSocialChatLog(sayEntry);
+
+											delete aampNetwork.socialPendingTimeouts[this.key];
+										}.bind({"key": key, "socialuser": this.socialUser, "displayName": childVal.displayName}), 6000);
+
+										this.rootRef.child("social").child("users").child(key).off();
+										delete this.socialUsers[key];
+
+										localStorage.setItem("socialUsers", JSON.stringify(this.socialUsers));
+									}
+								}.bind(this));
+						}.bind(this));
+						console.log("Connected to social.");
+					}.bind(this));
+					/*
+						metaverse
+						  - social
+						    -users
+						      -[USERID]
+						        -userId
+						        -displayName
+						        -sessionId
+						        -chat
+						    -invites
+						      -[INVITEID]
+						        -owner (the ID of the person who initiated this invite)
+						        -target (the user who the invite is sent to, or ALL)
+						        -type (JOIN, KNOCK)
+						        -status (PENDING, ACCEPTING, ACCEPTED/0, REJECTED/0)
+						    -mutes
+						      -[USERID]
+						      -[USERID]
+						      -[USERID]
+					*/
+				},
+				"socialLeave": function(user)
+				{
+					if( !!!this.rootRef || !this.social )
+					{
+						console.log("Already NOT connected to social.");
+						return;
+					}
+
+					//this.rootRef = new Firebase("https://metaverse.firebaseio.com/");
+
+					this.rootRef.child("social").child("users").off();
+					this.rootRef.child("social").child("users").child(user).onDisconnect().cancel();
+					this.rootRef.child("social").child("users").child(user).remove();
+					this.social = false;
+					this.socialUniverse = "";
+					this.socialInstance = "";
+					this.socialMapFile = "";
+					this.socialArcadeTile = "";
+					this.socialUsers = {};
+					localStorage.setItem("socialUsers", JSON.stringify(this.socialUsers));
+				},
+				"joinSession": function(avatarUrl, address, universe, instance, user, passcode, displayName, lobby, isPublic, isPersistent, lobbyPassword)
+				{
+					g_avatarURL = avatarUrl;
+
+					//  function(avatarUrl, address, universe, instance, user, passcode, displayName, lobby, isPublic, lobbyPassword)
+					if( this.isHost || g_metaverse.status !== "Offline" || !!g_quickConnectInfo )
+					{
+						console.log("Invalid state.  Unable to host.");
+						return;
+					}
+
+					// just hard-code test scenario for now.
+					// TODO: Make it resolve a lobby ID into this actual info instead.
+					g_quickConnectInfo = {
+						"address": g_defaultAddress,
+						"universe": universe,//"-pX-opsWu9hsVe_wUkbl",
+						"instance": instance,//"8f8353de",
+						"user": user,
+						"passcode": passcode,
+						"avatar": avatarUrl,
+						"displayName": displayName,
+						"lobby": lobby,
+						"isPublic": (isPublic == "1"),
+						"isPersistent": (isPersistent == "1"),
+						"lobbyPassword": lobbyPassword,
+						"metrics": {}
+					};
+
+					metaverseConnect(g_quickConnectInfo.address, function()
+					{
+						if(g_metaverse.status === "Select Universe")
+						{
+							universeJoin(g_quickConnectInfo.universe, g_quickConnectInfo.user, function()
+								{
+									if( g_metaverse.status === "Universe Ready" )
+									{
+										function onLocalUserLoggedIn(callback)
+										{
+											if( this.instance !== "" )
+											{
+												// grab the metrics
+												g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").once("value", function(metricsSnapshot)
+												{
+													var metrics = metricsSnapshot.val();
+													if( metrics === null )
+														metrics = {};
+
+													if( !metrics.hasOwnProperty("numVisitors") )
+														metrics.numVisitors = 0;
+
+													if( !metrics.hasOwnProperty("uniqueVisitors") )
+														metrics.uniqueVisitors = {};
+
+													if( !metrics.hasOwnProperty("rating") )
+														metrics.rating = 0;
+
+													if( !metrics.hasOwnProperty("numVotes") )
+														metrics.numVotes = 0;
+
+													if( !metrics.hasOwnProperty("visits") )
+														metrics.visits = 0;
+
+													if( !metrics.hasOwnProperty("guestbook") )
+														metrics.guestbook = {};
+
+													if( !metrics.hasOwnProperty("lastModified") )
+														metrics.lastModified = 0;
+
+													if( !metrics.hasOwnProperty("numObjects") )
+														metrics.numObjects = 0;
+
+													g_quickConnectInfo.metrics = metrics;
+
+													var metricsPayload = {};
+													g_quickConnectInfo.metrics.visits++;
+													metricsPayload["visits"] = g_quickConnectInfo.metrics.visits;
+
+													// are we already in uniqueVisitors?
+													if( !g_quickConnectInfo.metrics.uniqueVisitors.hasOwnProperty(g_quickConnectInfo.user) )
+													{
+														g_quickConnectInfo.metrics.uniqueVisitors[g_quickConnectInfo.user] = 0;
+														g_quickConnectInfo.metrics.numVisitors++;
+
+														metricsPayload["uniqueVisitors"] = g_quickConnectInfo.metrics.uniqueVisitors;
+														metricsPayload["numVisitors"] = g_quickConnectInfo.metrics.numVisitors;
+													}
+
+													arcadeHud.onConnectionMetricsUpdate(g_quickConnectInfo.metrics);
+
+													// update the metrics
+													g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").update(metricsPayload);
+
+													g_metaverse.connectInstance(g_quickConnectInfo.instance, function(connectInfo)
+													{
+														//var mapFile = connectInfo.map.current.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+														//console.log(JSON.stringify(connectInfo));
+
+														// entries are now streaming in their initial data.
+														callback();
+													}.bind(this));
+												}.bind(this));
+											}
+											else
+											{
+												console.log("ERROR: Invalid instance.");
+											}
+										}
+
+										function loginCallback(loginError)
+										{
+											if( !!loginError )
+											{
+												console.log("Your user does not exist: " + loginError.message);
+												/*
+												if( loginError.message.indexOf("NOTICE: You were *not* logged") >= 0 )
+												{
+													console.log(loginError.message);
+													alert("Could not join because your IP is already in the lobby. If you crashed, please wait a couple minutes for your connection to timeout.");
+													window.location = "http://aarcade.tv/";
+												}
+												else
+												{
+													*/
+												///*
+												var userData = {
+													"username": g_quickConnectInfo.user,
+													"passcode": g_quickConnectInfo.passcode
+												};
+
+												g_metaverse.createUser(userData, function(data)
+												{
+													if( !!!data )
+													{
+														console.log("ERROR: Could not create user!");
+														//window.location = "http://aarcade.tv/";
+														return;
+													}
+
+													// now login to the new user
+													g_metaverse.logIn(g_quickConnectInfo.user, g_quickConnectInfo.passcode, function(error2)
+													{
+														if( !!error2 )
+														{
+															console.log(error2.message);
+															//window.location = "http://aarcade.tv/";
+														}
+														else
+														{
+															//onUserLoggedIn(sessionManager.metaverse.localUser);
+
+															console.log("Logged into universe successfully.");
+
+															// fetch the server password (if there is one) and do that stuff, then...
+															// add the instance user now (but he'll be sitting still while stuff loads in still), then...
+															// then fet
+															onLocalUserLoggedIn.call(this, function()
+															{
+																// this event does NOT mean that all existing entries have been fetched.  simply means the process has begun.
+																console.log("Session Initialized.");
+																//aaapi.cmd("networkEvent", "client", g_quickConnectInfo.address);
+																g_metaverse.addInstanceUser(g_quickConnectInfo.instance, g_metaverse.sessionRef.key,g_metaverse.localUser.id, function(userId)
+																{
+																	if( !!!userId )
+																	{
+																		console.log("Failed to join session.");
+																	}
+																	else
+																	{
+																		//console.log(JSON.stringify(g_quickConnectInfo));
+aaapi.cmd("networkEvent", "clientReady", g_quickConnectInfo.address, g_quickConnectInfo.universe, g_quickConnectInfo.instance, g_metaverse.sessionRef.key, g_quickConnectInfo.lobby, g_quickConnectInfo.isPublic, g_quickConnectInfo.isPersistent, g_quickConnectInfo.lobbyPassword);//, userId);
+
+
+if( aampNetwork.social )
+{
+	var arcadeTitle = "Singleplayer";
+	var mapTitle = "";
+	var worldInfo = aaapi.cmdEx("getWorldInfo");
+	if( !!worldInfo )
+	{
+		var instance = worldInfo.instance;
+		if( !!instance )
+		{
+			if( !!g_quickConnectInfo )
+			{
+				if( g_quickConnectInfo.isPublic )
+					arcadeTitle = "Multiplayer";
+				else
+					arcadeTitle = "Private";
+			}
+			
+			var map = worldInfo.map;
+			if( !!map )
+				mapTitle = map.platforms[arcadeHud.platformId].file;
+		}
+	}
+
+	if( g_quickConnectInfo.isPublic && g_quickConnectInfo.lobbyPassword === "" )
+		aampNetwork.setSocialPresence(g_quickConnectInfo.user, g_quickConnectInfo.universe, g_quickConnectInfo.instance, mapTitle, arcadeTitle);
+	else
+		aampNetwork.setSocialPresence(g_quickConnectInfo.user, "private", "private", mapTitle, arcadeTitle);
+}
+																		//g_isJoiningInitComplete = true;
+																		//onClientReady();
+
+																		console.log("Joined the session.");
+
+
+			setTimeout(function()
+			{
+				g_okayToForceResolve = true;
+				attemptEmptyTheQueue();
+			}, 30000);
+																		
+																	}
+																}.bind(this));
+															}.bind(this));
+														}
+													}, g_quickConnectInfo.user, g_quickConnectInfo.displayName);
+												}, g_quickConnectInfo.user);
+												//}
+												//*/
+											}
+											else
+											{
+												onLocalUserLoggedIn.call(this, function()
+												{
+													// this event does NOT mean that all existing entries have been fetched.  simply means the process has begun.
+													console.log("Session Initialized.");
+													//aaapi.cmd("networkEvent", "client", g_quickConnectInfo.address);
+													g_metaverse.addInstanceUser(g_quickConnectInfo.instance, g_metaverse.sessionRef.key,g_metaverse.localUser.id, function(userId)
+													{
+														if( !!!userId )
+														{
+															console.log("Failed to join session.");
+														}
+														else
+														{
+															//console.log(JSON.stringify(g_quickConnectInfo));
+															//aaapi.cmd("networkEvent", "clientReady", g_quickConnectInfo.instance, g_metaverse.sessionRef.key, userId);
+aaapi.cmd("networkEvent", "clientReady", g_quickConnectInfo.address, g_quickConnectInfo.universe, g_quickConnectInfo.instance, g_metaverse.sessionRef.key, g_quickConnectInfo.lobby, g_quickConnectInfo.isPublic, g_quickConnectInfo.isPersistent, g_quickConnectInfo.lobbyPassword);
+
+
+
+if( aampNetwork.social )
+{
+	var arcadeTitle = "Singleplayer";
+	var mapTitle = "";
+	var worldInfo = aaapi.cmdEx("getWorldInfo");
+	if( !!worldInfo )
+	{
+		var instance = worldInfo.instance;
+		if( !!instance )
+		{
+			if( !!g_quickConnectInfo )
+			{
+				if( g_quickConnectInfo.isPublic )
+					arcadeTitle = "Multiplayer";
+				else
+					arcadeTitle = "Private";
+			}
+			
+			var map = worldInfo.map;
+			if( !!map )
+				mapTitle = map.platforms[arcadeHud.platformId].file;
+		}
+	}
+
+	if( g_quickConnectInfo.isPublic && g_quickConnectInfo.lobbyPassword === "" )
+		aampNetwork.setSocialPresence(g_quickConnectInfo.user, g_quickConnectInfo.universe, g_quickConnectInfo.instance, mapTitle, arcadeTitle);
+	else
+		aampNetwork.setSocialPresence(g_quickConnectInfo.user, "private", "private", mapTitle, arcadeTitle);
+}
+															//g_isJoiningInitComplete = true;
+															//onClientReady();
+
+															console.log("Joined the session.");
+														}
+													}.bind(this));
+												}.bind(this));
+											}
+
+											/*function onUserLoggedIn()
+											{
+												console.log("Logged into universe successfully.");
+
+												// fetch the server password (if there is one) and do that stuff, then...
+												// add the instance user now (but he'll be sitting still while stuff loads in still), then...
+												// then fet
+												onLocalUserLoggedIn.call(this, function()
+												{
+													// this event does NOT mean that all existing entries have been fetched.  simply means the process has begun.
+													console.log("Session Initialized.");
+													//aaapi.cmd("networkEvent", "client", g_quickConnectInfo.address);
+													g_metaverse.addInstanceUser(g_quickConnectInfo.instance, g_metaverse.sessionRef.key,g_metaverse.localUser.id, function(userId)
+													{
+														if( !!!userId )
+														{
+															console.log("Failed to join session.");
+														}
+														else
+														{
+															aaapi.cmd("networkEvent", "clientReady", g_quickConnectInfo.instance, g_metaverse.sessionRef.key, userId);
+															//g_isJoiningInitComplete = true;
+															//onClientReady();
+
+															console.log("Joined the session.");
+														}
+													}.bind(this));
+												}.bind(this));//, sessionManager.metaverse.localUser);
+											}*/
+										}
+
+										g_metaverse.logIn(undefined, g_quickConnectInfo.passcode, loginCallback.bind(this), g_quickConnectInfo.user, g_quickConnectInfo.displayName, g_avatarURL);
+									}
+									else
+										console.log("Universe does not exist. Abort.");
+								}.bind(this));
+						}
+						else
+							console.log("Server does not exist. Abort.");
+					}.bind(this), this.rootRef);
+
+					//console.log(lobbyAddress);//g_defaultAddress);
+					//console.log("isHost: " + this.isHost + ", status: " + g_metaverse.status + ", address: " + JSON.stringify(g_quickConnectInfo));
+				},
+				"unbanUser": function(userId)
+				{
+					delete g_userBans[userId];
+					localStorage.setItem("userBans", JSON.stringify(g_userBans));
+					g_metaverse.unbanUser(userId);
+				},
+				"banUser": function(userId)
+				{
+					var user = g_metaverse.users[userId];
+					var displayName = (!!user && !!user.session && !!user.session.displayName && user.session.displayName !== "") ? user.session.displayName : "Unnamed User";
+
+					g_userBans[userId] = {
+						"id": userId,
+						"displayName": displayName,
+						"date": new Date().getTime(),
+						"creator": g_metaverse.localUser.id,
+						"duration": 0,
+						"reason": ""
+					};
+
+					localStorage.setItem("userBans", JSON.stringify(g_userBans));
+					g_metaverse.banUser(userId);
+				},
+				"syncPano": function(bodyOrigin, bodyAngles, shotWidth, shotHeight)
+				{
+					var panosLoaded = 0;
+					var panoImage;
+					var panoName;
+					var panoRes = 512;
+
+					function drawImageOnContext(panoImage)
+					{
+						var context = panoImage.getContext("2d");
+						var totalWidth = (shotWidth / (shotHeight * 1.0)) * panoImage.height;
+						var dif = totalWidth - panoImage.height;
+						context.drawImage(panoImage.image, -(dif / 2.0), 0, totalWidth, panoImage.height);
+					}
+
+					var panoImages = document.querySelectorAll(".panoImage");
+					for( var i = 0; i < panoImages.length; i++ )
+					{
+						panoImage = panoImages[i];
+						panoImage.width = panoRes;
+						panoImage.height = panoRes;
+						panoName = panoImage.getAttribute("panoName");
+/*
+						if( i === panoImages.length - 2 )
+						{
+							panoImage.style.left = 2.0 * panoRes + "px";
+						}
+
+						if( i === panoImages.length - 1 )
+						{
+							panoImage.style.left = panoRes + "px";
+							panoImage.style.top = -2.0 * panoRes + "px";
+						}
+*/
+						g_panoIndex = panoImage.getAttribute("panoIndex");
+
+						var image = new Image();
+						panoImage.image = image;
+						/*
+						var payload = {
+							"panoImage": panoImage,
+							"image": image
+						};*/
+
+						image.onload = function()
+						{
+							panosLoaded++;
+							drawImageOnContext(this);
+
+							if( panosLoaded === 6 )
+								onAllPanosLoaded();
+						}.bind(panoImage);
+
+						image.src = "pano/" + panoName + ".jpg?r=" + Math.random() + "r" + Math.random() + "r" + Math.random();
+					}
+
+						//var data = panoImage.toDataURL("image/jpeg", 0.75);
+						//console.log(bytesToSize(data.length * 6));
+						//document.querySelector("#results").value = bytesToSize(data.length * 6);
+
+					function onAllPanosLoaded(panoId)
+					{
+						var tinyFactor = (1/6.0);
+
+						var panoImagesRaw = document.querySelectorAll(".panoImage");
+						var panoImages = {};
+						for( var i = 0; i < panoImagesRaw.length; i++ )
+						{
+							panoImages[panoImagesRaw[i].getAttribute("panoName")] = panoImagesRaw[i];
+						}
+
+						var jpegQuality = 0.8;
+						if( !!!panoId )
+						{
+							var payload = {
+								"date": firebase.database.ServerValue.TIMESTAMP,
+								"binary":
+								{
+									"front": panoImages.front.toDataURL("image/jpeg", jpegQuality),
+									"right": panoImages.right.toDataURL("image/jpeg", jpegQuality),
+									"back": panoImages.back.toDataURL("image/jpeg", jpegQuality),
+									"left": panoImages.left.toDataURL("image/jpeg", jpegQuality),
+									"bottom": panoImages.bottom.toDataURL("image/jpeg", jpegQuality),
+									"top": panoImages.top.toDataURL("image/jpeg", jpegQuality)
+								},
+								"body":
+								{
+									"origin": bodyOrigin,
+									"angles": bodyAngles
+								}
+							};
+
+							g_metaverse.syncPano(null, payload, function(panoId)
+							{
+								console.log("Finished syncing pano image.");
+
+								// now make a tiny version for locally caching as a preview to the host.
+								var panoImages = document.querySelectorAll(".panoImage");
+								for( var i = 0; i < panoImages.length; i++ )
+								{
+									panoImage = panoImages[i];
+									panoImage.width = panoRes * tinyFactor;
+									panoImage.height = panoRes * tinyFactor;
+									drawImageOnContext(panoImage);
+								}
+
+								setTimeout(function()
+								{
+									onAllPanosLoaded(panoId);
+								}, 100);
+							});
+						}
+						else
+						{
+							var payload = {
+								"id": panoId,
+								"date": 0,
+								"binary":
+								{
+									"front": panoImages.front.toDataURL("image/jpeg", jpegQuality),
+									"right": panoImages.right.toDataURL("image/jpeg", jpegQuality),
+									"back": panoImages.back.toDataURL("image/jpeg", jpegQuality),
+									"left": panoImages.left.toDataURL("image/jpeg", jpegQuality)
+								},
+								"body":
+								{
+									"origin": bodyOrigin,
+									"angles": bodyAngles
+								}
+							};
+
+							// grab the last pano name (won't this always be "cachedPano 0005" or something?)
+							var panoIndex = pad(0);
+							var cachedPanoName = "cachedPano" + panoIndex;
+							while( localStorage[cachedPanoName] !== undefined )
+							{
+								panoIndex = pad(parseInt(panoIndex) + 1);
+								cachedPanoName = "cachedPano" + panoIndex;
+							}
+
+							localStorage.setItem(cachedPanoName, JSON.stringify(payload));
+							aaapi.cmd("networkEvent", "panoComplete", cachedPanoName, panoId);
+						}
+					}
+				},
+				"localUserChangeInstance": function(instanceId, map)
+				{
+					g_metaverse.sendInstanceUserUpdate(instanceId, "", "", "", "", "", "", "", "", "", "");
+
+					setTimeout(function()
+					{
+						aaapi.cmd("loadMapNow", map);
+					}, 500);
+				},
+				"localUserUpdate": function(instance, say, bodyOrigin, bodyAngles, headOrigin, headAngles, item, object, mouseX, mouseY, webURL, state, launched, twitchChannel, twitchLive)
+				{
+					// first, add our say text to the session chat log
+					if( say !== this.lastSay )
+					{
+						this.lastSay = say;
+
+						if( say !== "" )
+						{
+							var sayEntry = {
+								"user": g_metaverse.localUser.id,
+								"displayName": g_metaverse.localUser.session.displayName,
+								"avatar": g_metaverse.localUser.session.avatar.url,
+								"text": say
+							};
+
+							aampNetwork.addToSessionChatLog(sayEntry);
+						}
+					}
+
+					// broadcast to network
+					g_metaverse.sendInstanceUserUpdate(instance, say, bodyOrigin, bodyAngles, headOrigin, headAngles, item, object, mouseX, mouseY, webURL, g_avatarURL, undefined, state, launched, twitchChannel, twitchLive);
+				},
+				"localEntryUpdate": function(mode)
+				{
+					if( !!aampNetwork && !aampNetwork.isHost )
+						return;
+
+					// update the metrics
+					g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").child("lastModified").set(firebase.database.ServerValue.TIMESTAMP);
+
+					// NOTE: The rest of the arguments are in arguments array.
+					if( mode === "Item" )
+					{
+						var item = arguments[1];
+						var app = arguments[2];
+						var description = arguments[3];
+						var download = arguments[4];
+						var file = arguments[5];
+						var marquee = arguments[6];
+						var preview = arguments[7];
+						var reference = arguments[8];
+						var screen = arguments[9];
+						var stream = arguments[10];
+						var title = arguments[11];
+						var type = arguments[12];
+
+						var isNewItem = (!!!g_metaverse.library.items[item]);
+						if( isNewItem )
+						{
+							console.log("NOT syncing item to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						var updateTypes = {};
+						if( type !== "" )
+							updateTypes[type] = true;
+
+						// CHECK ORDER: app, type(s)
+						function appCheckComplete()
+						{
+							function typesCheckComplete()
+							{
+								function sendItemUpdate(item, app, description, download, file, marquee, preview, reference, screen, stream, title, type)
+								{
+									g_pendingInstanceEntries[item] = true;	// so we know to ignore our 1st update received from it.
+									g_metaverse.sendItemUpdate(item, app, description, download, file, marquee, preview, reference, screen, stream, title, type, function()
+									{
+										if(isNewItem)
+											aaapi.cmd("addToastMessage", "Added item " + title + " to the universe.");
+										else
+											aaapi.cmd("addToastMessage", "Item updated in the universe.");
+
+										if( g_verbose )
+											console.log("Updated metaverse item.");
+									}.bind(this));
+								}
+
+								// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+								sendItemUpdate.call(this, item, app, description, download, file, marquee, preview, reference, screen, stream, title, type);
+							}
+
+							function processNextTypeCheck()
+							{
+								var updateTypesKeys = Object.keys(updateTypes);
+								if( updateTypesKeys.length === 0 )
+								{
+									typesCheckComplete.call(this);
+									return;
+								}
+	/*
+								if( updateTypes[updateTypesKeys[0]] === "" )
+								{
+									delete updateTypes[updateTypesKeys[0]];
+									processNextTypeCheck.call(this);
+								}*/
+								//var type = updateTypes[updateTypesKeys[0]];
+
+								// TYPE
+								var fetchType = "Type";
+								var category = fetchType.toLowerCase() + "s";
+								var id = updateTypesKeys[0];
+
+								if( g_verbose )
+									console.log("Fetching " + fetchType);
+
+								g_metaverse.fetchEntry(fetchType, id, function(data)
+								{
+									if( !!!data )
+									{
+										if( g_verbose )
+											console.log("Entry does not exist on server.");
+
+										var entry;
+										if( category === "types" )
+											entry = aaapi.cmdEx("getLibraryType", id);
+
+										if( !!!entry )
+										{
+											console.log("ERROR: Could not get local entry info.");
+											return;
+										}
+
+										// search for a twin-brother
+										g_metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+										{
+											if( !!twinId )
+											{
+												console.log("Twin FOUND w/ ID: " + twinId);
+												console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+											}
+											else
+											{
+												if( g_verbose )
+													console.log("No twin exists on the server. Time to create it.");
+
+												var entryData;
+												if( category === "types" )
+												{
+													entryData = generateTypeData(entry);
+												}
+
+												g_metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+												//{
+												//	if( !!!entryId )
+												//	{
+												//		console.log("Failed to create entry.");
+												//	}
+												//	else
+												//	{
+														delete updateTypes[entry.info.id];
+														aaapi.cmd("addToastMessage", "Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+														processNextTypeCheck.call(this);
+												//	}
+												//}.bind(this));
+											}
+										}.bind(this));
+									}
+									else
+									{
+										//console.log(JSON.stringify(modelData));
+										delete updateTypes[id];
+										processNextTypeCheck.call(this);
+									}
+								}.bind(this));
+							}
+
+							processNextTypeCheck.call(this);
+						}
+
+						if( !!!app || app === "" )
+						{
+							// No app is used by this item
+							appCheckComplete.call(this);
+						}
+						else
+						{
+							// APP
+							var fetchType = "App";
+							var category = fetchType.toLowerCase() + "s";
+							var id = app;
+
+							if( g_verbose )
+								console.log("Fetching " + fetchType);
+
+							g_metaverse.fetchEntry(fetchType, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( g_verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "apps" )
+										entry = aaapi.cmdEx("getLibraryApp", id);
+									//console.log(JSON.stringify(entry));
+
+									if( !!!entry )
+									{
+										console.log("ERROR: Could not get local entry info.");
+										return;
+									}
+
+									// search for a twin-brother
+									g_metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( g_verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "apps" )
+											{
+												entryData = generateAppData(entry);
+
+												// Detect any types this app references that should be processed.
+												if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+													updateTypes[entryData.type] = true;
+											}
+
+											g_metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													aaapi.cmd("addToastMessage", "Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+													appCheckComplete.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									//console.log(JSON.stringify(modelData));
+									appCheckComplete.call(this);
+								}
+							}.bind(this));
+						}
+					}
+					else if( mode === "Model" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var model = arguments[1];
+						var dynamic = (arguments[2] === "") ? 0 : parseInt(arguments[2]);
+						var keywords = arguments[3];
+						var file = arguments[4];
+						var mountIds = arguments[5];
+						var workshopIds = arguments[6];
+						var title = arguments[7];
+						var screen = arguments[8];
+						var preview = arguments[9];
+						var download = arguments[10];
+
+						var isNewEntry = (!!!g_metaverse.library[category][model]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						// mute local file locations
+						var lastFoundSlash;
+						var privateData;
+						//var privateFields = ["screen"];
+						//for( var i = 0; i < privateFields.length; i++ )
+						//{
+							privateData = screen;//modelData[privateFields[i]];
+							if( privateData.indexOf(":") === 1 )
+							{
+								lastFoundSlash = privateData.lastIndexOf("/");
+								if( lastFoundSlash < 0 )
+									lastFoundSlash = privateData.lastIndexOf("\\");
+
+								if( lastFoundSlash >= 0 )
+								{
+									screen = privateData.substring(lastFoundSlash+1);
+									//privateData = privateData.substring(lastFoundSlash+1);
+									//modelData[privateFields[i]] = privateData;
+								}
+							}
+						//}
+
+						function sendModelUpdate(model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download)
+						{
+							g_pendingInstanceEntries[model] = true;	// so we know to ignore our 1st update received from it.
+							console.log("Send update for model");
+							g_metaverse.sendModelUpdate(model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download, function()
+							{
+								if(isNewEntry)
+									aaapi.cmd("addToastMessage", "Added " + mode.toLowerCase() + " " + title + " to the universe.");
+								else
+									aaapi.cmd("addToastMessage", mode + " updated in the universe.");
+
+								if( g_verbose )
+									console.log("Updated metaverse " + mode.toLowerCase() + ".");
+							}.bind(this));
+						}
+
+						// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+						sendModelUpdate.call(this, model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download);
+					}
+					else if( mode === "Type" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var type = arguments[1];
+						var fileformat = arguments[2];
+						var titleformat = arguments[3];
+						var title = arguments[4];
+						var priority = parseInt(arguments[5]);
+
+						var isNewEntry = (!!!g_metaverse.library[category][type]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						function sendTypeUpdate(type, fileformat, titleformat, title, priority)
+						{
+							g_pendingInstanceEntries[type] = true;	// so we know to ignore our 1st update received from it.
+							g_metaverse.sendTypeUpdate(type, fileformat, titleformat, title, priority, function()
+							{
+								if(isNewEntry)
+									aaapi.cmd("addToastMessage", "Added " + mode.toLowerCase() + " " + title + " to the universe.");
+								else
+									aaapi.cmd("addToastMessage", mode + " updated in the universe.");
+
+								if( g_verbose )
+									console.log("Updated metaverse " + mode.toLowerCase() + ".");
+							}.bind(this));
+						}
+
+						// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+						sendTypeUpdate.call(this, type, fileformat, titleformat, title, priority);
+					}
+					else if( mode === "App" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var app = arguments[1];
+						var title = arguments[2];
+						var file = arguments[3];
+						var commandformat = arguments[4];
+						var type = arguments[5];
+						var download = arguments[6];
+						var reference = arguments[7];
+						var screen = arguments[8];
+						var description = arguments[9];
+						var filepaths = arguments[10];
+
+						var isNewEntry = (!!!g_metaverse.library[category][app]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						var updateTypes = {};
+						if( type !== "" )
+							updateTypes[type] = true;
+
+						function typesCheckComplete()
+						{
+							function sendAppUpdate(app, title, file, commandformat, type, download, reference, screen, description, filepaths)
+							{
+								g_pendingInstanceEntries[app] = true;	// so we know to ignore our 1st update received from it.
+								g_metaverse.sendAppUpdate(app, title, file, commandformat, type, download, reference, screen, description, filepaths, function()
+								{
+									if(isNewEntry)
+										aaapi.cmd("addToastMessage", "Added " + mode.toLowerCase() + " " + title + " to the universe.");
+									else
+										aaapi.cmd("addToastMessage", mode + " updated in the universe.");
+
+									if( g_verbose )
+										console.log("Updated metaverse " + mode.toLowerCase() + ".");
+								}.bind(this));
+							}
+
+							// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+							sendAppUpdate.call(this, app, title, file, commandformat, type, download, reference, screen, description, filepaths);
+						}
+
+						function processNextTypeCheck()
+						{
+							var updateTypesKeys = Object.keys(updateTypes);
+							if( updateTypesKeys.length === 0 )
+							{
+								typesCheckComplete.call(this);
+								return;
+							}
+
+							// TYPE
+							var fetchType = "Type";
+							var category = fetchType.toLowerCase() + "s";
+							var id = updateTypesKeys[0];
+
+							if( g_verbose )
+								console.log("Fetching " + fetchType);
+
+							g_metaverse.fetchEntry(fetchType, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( g_verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "types" )
+										entry = aaapi.cmdEx("getLibraryType", id);
+
+									if( !!!entry )
+									{
+										console.log("ERROR: Could not get local entry info.");
+										return;
+									}
+
+									// search for a twin-brother
+									g_metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( g_verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "types" )
+											{
+												entryData = generateTypeData(entry);
+											}
+
+											g_metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													delete updateTypes[entry.info.id];
+													aaapi.cmd("addToastMessage", "Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+													processNextTypeCheck.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									delete updateTypes[id];
+									processNextTypeCheck.call(this);
+								}
+							}.bind(this));
+						}
+
+						processNextTypeCheck.call(this);
+					}
+				},
+				"localObjectRemove": function(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+				{
+					function sendRemove(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+					{
+						g_metaverse.sendInstanceObjectRemove(object, instance, item, model, slave, child, parentObject, scale, origin, angles, function()
+						{
+							aaapi.cmd("addToastMessage", "Removed an object from the universe.");
+
+							if( g_verbose )
+								console.log("Removed metaverse object.");
+
+							// update the metrics
+							g_quickConnectInfo.metrics.numObjects--;
+
+							arcadeHud.onConnectionMetricsUpdate(g_quickConnectInfo.metrics);
+
+							var metricsPayload = {
+								"numObjects": g_quickConnectInfo.metrics.numObjects,
+								"lastModified": firebase.database.ServerValue.TIMESTAMP
+							};
+							g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").update(metricsPayload);
+						}.bind(this));
+					}
+
+
+					// This is our LAST CHANCE to re-assign IDs for items, models, types, & apps.
+					sendRemove.call(this, object, instance, item, model, slave, child, parentObject, scale, origin, angles);
+
+					//console.log("Hang on to ur butts...");
+					// NOTE: If possible, delay all of this until an objectChanged callback.
+					// delete listeners on the object w/ bookkeeping
+					// delete the object itself from library/objects
+				},
+				"localObjectUpdate": function(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+				{
+					// we must determine if modelId or itemId are changing PRIOR to sending the object update, that way we can make sure the model, item, type, & apps required exist prior to putting the object onto the Firebase server.
+
+					var isNewObject = (!!!g_metaverse.library.objects[object]);
+
+					// CHECK ORDER: model, item, app, type(s)
+					var updateTypes = {};	// contains keys of type IDs with dummy bool values
+					function modelCheckComplete()
+					{
+						function itemCheckComplete()
+						{
+							function appCheckComplete()
+							{
+								function typesCheckComplete()
+								{
+									function sendObjectUpdate(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+									{
+										g_pendingInstanceEntries[object] = true;	// so we know to ignore our 1st update received from it.
+
+										var goodItem = (item !== model) ? item : "";	// fixme: this should be done prior to calling sendObjectUpdate.
+										g_metaverse.sendInstanceObjectUpdate(object, instance, goodItem, model, slave, child, parentObject, scale, origin, angles, function()
+										{
+											if(isNewObject)
+											{
+												aaapi.cmd("addToastMessage", "Added an object to the universe.");
+												g_quickConnectInfo.metrics.numObjects++;
+											}
+
+											if( g_verbose )
+												console.log("Updated metaverse object.");
+
+											arcadeHud.onConnectionMetricsUpdate(g_quickConnectInfo.metrics);
+
+											// update the metrics
+											var metricsPayload = {
+												"numObjects": g_quickConnectInfo.metrics.numObjects,
+												"lastModified": firebase.database.ServerValue.TIMESTAMP
+											};
+											g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").update(metricsPayload);
+										}.bind(this));
+									}
+
+									// This is our LAST CHANCE to re-assign IDs for items, models, types, & apps.
+									sendObjectUpdate.call(this, object, instance, item, model, slave, child, parentObject, scale, origin, angles);
+								}
+
+								function processNextTypeCheck()
+								{
+									var updateTypesKeys = Object.keys(updateTypes);
+									if( updateTypesKeys.length === 0 )
+									{
+										typesCheckComplete.call(this);
+										return;
+									}
+/*
+									if( updateTypes[updateTypesKeys[0]] === "" )
+									{
+										delete updateTypes[updateTypesKeys[0]];
+										processNextTypeCheck.call(this);
+									}*/
+
+									//var type = updateTypes[updateTypesKeys[0]];
+
+									// TYPE
+									var type = "Type";
+									var category = type.toLowerCase() + "s";
+									var id = updateTypesKeys[0];
+
+									if( g_verbose )
+										console.log("Fetching " + type);
+
+									g_metaverse.fetchEntry(type, id, function(data)
+									{
+										if( !!!data )
+										{
+											if( g_verbose )
+												console.log("Entry does not exist on server.");
+
+											var entry;
+											if( category === "types" )
+												entry = aaapi.cmdEx("getLibraryType", id);
+
+											if( !!!entry )
+											{
+												console.log("ERROR: Could not get local entry info.");
+												return;
+											}
+
+											// search for a twin-brother
+											g_metaverse.findTwinEntry(type, "title", entry.title, function(twinId)
+											{
+												if( !!twinId )
+												{
+													console.log("Twin FOUND w/ ID: " + twinId);
+													console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+												}
+												else
+												{
+													if( g_verbose )
+														console.log("No twin exists on the server. Time to create it.");
+
+													var entryData;
+													if( category === "types" )
+													{
+														entryData = generateTypeData(entry);
+													}
+
+													g_metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+													//{
+													//	if( !!!entryId )
+													//	{
+													//		console.log("Failed to create entry.");
+													//	}
+													//	else
+													//	{
+															delete updateTypes[entry.info.id];
+															aaapi.cmd("addToastMessage", "Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+															processNextTypeCheck.call(this);
+													//	}
+													//}.bind(this));
+												}
+											}.bind(this));
+										}
+										else
+										{
+											delete updateTypes[id];
+											processNextTypeCheck.call(this);
+										}
+									}.bind(this));
+								}
+
+								processNextTypeCheck.call(this);
+							}
+
+							if( item === "" || item === model )
+								appCheckComplete.call(this);
+							else
+							{
+								var app = (!!g_metaverse.library.items[item]) ? g_metaverse.library.items[item].current.app : "";
+								if( !!!app || app === "" )
+								{
+									// No app is used by this item
+									appCheckComplete.call(this);
+								}
+								else
+								{
+									// APP
+									var type = "App";
+									var category = type.toLowerCase() + "s";
+									var id = app;
+
+									if( g_verbose )
+										console.log("Fetching " + type);
+
+									g_metaverse.fetchEntry(type, id, function(data)
+									{
+										if( !!!data )
+										{
+											if( g_verbose )
+												console.log("Entry does not exist on server.");
+
+											var entry;
+											if( category === "apps" )
+												entry = aaapi.cmdEx("getLibraryApp", id);
+
+											if( !!!entry )
+											{
+												console.log("ERROR: Could not get local entry info.");
+												return;
+											}
+
+											// search for a twin-brother
+											g_metaverse.findTwinEntry(type, "title", entry.title, function(twinId)
+											{
+												if( !!twinId )
+												{
+													console.log("Twin FOUND w/ ID: " + twinId);
+													console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+												}
+												else
+												{
+													if( g_verbose )
+														console.log("No twin exists on the server. Time to create it.");
+
+													var entryData;
+													if( category === "apps" )
+													{
+														entryData = generateAppData(entry);
+
+										//console.log(JSON.stringify(entry));
+
+														// Detect any types this app references that should be processed.
+														if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+															updateTypes[entryData.type] = true;
+													}
+
+													g_metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+													//{
+													//	if( !!!entryId )
+													//	{
+													//		console.log("Failed to create entry.");
+													//	}
+													//	else
+													//	{
+															aaapi.cmd("addToastMessage", "Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+															appCheckComplete.call(this);
+													//	}
+													//}.bind(this));
+												}
+											}.bind(this));
+										}
+										else
+										{
+											//console.log(JSON.stringify(modelData));
+											appCheckComplete.call(this);
+										}
+									}.bind(this));
+								}
+							}
+						}
+
+						if( item === model )
+							itemCheckComplete.call(this);
+						else
+						{
+							// ITEM
+							var type = "Item";
+							var category = type.toLowerCase() + "s";
+							var id = item;
+
+							if( g_verbose )
+								console.log("Fetching " + type);
+
+							g_metaverse.fetchEntry(type, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( g_verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "items" )
+										entry = aaapi.cmdEx("getLibraryItem", id);
+
+									if( !!!entry )
+									{
+										//console.log("ERROR: Could not get local entry info.");
+										itemCheckComplete.call(this);
+										return;
+									}
+
+									// search for a twin-brother for the model
+
+									g_metaverse.findTwinEntry(type, "file", entry.file, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( g_verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "items" )
+											{
+												entryData = generateItemData(entry);
+
+												// Detect any types this app references that should be processed.
+												if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+													updateTypes[entryData.type] = true;
+											}
+
+											g_metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													aaapi.cmd("addToastMessage", "Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+													itemCheckComplete.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									//this.library[category][id] = {"current": data};
+									//console.log(JSON.stringify(data));
+									itemCheckComplete.call(this);
+								}
+							}.bind(this));
+						}
+					}
+
+					// MODEL
+					if( g_verbose )
+						console.log("Fetching model");
+
+					g_metaverse.fetchEntry("Model", model, function(modelData)
+					{
+						if( !!!modelData )
+						{
+							if( g_verbose )
+								console.log("Model does not exist on server.");
+
+							uniqueModel = aaapi.cmdEx("getLibraryModel", model);
+							if( !!!uniqueModel )
+							{
+								console.log("ERROR: Could not get local model info.");
+								return;
+							}
+
+							if( !!!uniqueModel.platforms )
+								console.log("WARNING: Model has no platforms node!!!!");
+
+							// search for a twin-brother for the model
+							g_metaverse.findTwinEntry("Model", "platforms/" + arcadeHud.platformId + "/file", uniqueModel.platforms[arcadeHud.platformId].file, function(twinId)
+							{
+								if( !!twinId )
+								{
+									console.log("Twin FOUND w/ ID: " + twinId);
+									console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+								}
+								else
+								{
+									if( g_verbose )
+										console.log("No twin exists on the server. Time to create it.");
+
+									var modelData = generateModelData(uniqueModel);
+									g_metaverse.createLibraryEntry("Model", modelData, uniqueModel.info.id);//, function(modelId)
+									//{
+									//	if( !!!modelId )
+									//	{
+									//		console.log("Failed to create model.");
+									//	}
+									//	else
+									//	{
+											aaapi.cmd("addToastMessage", "Added model " + modelData.title + " to the universe.");
+											modelCheckComplete.call(this);
+									//	}
+									//}.bind(this));
+								}
+							}.bind(this));
+						}
+						else
+						{
+							//console.log(JSON.stringify(modelData));
+							modelCheckComplete.call(this);
+						}
+					}.bind(this));
+				},
+				"hostSession": function(avatarUrl, address, universe, instance, user, passcode, displayName, lobby, isPublic, isPersistent, lobbyPassword)
+				{
+					g_avatarURL = avatarUrl;
+					//console.log(g_avatarURL);
+
+					if( g_metaverse.status !== "Offline" )
+					{
+						console.log("WARNING: Invalid state.  Should probably just abort.");
+						// WARNING: Reset method needs to be updated to actually work fully.
+						g_metaverse.reset();
+					}
+
+					window.isQuickHosting = true;
+
+					this.isHost = true;
+
+					g_quickConnectInfo = {
+						"address": address,
+						"universe": universe,
+						"instance": instance,
+						"user": user,
+						"passcode": passcode,
+						"avatar": avatarUrl,
+						"displayName": displayName,
+						"lobby": lobby,
+						"isPublic": isPublic,
+						"isPersistent": isPersistent,
+						"lobbyPassword": lobbyPassword,
+						"metrics": {}
+					};
+
+					if( !!!g_quickConnectInfo.address )
+						g_quickConnectInfo.address = g_defaultAddress;
+
+					if( !!!g_quickConnectInfo.universe )
+						g_quickConnectInfo.universe = g_defaultUniverse;
+
+					if( !!!g_quickConnectInfo.instance )
+						g_quickConnectInfo.instance = "";
+
+					if( !!!g_quickConnectInfo.user )
+						g_quickConnectInfo.user = "";
+
+					if( !!!g_quickConnectInfo.passcode )
+						g_quickConnectInfo.passcode = "";
+
+					if( !!!g_quickConnectInfo.displayName )
+						g_quickConnectInfo.displayName = "Human Player";
+
+					if( !!!g_quickConnectInfo.avatar )
+						g_quickConnectInfo.avatar = "";
+
+					if( !!!g_quickConnectInfo.lobby )
+						g_quickConnectInfo.lobby = "lobby";
+
+					// make lobby name nice
+					g_quickConnectInfo.lobby.replace(/[^0-9a-z]/gi, '');
+					var myNumbers = "0123456789";
+					if( !!g_quickConnectInfo.lobby[0] && myNumbers.indexOf(g_quickConnectInfo.lobby[0]) >= 0 )
+						g_quickConnectInfo.lobby = "";
+
+					if( g_quickConnectInfo.lobby === "" )
+						g_quickConnectInfo.lobby = "lobby";
+
+					g_quickConnectInfo.isPublic = (g_quickConnectInfo.isPublic == "1");//(!!parseInt(g_quickConnectInfo.isPublic));
+					g_quickConnectInfo.isPersistent = (g_quickConnectInfo.isPersistent == "1");//(!!parseInt(g_quickConnectInfo.isPersistent));
+
+					if( !!!g_quickConnectInfo.lobbyPassword )
+						g_quickConnectInfo.lobbyPassword = "";
+
+					//this.quickConnectInfo = quickConnectInfo;
+
+					function doJoinUniverse()
+					{
+						universeJoin(g_quickConnectInfo.universe, g_quickConnectInfo.user, function()
+						{
+							if( g_metaverse.status === "Universe Ready" )
+							{
+								if( g_quickConnectInfo.user !== "" && g_quickConnectInfo.passcode !== "" )
+								{
+									aaapi.cmd("networkEvent", "universeJoin", g_metaverse.universe);
+
+									universeLogin(g_quickConnectInfo.user, g_quickConnectInfo.passcode, g_quickConnectInfo.displayName, function()
+									{
+										onLoggedIn.call(this);
+									}.bind(this), function()
+									{
+										universeNewUser(g_quickConnectInfo.user, g_quickConnectInfo.passcode, function()
+										{
+											aaapi.cmd("networkEvent", "userCreate", g_quickConnectInfo.user, g_quickConnectInfo.displayName);
+
+											universeLogin(g_quickConnectInfo.user, g_quickConnectInfo.passcode, g_quickConnectInfo.displayName, function()
+											{
+												onLoggedIn.call(this);
+											}.bind(this), function()
+											{
+												console.log("Failed to login to newly created user.");
+											}.bind(this));
+										}.bind(this), function()
+										{
+											console.log("Negatory");
+										}.bind(this));
+									}.bind(this));
+								}
+							}
+							else
+							{
+								console.log("Failed to connect to universe.");
+							}
+						}.bind(this));
+					}
+
+					function onLoggedIn()
+					{
+						//	console.log("testerrr!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+						//console.log(g_quickConnectInfo.isPersistent);
+						//console.log(!g_quickConnectInfo.isPersistent);
+						// volatile
+						if( !g_quickConnectInfo.isPersistent )
+						{
+						//	console.log("Volatile!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+							g_metaverse.rootRef.child(g_quickConnectInfo.universe).child("library").child("instances").child(g_quickConnectInfo.instance).onDisconnect().remove();
+							//g_metaverse.child(g_quickConnectInfo.universe).child("users").child(g_quickConnectInfo.user).onDisconnect().remove();	// Completely remove the user, for now.  When universes become more persistent, users will probably want to just logout instead of be removed.
+						}
+						else
+						{
+							g_metaverse.rootRef.child(g_quickConnectInfo.universe).child("library").child("instances").child(g_quickConnectInfo.instance).child("users").child(g_quickConnectInfo.user).onDisconnect().remove();
+						}
+
+						aaapi.cmd("networkEvent", "userLogin", g_quickConnectInfo.user, g_quickConnectInfo.displayName);
+
+						// update our universe's info w/ our avatar so that the server list can be better organized.
+						// Updating this every time the user hosts a new instance in their universe allows it to stay current.
+						var ownerAvatarPayload = {
+							"ownerAvatar": g_avatarURL,//g_quickConnectInfo.avatar
+							"author": g_quickConnectInfo.displayName
+						};
+						g_metaverse.universeRef.child("info").update(ownerAvatarPayload);
+
+						// Now it's time to add/update EVERYTHING that this arcade uses:
+						// 	map
+						//	models
+						// 	items
+						//	instance
+
+						var worldInfo = aaapi.cmdEx("getWorldInfo");
+						var instanceInfo = worldInfo.instance;
+						var mapInfo = worldInfo.map;
+						
+						function onMapReady()
+						{
+							g_metaverse.universeRef.child("library").child("instances").child(g_quickConnectInfo.instance).child("metrics").once("value", function(metricsSnapshot)
+							{
+								var metrics = metricsSnapshot.val();
+								if( metrics === null )
+									metrics = {};
+
+								if( !metrics.hasOwnProperty("numVisitors") )
+									metrics.numVisitors = 0;
+
+								if( !metrics.hasOwnProperty("uniqueVisitors") )
+									metrics.uniqueVisitors = {};
+
+								if( !metrics.hasOwnProperty("rating") )
+									metrics.rating = 0;
+
+								if( !metrics.hasOwnProperty("numVotes") )
+									metrics.numVotes = 0;
+
+								if( !metrics.hasOwnProperty("visits") )
+									metrics.visits = 0;
+
+								if( !metrics.hasOwnProperty("guestbook") )
+									metrics.guestbook = {};
+
+								if( !metrics.hasOwnProperty("numVisitors") )
+									metrics.numVisitors = 0;
+
+								if( !metrics.hasOwnProperty("uniqueVisitors") )
+									metrics.uniqueVisitors = {};
+
+								g_quickConnectInfo.metrics = metrics;
+
+								arcadeHud.onConnectionMetricsUpdate(g_quickConnectInfo.metrics);
+
+								onMapReadyReal.call(this);
+							}.bind(this));
+						}
+
+						function onMapReadyReal()
+						{
+							var objectInfos = aaapi.cmdEx("getAllObjectInfos");
+
+							// get all the models used & add them to the db
+							// BETTER YET, update EVERYTHING in a collective update.
+							g_uniqueModels = {};
+							g_uniqueObjects = {};
+							g_uniqueItems = {};
+							g_uniqueTypes = {};
+							g_uniqueApps = {};
+
+							var objectInfo;
+							for( var i = 0; i < objectInfos.length; i++ )
+							{
+								objectInfo = objectInfos[i];
+
+								if( !!!objectInfo || objectInfo.objectId === "1.#INF00" || objectInfo.itemId === "1.#INF00" || objectInfo.modelId === "1.#INF00" )
+									continue;
+
+								if( !!!g_uniqueObjects[objectInfo.objectId] )
+								{
+									var object = aaapi.cmdEx("getObject", objectInfo.objectId);
+									g_uniqueObjects[objectInfo.objectId] = object;
+								}
+
+								if( !!!g_uniqueItems[objectInfo.itemId] )
+								{
+									var item = aaapi.cmdEx("getLibraryItem", objectInfo.itemId);
+
+									if( !!item )
+									{
+										g_uniqueItems[objectInfo.itemId] = item;
+
+										if( item.type !== "1.#INF00" && !!!g_uniqueTypes[item.type] )
+										{
+											var curtype = aaapi.cmdEx("getLibraryType", item.type);
+											if( !!curtype )
+												g_uniqueTypes[curtype.info.id] = curtype;
+										}
+
+										if( item.app !== "1.#INF00" && !!!g_uniqueApps[item.app] )
+										{
+											var app = aaapi.cmdEx("getLibraryApp", item.app);
+											if( !!app )
+												g_uniqueApps[app.info.id] = app;
+										}
+									}
+								}
+
+								if( !!!g_uniqueModels[objectInfo.modelId] )
+								{
+									var model = aaapi.cmdEx("getLibraryModel", objectInfo.modelId);
+									g_uniqueModels[objectInfo.modelId] = model;
+								}
+							}
+
+							var uniqueObjectKeys = Object.keys(g_uniqueObjects);
+							var uniqueObjectKeysIndex = 0;
+							g_freshObjects = {};
+
+							var uniqueItemKeys = Object.keys(g_uniqueItems);
+							var uniqueItemKeysIndex = 0;
+
+							var uniqueTypeKeys = Object.keys(g_uniqueTypes);
+							var uniqueTypeKeysIndex = 0;
+
+							var uniqueAppKeys = Object.keys(g_uniqueApps);
+							var uniqueAppKeysIndex = 0;
+
+							var uniqueModelKeys = Object.keys(g_uniqueModels);
+							var uniqueModelKeysIndex = 0;
+
+							function onProcessModelsComplete()
+							{
+								function onProcessAppsComplete()
+								{
+									function onProcessTypesComplete()
+									{										
+										function onProcessItemsComplete()
+										{								
+											function onProcessObjectsComplete()
+											{
+												function onProcessInstanceComplete()
+												{
+													function onProcessInstanceObjectsComplete()
+													{
+														function onOverviewSynced()
+														{
+															g_metaverse.addInstanceUser(g_quickConnectInfo.instance, g_metaverse.sessionRef.key,g_metaverse.localUser.id, function(userId)
+															{
+																if( !!!userId )
+																{
+																	console.log("Failed to join session.");
+																}
+																else
+																{
+																	aaapi.cmd("networkEvent", "instanceUserCreate", g_quickConnectInfo.instance, g_metaverse.sessionRef.key, userId);
+
+																	// if we had ZERO starting objects, we are finished HERE.
+																	if( !g_isHostInitComplete && uniqueObjectKeys.length === 0 )
+																	{
+
+																		console.log("Finished Receiving Object Data");
+
+																		delete g_uniqueModels;
+																		delete g_uniqueObjects;
+																		delete g_uniqueItems;
+																		delete g_uniqueTypes;
+																		delete g_uniqueApps;
+																		delete g_numUniqueObjects;
+																		delete g_freshObjects;
+
+																		// We are all finished "going live" and ready to invite people to the session.
+																		g_isHostInitComplete = true;
+																		onHostReady();
+																	}
+
+																	//console.log("Receiving Object Data...");
+																}
+															}.bind(this));
+														}
+
+														var overviewInfo = aaapi.cmdEx("getSyncOverview");
+														//console.log(overviewInfo);
+														if( !!!overviewInfo)
+															onOverviewSynced.call(this);
+														else
+														{
+															g_tga.open(overviewInfo.map + ".tga", function() {
+																var elem = g_tga.getCanvas();//elem.style.width = "1024px";
+
+																var jpegQuality = 0.8;
+																var payload = {
+																	"date": firebase.database.ServerValue.TIMESTAMP,
+																	"binary": elem.toDataURL("image/jpeg", jpegQuality),
+																	"pos_x": overviewInfo.pos_x,
+																	"pos_y": overviewInfo.pos_y,
+																	"scale": overviewInfo.scale
+																};
+
+																g_metaverse.syncOverview(g_quickConnectInfo.instance, payload, function()
+																{
+																	console.log("Finished syncing overview image.");
+																	//aaapi.cmd("networkEvent", "overviewComplete");
+																	onOverviewSynced.call(this);
+																}.bind(this));
+															}.bind(this));
+														}
+													}
+
+													function processNextInstanceObject()
+													{
+														if( uniqueObjectKeysIndex >= uniqueObjectKeys.length )
+														{
+															console.log("Added " + uniqueObjectKeys.length + " object(s) to the instance.");
+															onProcessInstanceObjectsComplete.call(this);
+															return;
+														}
+
+														var uniqueObject = g_uniqueObjects[uniqueObjectKeys[uniqueObjectKeysIndex]];
+//console.log(uniqueObject.id);
+														g_metaverse.addInstanceObject(g_quickConnectInfo.instance, uniqueObject.id);//, function(objectId)
+														//{
+														//	if( !!!objectId )
+														//	{
+														//		console.log("Failed to add object to instance.");
+														//	}
+														//	else
+														//	{
+																uniqueObjectKeysIndex++;
+
+															//	aaapi.cmd("networkEvent", "instanceObjectCreate", g_quickConnectInfo.instance, objectId, uniqueObjectKeysIndex, uniqueObjectKeys.length);
+																processNextInstanceObject.call(this);
+															//}
+														//}, uniqueObject.id);
+													}
+
+													uniqueObjectKeysIndex = 0;
+													processNextInstanceObject.call(this);
+												}
+
+												var instanceData = {
+													"map": instanceInfo.mapId,
+													"title": instanceInfo.title,
+													"author": g_quickConnectInfo.displayName,
+													"avatar": g_quickConnectInfo.avatar,
+													"password": (g_quickConnectInfo.lobbyPassword !== "") ? g_metaverse.encodePasscode(g_quickConnectInfo.lobbyPassword) : "",
+													"platforms":
+													{
+														"-KJvcne3IKMZQTaG7lPo":
+														{
+															"id": arcadeHud.platformId,
+															"mountIds": instanceInfo.mountIds,
+															"workshopIds": instanceInfo.workshopIds
+														}
+													}
+												};
+
+												if( !!!instanceData.map || instanceData.map === "" )
+													instanceData.map = g_metaverse.defaultInstance.map.default;
+
+												if( !!!instanceData.title || instanceData.title === "" )
+													instanceData.title = g_metaverse.defaultInstance.title.default;
+
+												if( !!!instanceData.platforms[arcadeHud.platformId].mountIds || instanceData.platforms[arcadeHud.platformId].mountIds === "" )
+													instanceData.platforms[arcadeHud.platformId].mountIds = "";
+
+												if( !!!instanceData.platforms[arcadeHud.platformId].workshopIds || instanceData.platforms[arcadeHud.platformId].workshopIds === "" )
+													instanceData.platforms[arcadeHud.platformId].workshopIds = "";
+
+												//console.log(JSON.stringify(instanceData));
+
+												g_metaverse.createLibraryEntry("Instance", instanceData, g_quickConnectInfo.instance);//, function(instanceId)
+												//{
+												//	if( !!!instanceId )
+												//	{
+												//		console.log("Failed to create instance.");
+												//	}
+												//	else
+												//	{
+												//		aaapi.cmd("networkEvent", "instanceCreate", instanceId);
+														onProcessInstanceComplete.call(this);
+												//	}
+												//}.bind(this));
+											}
+
+											function processNextObject()
+											{
+												if( uniqueObjectKeysIndex >= uniqueObjectKeys.length )
+												{
+													console.log("Processed " + uniqueObjectKeys.length + " unique object(s).");
+													onProcessObjectsComplete.call(this);
+													return;
+												}
+
+												var uniqueObject = g_uniqueObjects[uniqueObjectKeys[uniqueObjectKeysIndex]];
+
+												var goodItem = (uniqueObject.item !== uniqueObject.model) ? uniqueObject.item : "";//(!!uniqueObject.model && uniqueObject.model !== "") ? uniqueObject.item : "";
+												var goodModel = uniqueObject.model;//(!!uniqueObject.model && uniqueObject.model !== "") ? uniqueObject.model : uniqueObject.item;
+												var slaveVal = (uniqueObject.slave) ? 1 : 0;
+												var childVal = (uniqueObject.child) ? 1 : 0;
+												var objectData = {
+													"instance": g_quickConnectInfo.instance,
+													"item": goodItem,
+													"model": goodModel,
+													"slave": slaveVal,
+													"child": childVal,
+													"parentObject": uniqueObject.parentObject,
+													"scale": uniqueObject.scale,
+													"origin": uniqueObject.origin,
+													"angles": uniqueObject.angles,
+													"anim": uniqueObject.anim
+												};
+
+												if( !!!objectData.instance || objectData.instance === "" )
+													objectData.instance = g_metaverse.defaultObject.item.default;
+
+												if( !!!objectData.item || objectData.item === "" )
+													objectData.item = g_metaverse.defaultObject.item.default;
+
+												if( !!!objectData.model || objectData.model === "" )
+													objectData.model = g_metaverse.defaultObject.model.default;
+
+												if( !!!objectData.slave || objectData.slave === "" )
+													objectData.slave = g_metaverse.defaultObject.slave.default;
+
+												if( !!!objectData.child || objectData.child === "" )
+													objectData.child = g_metaverse.defaultObject.child.default;
+
+												if( !!!objectData.parentObject || objectData.parentObject === "" )
+													objectData.parentObject = g_metaverse.defaultObject.parentObject.default;
+
+												if( !!!objectData.scale || objectData.scale === "" )
+													objectData.scale = g_metaverse.defaultObject.scale.default;
+
+												if( !!!objectData.origin || objectData.origin === "" )
+													objectData.origin = g_metaverse.defaultObject.origin.default;
+
+												if( !!!objectData.angles || objectData.angles === "" )
+													objectData.angles = g_metaverse.defaultObject.angles.default;
+
+												if( !!!objectData.anim )
+													objectData.anim = "";
+//console.log(JSON.stringify(objectData));
+												g_metaverse.createLibraryEntry("Object", objectData, uniqueObject.id);//, function(objectId)
+												//{
+												//	if( !!!objectId )
+												//	{
+												//		console.log("Failed to create object.");
+												//	}
+												//	else
+												//	{
+														uniqueObjectKeysIndex++;
+
+													//	aaapi.cmd("networkEvent", "objectCreate", objectId, uniqueObjectKeysIndex, uniqueObjectKeys.length);
+														processNextObject.call(this);
+												//	}
+												//}.bind(this));
+											}
+
+											processNextObject.call(this);
+										}
+
+										function processNextItem()
+										{
+											if( uniqueItemKeysIndex >= uniqueItemKeys.length )
+											{
+												console.log("Processed " + uniqueItemKeys.length + " unique item(s).");
+												onProcessItemsComplete.call(this);
+												return;
+											}
+
+											var uniqueItem = g_uniqueItems[uniqueItemKeys[uniqueItemKeysIndex]];
+
+											
+
+											/*if( !!!itemData.model || itemData.model === "" )
+												itemData.model = g_metaverse.defaultItem.model.default;*/
+
+											//g_metaverse.createLibraryObject("Item", itemData, function(itemId)
+											var itemData = generateItemData(uniqueItem);
+
+											g_metaverse.createLibraryEntry("Item", itemData, uniqueItem.info.id);//, function(itemId)
+											//{
+											//	if( !!!itemId )
+											//	{
+											//		console.log("Failed to create item.");
+											//	}
+											//	else
+											//	{
+													uniqueItemKeysIndex++;
+
+											//		aaapi.cmd("networkEvent", "itemCreate", itemId, uniqueItemKeysIndex, uniqueItemKeys.length);
+													processNextItem.call(this);
+											//	}
+											//}.bind(this));
+										}
+
+										processNextItem.call(this);
+									}
+
+									function processNextType()
+									{
+										if( uniqueTypeKeysIndex >= uniqueTypeKeys.length )
+										{
+											console.log("Processed " + uniqueTypeKeys.length + " unique type(s).");
+											onProcessTypesComplete.call(this);
+											return;
+										}
+
+										var uniqueType = g_uniqueTypes[uniqueTypeKeys[uniqueTypeKeysIndex]];
+
+										var typeData = generateTypeData(uniqueType);
+
+										g_metaverse.createLibraryEntry("Type", typeData, uniqueType.info.id);//, function(typeId)
+										//{
+										//	if( !!!typeId )
+										//	{
+										//		console.log("Failed to create type.");
+										//	}
+										//	else
+										//	{
+												uniqueTypeKeysIndex++;
+
+										//		aaapi.cmd("networkEvent", "typeCreate", typeId, uniqueTypeKeysIndex, uniqueTypeKeys.length);
+												processNextType.call(this);
+										//	}
+										//}.bind(this));
+									}
+
+									processNextType.call(this);
+								}
+
+								function processNextApp()
+								{
+									if( uniqueAppKeysIndex >= uniqueAppKeys.length )
+									{
+										console.log("Processed " + uniqueAppKeys.length + " unique app(s).");
+										onProcessAppsComplete.call(this);
+										return;
+									}
+
+									var uniqueApp = g_uniqueApps[uniqueAppKeys[uniqueAppKeysIndex]];
+
+									var appData = generateAppData(uniqueApp);
+
+									//console.log(JSON.stringify(uniqueApp));
+
+									// Detect any types this app references that should be processed.
+									if( !!appData.type && appData.type !== "" && !!!g_uniqueTypes[appData.type] )
+									{
+										var curtype = aaapi.cmdEx("getLibraryType", appData.type);
+										if( !!curtype )
+											g_uniqueTypes[curtype.info.id] = curtype;
+									}
+
+									g_metaverse.createLibraryEntry("App", appData, uniqueApp.info.id);//, function(appId)
+									//{
+									//	if( !!!appId )
+									//	{
+									//		console.log("Failed to create app.");
+									//	}
+									//	else
+									//	{
+											uniqueAppKeysIndex++;
+
+									//		aaapi.cmd("networkEvent", "appCreate", appId, uniqueAppKeysIndex, uniqueAppKeys.length);
+											processNextApp.call(this);
+									//	}
+									//}.bind(this));
+								}
+
+								processNextApp.call(this);
+							}
+
+							function processNextModel()
+							{
+								if( uniqueModelKeysIndex >= uniqueModelKeys.length )
+								{
+									console.log("Processed " + uniqueModelKeys.length + " unique model(s).");
+									onProcessModelsComplete.call(this);
+									return;
+								}
+
+								var uniqueModel = g_uniqueModels[uniqueModelKeys[uniqueModelKeysIndex]];
+								if( !!uniqueModel && !!uniqueModel.info && !!uniqueModel.platforms && !!uniqueModel.info.id && uniqueModel.info.id.indexOf(".") < 0 )
+								{
+									var modelData = generateModelData(uniqueModel);
+
+									console.log("(" + uniqueModelKeysIndex + ") Processing model ID " + uniqueModel.info.id);
+
+									g_metaverse.createLibraryEntry("Model", modelData, uniqueModel.info.id);//, function(modelId)
+								}
+								else
+								{
+									console.log("(" + uniqueModelKeysIndex + ") SKIPPING model");
+								}
+								//{
+								//	if( !!!modelId )
+								//	{
+								//		console.log("Failed to create model.");
+								//	}
+								//	else
+								//	{
+										uniqueModelKeysIndex++;
+
+								//		aaapi.cmd("networkEvent", "modelCreate", modelId, uniqueModelKeysIndex, uniqueModelKeys.length);
+										processNextModel.call(this);
+								//	}
+								//}.bind(this));
+							}
+
+							processNextModel.call(this);
+						}
+
+						g_metaverse.doesMapExist(g_quickConnectInfo.universe, mapInfo.info.id, function(doesExist)
+						{
+							if( doesExist )
+								onMapReady.call(this);
+							else
+							{
+								// add the map
+								var mapData = {
+									"title": mapInfo.title,
+									"keywords": mapInfo.keywords,
+									"platforms":
+									{
+										"-KJvcne3IKMZQTaG7lPo":
+										{
+											"id": "-KJvcne3IKMZQTaG7lPo",
+											"download": "",
+											"file": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].file,
+											"mountIds": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds,
+											"workshopIds": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds
+										}
+									}
+								};
+
+								g_metaverse.createLibraryEntry("Map", mapData, mapInfo.info.id);//, function(mapId)
+								//{
+								//	if( !!!mapId )
+								//	{
+								//		console.log("could not create map.");
+								//	}
+								//	else
+								//	{
+								//		aaapi.cmd("networkEvent", "mapCreate", mapId);
+										onMapReady.call(this);
+								//	}
+								//}.bind(this));
+							}
+						}.bind(this));
+					}
+/*
+					// get the client's IP
+					//var userInfo = //https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={key}&steamids=76561197960361544
+					var xmlHttp = new XMLHttpRequest();
+					xmlHttp.onreadystatechange = function()
+					{ 
+						if (xmlHttp.readyState == 4)
+						{
+							if(xmlHttp.status == 200)
+							{
+								var response = JSON.parse(xmlHttp.responseText);
+								var responsePlayers = response.players;
+								var responsePlayer = responsePlayers[0];
+								console.log(responsePlayer.avatarFull);
+								g_avatarURL = responsePlayer.avatarFull;
+							}
+							else
+							{
+								console.log("ERROR: Failed to get local user avatar.");
+							}
+						}
+					}
+					
+					xmlHttp.open("GET", "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=&steamids=" + steamId, true);
+					xmlHttp.send(null);
+*/
+					metaverseConnect(g_quickConnectInfo.address, function()
+					{
+						if(g_metaverse.status === "Select Universe")
+						{
+							aaapi.cmd("networkEvent", "metaverseConnect", g_quickConnectInfo.address);
+
+							if( g_quickConnectInfo.universe !== "" )
+							{
+								// check if the universe already exists
+								g_metaverse.doesUniverseExist(g_quickConnectInfo.universe, function(doesExist)
+								{
+									if( doesExist )
+										doJoinUniverse.call(this);
+									else
+									{
+										// create the universe
+										g_metaverse.createUniverse("Unnamed Universe", g_quickConnectInfo.universe, g_userBans, g_quickConnectInfo.isPublic, g_quickConnectInfo.isPersistent, function(universeId)
+										{
+											if( !!!universeId )
+											{
+												console.log("ERROR: Failed to create player universe.");
+												return;
+											}
+											else
+											{
+												aaapi.cmd("networkEvent", "universeCreate", universeId);
+												doJoinUniverse.call(this);
+											}
+										}.bind(this));
+									}
+								}.bind(this));
+							}
+						}
+					}.bind(this), this.rootRef);
+				},
+				/*"quickConnectInfo": {
+					"address": g_metaverse.quickJoinAddress,
+					"universe": "",
+					"instance": "",
+					"user": "",
+					"passcode": "",
+					"displayName": "Human Player"
+				},*/
+				"isBusy": false
+			};
+
+			localStorage.removeItem("sessionChat");
+			//localStorage.removeItem("socialChat");
+
+			// clear twitch chat
+			//localStorage.setItem("twitchChatLog", null);
+
+
+		//	// fetch social chat log
+			//aampNetwork.fetchSocialChat();
+
+			console.log("Loaded network tab.");
+
+			aaapi.cmd("networkReady");
+
+			if( aaapi.cmdEx("getConVarValue", "twitch_enabled") === "1" )
+			{
+				aampTwitch.resetChannelStates();
+				aaapi.cmd("openTwitchConnection");
+			}
+		</script>
+
+		<script>
+			function onEntryRemoved(mode, val)
+			{
+				if( mode === "Object" )
+				{
+					var objectId = val.info.id;
+					if( objectId !== "" )
+						aaapi.cmd("networkEvent", "objectRemoved", objectId);
+				}
+				else
+				{
+					console.log("TODO: Unhandled non-object entry removed.");
+					return;
+				}
+			}
+		</script>
+
+		<script>
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+
+			var assetManager = {
+				"uploadQueue": {},
+				"uploadQueueSizes": {},
+				"uploadQueueOriginalFiles": {},
+				"uploadQueueOriginalHashes": {},
+				"rootStorageRef": null,
+				"assetsRef": null,
+				"assetRequestQueue": [],
+				"alreadyProcessedRequests": [],	// file names to avoid duplicate query spam
+				"checkBatchFiles": function(batchId, files)
+				{
+					console.log("So let it be written,");
+				},
+				"requestUnavailable": function(fileHash, file)
+				{
+					// set the requests node:
+					// metaverse/METAVERSE_ID/requests/FILE_HASH/{file: "", status: "unavailable"}
+					var payload = {
+						"status": "unavailable"
+					};
+					g_metaverse.universeRef.child("requests").child(fileHash).update(payload);
+
+					//setTimeout(function()
+					//{
+						assetManager.assetRequestQueue.shift();
+						assetManager.giveNextAssetRequest();
+					//}, 1000);
+				},
+				"onAssetRequestAdded": function(snapshot, prevChildKey)
+				{
+					var val = snapshot.val();
+					assetManager.assetRequestQueue.push({fileHash: snapshot.key, file: val.file});
+					//console.log(assetManager.assetRequestQueue.length);
+					if( assetManager.assetRequestQueue.length === 1 )
+						assetManager.giveNextAssetRequest();
+				},
+				"giveNextAssetRequest": function()
+				{
+					//console.log(this.assetRequestQueue.length);
+					if( this.assetRequestQueue.length === 0 )
+						return;
+
+					var assetRequest = this.assetRequestQueue[0];
+					aaapi.cmd("onAssetRequestAdded", assetRequest.fileHash, assetRequest.file);
+				},
+				"onRequestedAssetStatusUpdated": function(snapshot)
+				{
+					var val = snapshot.val();
+					if( val === "accepted" )
+					{
+						// do nothing, wait until complete.
+					}
+					else if( val === "complete" )
+					{
+						// re-initialize the cloud file look-up
+						assetManager.requestAsset(this.requestId, this.file, this.fileHash);
+					}
+					else if( val === "unavailable" )
+					{
+						// do nothing.  perma-wait.
+					}
+				},
+				"requestAsset": function(requestId, file, fileHash)
+				{
+					createFirebaseGlobal();
+					var rootDatabaseRef = firebase.database().ref();
+					var assetBookkeepingRef = rootDatabaseRef.child("assets").child(fileHash);
+					assetBookkeepingRef.once("value", function(snapshot)
+					{
+						var val = snapshot.val();
+						if( !!!val )
+						{
+							var payload = ["cloudAssetUnavailable"];
+							payload.push(this.requestId);
+							payload.push(this.file);
+							payload.push(this.fileHash);
+							aaapi.cmd.apply(null, payload);
+
+							var payload = {
+								"file": this.file,
+								"status": "pending"
+							};
+
+							g_metaverse.universeRef.child("requests").child(this.fileHash).update(payload).then(function()
+							{
+								g_metaverse.universeRef.child("requests").child(this.fileHash).child("status").on("value", assetManager.onRequestedAssetStatusUpdated.bind(this));	
+							}.bind(this));
+						}
+						else
+						{
+							if( assetManager.alreadyProcessedRequests.indexOf(val.file) >= 0 )
+							{
+								var payload = ["cloudAssetUnavailable"];
+								payload.push(this.requestId);
+								payload.push(this.file);
+								payload.push(this.fileHash);
+								aaapi.cmd.apply(null, payload);
+							}
+							else
+							{
+								assetManager.alreadyProcessedRequests.push(val.file);
+								var firstFile = {};
+								firstFile[snapshot.key] = val.file;
+								var allFiles = [firstFile];//.concat(val.other);
+								var entry;
+								for( var x in val.other )
+								{
+									entry = {};
+									entry[x] = val.other[x];
+									allFiles.push(entry);
+								}
+
+								// Now that we have all files, let's get download URLs for every one of them, just in-case the user needs them.
+								var requestId = this.requestId;
+								var resolvedURLs = [];
+								var resolvedSizes = [];
+								var lastResolved = -1;
+								function onAllResolved()
+								{
+									var fileId;
+									var payload = ["cloudAssetAvailable"];
+									payload.push(requestId);
+									for( var i = 0; i < allFiles.length; i++ )
+									{
+										fileId = Object.keys(allFiles[i])[0];
+										payload.push(fileId);
+										payload.push(allFiles[i][fileId]);
+										payload.push(resolvedURLs[i]);
+										payload.push(resolvedSizes[i]);
+									}
+									aaapi.cmd.apply(null, payload);
+								}
+
+								function resolveURL(resolveIndex)
+								{
+									createFirebaseGlobal();
+
+									var assetRequest = allFiles[resolveIndex];
+									var fileHash = Object.keys(assetRequest)[0];
+									var file = assetRequest[fileHash];
+									var storage = firebase.storage();
+									var rootStorageRef = storage.ref();
+									var assetsRef = rootStorageRef.child("assets");
+
+									var goodPath = file;
+									goodPath = goodPath.replace(/\\/g,"/");
+									var ref = assetsRef.child(goodPath + ".zip");
+
+									function assetExists(url)
+									{
+										resolvedURLs.push(url);
+										if( lastResolved < allFiles.length-1 )
+											resolveURL(lastResolved+1);
+										else
+											onAllResolved();
+									}
+
+									function assetDoesNotExist()
+									{
+										resolvedURLs.push("");
+										if( lastResolved < allFiles.length-1 )
+											resolveURL(lastResolved+1);
+										else
+											onAllResolved();
+									}
+
+									function metaDataSuccess(metaData)
+									{
+										//console.log(JSON.stringify(metaData));
+										resolvedSizes.push(metaData.size);
+										this.ref.getDownloadURL().then(assetExists.bind(this), assetDoesNotExist.bind(this));
+									}
+
+									function metaDataFailure(error)
+									{
+										//console.log(error);
+										resolvedSizes.push(0);
+										this.ref.getDownloadURL().then(assetExists.bind(this), assetDoesNotExist.bind(this));
+									}
+
+									lastResolved = resolveIndex;
+
+									var payload = {ref: ref, file: file, index: resolveIndex};
+									ref.getMetadata().then(metaDataSuccess.bind(payload)).catch(metaDataFailure.bind(payload));
+								}
+
+								if( lastResolved < allFiles.length-1 )
+									resolveURL(lastResolved+1);
+								else
+									onAllResolved();
+							}
+						}
+					}.bind({requestId: requestId, file: file, fileHash: fileHash}));
+				},
+				"onUploadBatchReady": function(batchId)
+				{
+					if( arguments.length < 2 )
+					{
+						console.log("ERROR: Batch is size zero! Aborting!");
+						return;
+					}
+
+					var fileInputElem = document.querySelector("#fileInput");
+					if( fileInputElem.batchId !== "" )
+					{
+						console.log("ERROR: Batch already being fetched! Aborting!");
+						return;
+					}
+
+					fileInputElem.batchId = batchId;
+					this.uploadQueue[batchId] = [];
+
+					this.uploadQueueSizes[batchId] = (arguments.length-1)/3;
+					var batch = this.uploadQueue[batchId];
+					for( var i = 1; i < arguments.length; i += 3 )
+					{
+						var other = {};
+						var others = arguments[i+2].split("::");
+						if( others.length > 1 )
+						{
+							for( var j = 0; j < others.length; j += 2 )
+								other[others[j]] = others[j+1];
+						}
+						else
+							other = null;
+
+						//if( Object.keys(other).length === 0 )
+						//	other = null;
+
+						batch.push({"fullpath": arguments[i], "fullpathhash": arguments[i+1], "other": other, "data": null});
+						if( i === 1 )
+						{
+							this.uploadQueueOriginalFiles[batchId] = arguments[i];
+							this.uploadQueueOriginalHashes[batchId] = arguments[i+1];
+						}
+					}
+					aaapi.cmd("getAssetUploadBatch", batchId);
+				},
+				"uploadFiles": function(files, batchId)
+				{
+					var fileInputElem = document.querySelector("#fileInput");
+					fileInputElem.batchId = "";
+
+					var batch = this.uploadQueue[batchId];
+					if( !!!batch )
+					{
+						console.log("ERROR: Invalid batch ID.");
+						return;
+					}
+
+					if( batch.length === 0 )
+					{
+						console.log("ERROR: Batch size is zero.");
+						return;
+					}
+
+					for( var i = 0; i < batch.length; i++ )
+						batch[i].data = files[i];
+
+					createFirebaseGlobal();
+					this.rootStorageRef = firebase.storage().ref();
+					this.assetsRef = this.rootStorageRef.child("assets");
+
+					// set the requests node:
+					// metaverse/METAVERSE_ID/requests/FILE_HASH/{file: "", status: "accepted"}
+					var payload = {
+						"file": batch[0].fullpath,
+						"status": "accepted"
+					};
+					g_metaverse.universeRef.child("requests").child(batch[0].fullpathhash).update(payload);
+					this.uploadNextFile(batchId);
+				},
+				"uploadNextFile": function(batchId)
+				{
+					var batch = this.uploadQueue[batchId];
+					if( !!!batch )
+					{
+						console.log("ERROR: Invalid batch ID.");
+						return;
+					}
+
+					if( batch.length === 0 )
+					{
+						var payload = {
+							"file": this.uploadQueueOriginalFiles[batchId],
+							"status": "complete"
+						};
+						g_metaverse.universeRef.child("requests").child(this.uploadQueueOriginalHashes[batchId]).update(payload);
+
+						aaapi.cmd("addToastMessage", "Uploaded " + this.uploadQueueOriginalFiles[batchId]);
+						delete this.uploadQueue[batchId];
+						delete this.uploadQueueSizes[batchId];
+						delete this.uploadQueueOriginalFiles[batchId];
+						delete this.uploadQueueOriginalHashes[batchId];
+						createFileInput();
+						//setTimeout(function()
+						//{
+							assetManager.assetRequestQueue.shift();
+							assetManager.giveNextAssetRequest();
+						//}, 1000);
+						return;
+					}
+
+					var asset = batch.shift();
+					var goodPath = asset.fullpath;
+					goodPath = goodPath.replace(/\\/g,"/");
+
+					function uploadAsset()
+					{
+						var uploadTask = this.ref.put(this.asset.data);
+						uploadTask.on('state_changed', function(snapshot)
+						{
+							/*
+							var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+							console.log('Upload is ' + progress + '% done');
+
+							switch (snapshot.state)
+							{
+								case firebase.storage.TaskState.PAUSED: // or 'paused'
+									console.log('Upload is paused');
+									break;
+								case firebase.storage.TaskState.RUNNING: // or 'running'
+									console.log('Upload is running');
+									break;
+							}
+							*/
+						}.bind(this), function(error)
+						{
+							// Handle unsuccessful uploads
+							var batchId = this.batchId;
+							var batch = assetManager.uploadQueue[batchId];
+							var batchSize = assetManager.uploadQueueSizes[batchId];
+
+							//console.log("(" + (batchSize - batch.length) + "/" + batchSize + ") Failed to upload " + this.goodPath + " (" + formatBytes(this.asset.data.size) + ")");
+							//aaapi.cmd("addToastMessage("(" + (batchSize - batch.length) + "/" + batchSize + ") Failed to upload " + this.goodPath + " (" + formatBytes(this.asset.data.size) + ")");
+
+
+							aaapi.cmd('uploadStatusFailure', batchId, batchSize, (batchSize - batch.length), assetManager.uploadQueueOriginalFiles[batchId], this.goodPath);
+
+							assetManager.uploadNextFile(batchId);
+						}.bind(this), function()
+						{
+							// Handle successful uploads on complete
+							var batchId = this.batchId;
+							var batch = assetManager.uploadQueue[batchId];
+							var batchSize = assetManager.uploadQueueSizes[batchId];
+
+							var goodPath = this.goodPath;
+
+							createFirebaseGlobal();
+
+							// create bookkeeping reference
+							var rootDatabaseRef = firebase.database().ref();
+							var assetFilePath = goodPath.substring(0, goodPath.lastIndexOf("/"));
+							var metaverseAssetRef = rootDatabaseRef.child("assets").child(asset.fullpathhash);
+
+							var payload = {file: this.goodPath};
+							if( !!asset.other )
+							{
+								payload.other = asset.other;
+							}
+							metaverseAssetRef.set(payload);
+
+							//console.log("(" + (batchSize - batch.length) + "/" + batchSize + ") Uploaded " + this.goodPath + " (" + formatBytes(this.asset.data.size) + ")");
+
+							aaapi.cmd('uploadStatusSuccess', batchId, batchSize, (batchSize - batch.length), assetManager.uploadQueueOriginalFiles[batchId], this.goodPath, this.asset.data.size);
+
+							//aaapi.cmd(".addToastMessage("(" + (batchSize - batch.length) + "/" + batchSize + ") Uploaded " + this.goodPath + " (" + formatBytes(this.asset.data.size) + ")");
+							assetManager.uploadNextFile(batchId);
+						}.bind(this));
+					}
+
+					function assetAlreadyUploaded()
+					{
+						var batchId = this.batchId;
+						var batch = assetManager.uploadQueue[batchId];
+						var batchSize = assetManager.uploadQueueSizes[batchId];
+
+						//console.log("(" + (batchSize - batch.length) + "/" + batchSize + ") Skipping " + this.goodPath);
+						//aaapi.cmd(".addToastMessage("(" + (batchSize - batch.length) + "/" + batchSize + ") Skipping " + this.goodPath);
+
+						aaapi.cmd('uploadStatusSkipped', batchId, batchSize, (batchSize - batch.length), assetManager.uploadQueueOriginalFiles[batchId], this.goodPath);
+						assetManager.uploadNextFile(batchId);
+					}
+
+					// Does the file already exist on the server?
+					var ref = this.assetsRef.child(goodPath + ".zip");
+					var payload = {ref: ref, batchId: batchId, asset: asset, goodPath: goodPath};
+
+					// if this is a BSP, overwrite the old version, for now.
+					// TODO: Cloud overwrite flag must be passed to us by AArcade on a per-payload basis.
+					if( goodPath.indexOf(".bsp") == goodPath.length-4 || goodPath.indexOf(".BSP") == goodPath.length-4 )
+						uploadAsset.call(payload);
+					else
+						ref.getDownloadURL().then(assetAlreadyUploaded.bind(payload), uploadAsset.bind(payload));
+				}
+			};
+		</script>
+
+	</head>
+	<body>
+		<div id="panoContainer" style="position: relative; white-space: nowrap;">
+			<canvas class="panoImage" panoName="front"></canvas><canvas class="panoImage" panoName="right"></canvas><canvas class="panoImage" panoName="back"></canvas><canvas class="panoImage" panoName="left"></canvas><br /><canvas class="panoImage" panoName="bottom" style="position: relative;"></canvas><canvas class="panoImage" panoName="top" style="position: relative;"></canvas>
+		</div>
+		<div style="position: absolute; top: 0; left: 0;">
+			<input id="fileInput" style="font-size: 20px;" type="file" value="FILE" multiple="true" />
+		</div>
+
+	<script>
+		function createFileInput()
+		{
+			var oldElem = document.querySelector("#fileInput");
+			var oldParent = oldElem.parentNode;
+			oldParent.innerHTML = "";
+
+			var elem = document.createElement("input");
+			elem.batchId = "";
+			elem.id = "fileInput";
+			elem.style.cssText = "font-size: 20px;";
+			elem.type = "file";
+			elem.value = "FILE";
+			elem.multiple = "true";
+
+			elem.addEventListener("change", function(e)
+			{
+				var files = e.target.files;
+				if( files.length === 0 )
+					aaapi.cmd("addToastMessage", "No files to upload.");
+				else
+					assetManager.uploadFiles(files, e.target.batchId);
+			});
+
+			oldParent.appendChild(elem);
+		}
+
+		createFileInput();
+	</script>
+	</body>
+</html>

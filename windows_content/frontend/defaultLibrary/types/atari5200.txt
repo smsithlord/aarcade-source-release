@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-KexTWuu80NB-vX9scgg"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"atari5200"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

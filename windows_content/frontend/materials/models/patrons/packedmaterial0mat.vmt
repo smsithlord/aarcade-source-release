@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/packedmaterial0mat"
+	"$bumpmap" "models\patrons/packedmaterial0mat_normal"
+	"$model" "1"
+}

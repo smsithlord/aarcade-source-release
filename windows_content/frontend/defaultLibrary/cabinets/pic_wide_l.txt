@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"8284a29e"
+		}
+		"title"		"pic_wide_l"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\frames\pic_wide_l.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

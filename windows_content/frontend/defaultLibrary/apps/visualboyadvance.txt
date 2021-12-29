@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-OleeeX83v3-v1"
+		}
+		"title"		"VisualBoyAdvance"
+		"file"		"X:\Emulators\VisualBoyAdvance\VisualBoyAdvance-M.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-KzVjWhNZEBL8h"
+		"download"		"http://vba.ngemu.com/"
+		"reference"		"http://vba.ngemu.com/"
+		"filepaths"
+		{
+			"-om88gxNIXzJU8_lpIBa"
+			{
+				"id"		"-om88gxNIXzJU8_lpIBa"
+				"path"		"X:\Emulators\Gameboy\Roms\"
+			}
+		}
+	}
+}

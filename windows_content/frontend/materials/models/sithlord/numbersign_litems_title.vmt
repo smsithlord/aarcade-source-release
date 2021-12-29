@@ -1,0 +1,8 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\sithlord/numbersign_litems_title"
+	"$model" "1"
+	
+	"$additive" 1
+	"$selfillum" 1
+}

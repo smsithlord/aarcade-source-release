@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\hands/external_contoller_01_blinn1sg"
+	"$model" "1"
+}

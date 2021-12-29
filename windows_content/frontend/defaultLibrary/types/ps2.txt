@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-L8sbSQI_sIcJ-"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"ps2"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

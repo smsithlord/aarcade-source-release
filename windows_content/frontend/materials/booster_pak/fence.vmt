@@ -1,0 +1,5 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "booster_pak/fence"
+	"$bumpmap" "booster_pak/fence_normal"
+}

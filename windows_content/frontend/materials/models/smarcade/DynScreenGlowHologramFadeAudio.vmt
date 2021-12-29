@@ -1,0 +1,44 @@
+"Unlittwotexture"
+{
+	"$model" 1
+
+	$color2 "[1.0 1.0 1.0]"
+	//"$offset" 0
+	//"$fullplayerprox" 1.0
+	//"$playerprox" 0.0
+
+	"$basetexture" "vgui/canvas"
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+
+	"$additive" 1
+	"$selfillum" 1
+	"$texture2" "dev/dev_scanline"
+	"$surfaceprop" "glass"
+	"%compileNoLight" 1
+	"%compilepassbullets" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+
+		"TextureScroll"
+		{
+			"texturescrollvar" "$texture2transform"
+			"texturescrollrate" .10
+			"texturescrollangle" 270
+		}
+
+		"AAAudioPeak"
+		{
+			"audioUseAVR" "0"
+			"audioPeakVar" "$color2"
+			"audioPeakMin" "0.0"
+			"audioPeakMax" "1"
+			"audioPeakAmp" "1.0"
+		}
+	}
+}

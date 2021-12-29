@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"36b81013"
+		}
+		"title"		"pc_kiosk_standard"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\pc_kiosk_standard.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

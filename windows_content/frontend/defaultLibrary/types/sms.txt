@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-KexSr5d_Tq524yhSFdq"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"sms"
+		"priority"		"1"
+		"fileformat"		"/(.zip|.sms)$/i"
+	}
+}

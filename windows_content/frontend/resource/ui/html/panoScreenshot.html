@@ -1,0 +1,108 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+			var g_shouldShowInstructions = localStorage.getItem("show_pano_help");
+
+			if( !!!g_shouldShowInstructions )
+				g_shouldShowInstructions = "1";
+
+			g_shouldShowInstructions = (g_shouldShowInstructions === "1");
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Create 360&deg; Screenshot", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			function takePano()
+			{
+				aaapi.cmd("consoleCommand", "panoshot");
+				aaapi.cmd("deactivateInputMode");
+			}
+		</script>
+
+		
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+			<div style="max-width: 420px; padding: 10px; font-family: Arial;">
+				<b>IMPORTANT:</b>
+				<div style="padding: 10px;">
+					You must <b>stand perfectly still</b> & not move <u>at all</u> until the 360&deg; screenshot is complete.
+				</div>
+			</div>
+		</div>
+
+		<center>
+			<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" onclick="saveRemember(); takePano();" style="margin-top: 16px; width: 80%;" help="The 360&deg; screenshot will be captured from your current position.">Begin</div>
+
+			<style>
+				.aaCheckbox
+				{
+					-webkit-appearance: none;
+					width: 38px;
+					height: 38px;
+					border-width: 2px;
+					border-style: solid;
+					border-radius: 4px;
+				}
+
+				.aaCheckbox:checked
+				{
+					background-image: url('checkicon.png');
+					background-repeat: no-repeat;
+					background-position: center center;
+				}
+			</style>
+
+			<table cellspacing="0" cellpadding="0" style="padding-top: 12px;" class="helpNote" help="Check this box to skip these instructions next time. You can re-enable them in the Options menu.">
+				<tr valign="middle">
+					<td>
+						<input id="rememberBox" type="checkbox" class="aaThemeColorOneInverseShadedBorderColor aaThemeColorOneHoverBackgroundColor aaCheckbox" />
+					</td>
+					<td>
+						<label for="rememberBox" class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">Skip Instructions</label>
+					</td>
+				</tr>
+			</table>
+
+			<script>
+				var rememberBoxElem = document.querySelector("#rememberBox");
+				rememberBoxElem.checked = !g_shouldShowInstructions;
+			</script>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			if( !g_shouldShowInstructions )
+				takePano();
+
+			function saveRemember()
+			{
+				var val = (rememberBoxElem.checked) ? "0" : "1";
+				localStorage.setItem("show_pano_help", val);
+			}
+		</script>
+	</body>
+</html>

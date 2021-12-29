@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"c3467514"
+		}
+		"title"		"tall_rotator"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\frames\tall_rotator.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

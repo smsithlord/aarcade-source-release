@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"f2dc8d0c"
+		}
+		"title"		"wall_pad_t"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\icons\wall_pad_t.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\cabinets/pc_wallmount_skin"
+	"$model" "1"
+}

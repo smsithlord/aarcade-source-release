@@ -1,0 +1,11 @@
+vertexlitgeneric
+{
+	$basetexture models/props/stormy/pillar_01_lights
+	
+	$selfillum 1
+	
+	// hue modulation and shit goes where?
+	
+	// here motherfucker, here
+	
+}

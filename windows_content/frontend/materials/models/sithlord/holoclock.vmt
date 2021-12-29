@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\sithlord/holoclock"
+	"$model" "1"
+	"$additive" 1
+	"$selfillum" 1
+}

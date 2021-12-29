@@ -1,0 +1,29 @@
+"UnlitGeneric"
+{
+	"$selfillummask" "models/smarcade/DynScreenGlowMask"
+	//"$envmap" "env_cubemap"
+	//"$envmaptint" "[0.2 0.2 0.2]"
+	//"$bumpmap" "models/smarcade/DynScreenGlowBump"
+	"$model" 1
+
+	"$basetexture" "vgui/canvas"
+	
+	//"$detail" "canvas_hud"
+	//"$detailblendmode" 2
+	//"$detailscale" 1
+	//"$detailblendfactor" 1
+
+	"$selfillum" 1
+	"$additive" 1
+
+	"id"	"images"
+	"simpleimagechannel" "screen"
+	"autocreate" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+	}
+}

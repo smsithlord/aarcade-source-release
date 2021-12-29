@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/fitfrankglasses"
+	"$bumpmap" "models\patrons/fitfrankglasses_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

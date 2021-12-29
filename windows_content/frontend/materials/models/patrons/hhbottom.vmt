@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/hhbottom"
+	"$bumpmap" "models\patrons/hhbottom_normal"
+	"$model" "1"
+}

@@ -1,0 +1,7 @@
+"LightmappedGeneric"
+{
+ "$basetexture"  "ShantzPlaceCSS/ZoeyMirror"
+ "$surfaceprop"  "metal"
+ "$envmap" "env_cubemap"
+ "$envmapmask"  "ShantzPlaceCSS/ZoeyMirror_env"
+}

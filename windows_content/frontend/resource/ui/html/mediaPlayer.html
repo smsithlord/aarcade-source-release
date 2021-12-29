@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="description" content="Interactive particles on Canvas API">
+  <meta name="keywords" content="particles, canvas, js">
+  <meta name="author" content="Zilfaron">
+  <link rel="stylesheet" href="mp3particles/style.css">
+  <!--link rel="icon" href="favicon.png" sizes="16x16"-->
+
+  <title>Local Media Player</title>
+  <style>
+    body
+    {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
+
+  <script src="mp3particles/libs/vector.js" async></script>
+</head>
+<body onselectstart="return false;">
+  <div class="page-wrapper">
+    <div class="options">
+      <button class="options__toggle-btn open-btn"></button>
+      <div class="options-list hidden">
+        <div class="options-list__option">
+          <p class="option-name">Number: </p>
+          <div class="options-list__number-input slider" step="3" value="0" data-for=".number-value">
+            <div class="slider-thumb"></div>
+          </div>
+          <p class="option-value number-value">0</p>
+        </div>  
+        <div class="options-list__option">
+          <p class="option-name">Color(HEX): </p>
+          <input type="text" class="options-list__color-input" value="#" maxlength="7">
+          <p class="option-name">Rainbow: </p>
+          <input type="checkbox" class="options-list__rainbow">
+        </div>
+        <div class="options-list__option">
+          <p class="option-name">Max radius: </p>
+          <div class="options-list__radius-input slider" step="0.5" data-for=".radius-value">
+            <div class="slider-thumb"></div>
+          </div>
+          <p class="option-value radius-value">0</p>
+        </div>
+        <div class="options-list__option">
+          <p class="option-name">Bind distance: </p>
+          <div class="options-list__distance-input slider" step="10" data-for=".distance-value">
+            <div class="slider-thumb"></div>
+          </div>
+          <p class="option-value distance-value">0</p>
+        </div>
+        <div class="options-list__option">
+          <p class="option-name">Max speed: </p>
+          <div class="options-list__speed-input slider" step="0.5" data-for=".speed-value">
+            <div class="slider-thumb"></div>
+          </div>
+          <p class="option-value speed-value">0</p>
+        </div>
+        <div class="options-list__option">
+          <p class="option-name">Line width: </p>
+          <div class="options-list__line-width-input slider" step="0.01" data-for=".line-width-value">
+            <div class="slider-thumb"></div>
+          </div>
+          <p class="option-value line-width-value">0</p>
+        </div>
+        <div class="options-list__option">
+          <p class="option-name">Line color: </p>
+          <input type="text" class="options-list__line-color-input" value="#" maxlength="7">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="mp3particles/js/main.js" defer></script>
+
+
+
+		<video id="videoStage" onloadstart="this.volume=1.0" style="display: none; width: 100%; height: 100%; z-index: 100; position: absolute; top: 0; left: 0;" autoplay controls></video>
+		<audio id="audioStage" onloadstart="this.volume=1.0" style="display: none; width: 100%; z-index: 100; position: absolute; bottom: 0; left: 0;" autoplay controls></audio>
+
+		<script>
+			function GetParameterByName(name, url)
+			{
+				// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+			    if (!url) url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+
+      var otherIndex = -1;
+      var otherFiles = [];
+			var mediaFile = GetParameterByName("file");
+			if( !!mediaFile )
+				mediaFile = JSON.parse(mediaFile);
+
+			if( !!mediaFile )
+			{
+        var file = mediaFile.src;
+        var path = '';
+        var slashType = '/';
+        var lastSlash = file.lastIndexOf('/');
+        if( lastSlash < 0 )
+        {
+          lastSlash = file.lastIndexOf('\\');
+          slashType = '\\';
+        }
+
+        if( lastSlash >= 0 )
+        {
+          path = file.substring(0, lastSlash);
+          var fileOnly = file.substring(lastSlash+1);
+
+          for( var i = 0; i < 100; i++ )
+          {
+            var otherFile = GetParameterByName("f" + i);
+            if( !!!otherFile || otherFile == '' )
+              break;
+
+            otherFiles.push(path + slashType + otherFile);
+
+            if( otherFile == fileOnly )
+              otherIndex = i;
+            //{
+//              src: path + slashType + otherFile,
+              //type: mediaFile.type
+            //});
+          }
+        }
+
+				var mediaStage = (mediaFile.type.indexOf("audio") === 0) ? document.querySelector("#audioStage") : document.querySelector("#videoStage");
+
+				mediaStage.addEventListener('canplaythrough', function()
+				{
+          setTimeout(function()
+          {
+					 mediaStage.play();
+          }, 200);
+				});
+
+        mediaStage.addEventListener('ended', function()
+        {
+          otherIndex++;
+         // var index = otherFiles.indexOf(mediaFile.src);
+          if( otherIndex >= otherFiles.length )
+            otherIndex = 0;
+
+          mediaFile.src = otherFiles[otherIndex];
+          mediaSource.src = mediaFile.src;
+          mediaStage.load();
+        });
+
+        if( otherFiles.length == 0 )
+          mediaStage.loop = true;
+
+				var mediaSource = document.createElement("source");
+				mediaSource.src = mediaFile.src;
+				mediaSource.type = mediaFile.type;
+				mediaStage.appendChild(mediaSource);
+				mediaStage.style.display = "block";
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,28 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "0"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"$potentialframe" 0
+	"$blankframe" 10
+
+	"Proxies"
+	{
+		"AASystemTime"
+		{
+			"type" "date"
+			"digit" "1"
+			"resultVar" "$potentialframe"
+		}
+
+		"SelectFirstIfNonZero"
+		{
+			"srcVar1" "$potentialframe"
+			"srcVar2" "$blankframe"
+			"resultVar" "$frame"
+		}
+	}
+}

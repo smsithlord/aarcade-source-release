@@ -1,0 +1,1216 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js?a=b1"></script>
+		<script src="asset://ui/tga.js"></script>
+		<!--<script src="asset://ui/stickers.js"></script>-->
+		<script>
+			var prioritizeLegacyWorkshopImages = aaapi.cmdEx("getConVarValue", "prioritize_legacy_workshop_images");
+			var tga = new TGA();
+
+			//var imageLoaderStatus = {log: []};//localStorage.getItem('imageLoaderStatus');
+			//if( !!!imageLoaderStatus )
+			//	imageLoaderStatus = {log: []};
+
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			var g_allStickers;
+			var g_cachedAchievementStickers;
+			function fetchAllStickers(forceDetect)
+			{
+				if( !!!forceDetect )
+					g_allStickers = localStorage.getItem("allStickers");
+
+				if( !!!forceDetect && !!g_allStickers )
+					g_allStickers = JSON.parse(g_allStickers);
+				else
+				{
+					g_allStickers = {};
+
+					var allStickers = (!!forceDetect) ? aaapi.cmdEx("detectAllStickers") : aaapi.cmd("getAllStickers");
+					for( var i = 0; i < allStickers.length; i++ )
+					{
+						g_allStickers[allStickers[i]] = {
+							"file": "stickers/" + allStickers[i] + ".png"
+						};
+					}
+					localStorage.setItem("allStickers", JSON.stringify(g_allStickers));
+				}
+
+				g_cachedAchievementStickers = localStorage.getItem("achievementStickers");
+				if( !!g_cachedAchievementStickers )
+					g_cachedAchievementStickers = JSON.parse(g_cachedAchievementStickers);
+				else
+					g_cachedAchievementStickers = {};
+
+				for( var x in g_cachedAchievementStickers )
+					g_allStickers[x] = g_cachedAchievementStickers[x];
+			}
+		</script>
+		<style>
+			.dynamicImage
+			{
+				/*width: 512px;
+				height: 512px;*/
+				position: fixed;
+				top: 0;
+				left: 0;
+				z-index: 1;
+			}
+
+			#stickersContainer
+			{
+				z-index: 3;
+				position: fixed;
+				top: 0;
+				left: 0;
+			}
+
+			.stickersContainer
+			{
+				position: absolute;
+			}
+
+			.sticker
+			{
+				position: relative;
+				display: inline-block;
+				/*padding: 8px;*/
+				/*max-height: 512px;
+				max-width: 512px;*/
+    			-webkit-transform-origin: 50% 50%;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="stickersContainer"></div>
+
+		<script>
+			var g_thumbSize = 512;
+			var g_stickersContainer = document.querySelector("#stickersContainer");
+			/*
+			var stickerFileNames = {
+				"tester": "stickers/tester.png"
+			};
+			*/
+
+		// TODO: Make it so that MULTIPLE YouTubeIds are used when trying to find thumbnails, until one is found that actually works. (obsolete??)
+
+			// FLOWCHART
+			//	1: We (this page) are loaded when AArcade starts.
+			//	2: The imageLoader object is created w/ default sessionId "loading".
+			//	3: aaapi.cmd("simpleImageReady") is called w/ dummy params to signal that we are ready.
+			//	4: AArcade calls loadImage when it has an item it wants a particular image loaded for.
+			//	5: If the sessionId of a loadImage call doesn't match our sessionId, reset first.
+			//	6: Always try cached versions of URLs first.
+			//	7: Do try to auto-generate thumbnail URLs for YouTube videos.
+			//	8: If an image fails to load, try alternative image slots (marquee, screen, etc.)
+			//	9: Respond w/ complete failure if no image can be loaded for the item.
+
+			// IMAGE REQUESTS
+			//	1: imageElem is invisible while it gets resolved.
+			//	2: when an image is ready, it unhides itself and notifies AArcade to render it.
+			//	3: if we're already waiting for a previous image to be rendered, we wait our turn.
+
+			function ImageLoader()
+			{
+				this.sessionId = "loading";				
+				this.waitingToRender = false;
+				this.imageRequests = [];
+			}
+
+			ImageLoader.prototype.renderNextImage = function()
+			{
+				var i;
+				// don't do anything if another image is already waiting to render
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )
+					{
+						//console.log("Waiting for image to render, so skipping...");
+						return;
+					}
+				}
+//console.log(this.imageRequests.length);
+				var imageRequest;
+				// find the 1st image that is ready (there will be at least one)
+				//var stickerCount;
+				var realWidth, realHeight, realRatio, widthScale, heightScale;
+				var oldTransform, sticker, stickerFileName, stickerElem, stickerContainerElem;
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].ready )
+					{
+						imageRequest = this.imageRequests[i];
+						//console.log("Render request " + imageRequest.goodSrc);
+
+						var goodPixelElem = imageRequest.imageElem;//(!!imageRequest.tgaElem) ? imageRequest.tgaElem : imageRequest.imageElem;
+
+						goodPixelElem.style.display = "block";
+
+						realWidth = goodPixelElem.offsetWidth;
+						realHeight = goodPixelElem.offsetHeight;
+
+						widthScale = 1.0;
+						heightScale = 1.0;
+						if( realWidth >= realHeight )
+						{
+							goodPixelElem.style.width = g_thumbSize + "px";
+							heightScale = g_thumbSize / (goodPixelElem.offsetHeight * 1.0);
+						}
+						else
+						{
+							goodPixelElem.style.height = g_thumbSize + "px";
+							widthScale = g_thumbSize / (goodPixelElem.offsetWidth * 1.0);
+						}
+
+						goodPixelElem.style.width = g_thumbSize + "px";
+						goodPixelElem.style.height = g_thumbSize + "px";
+
+						oldTransform = localStorage.getItem("trans" + imageRequest.itemId);
+
+						if( !!!oldTransform )
+							oldTransform = {};
+						else
+							oldTransform = JSON.parse(oldTransform);
+
+						g_stickersContainer.innerHTML = "";
+
+						// reset the text msg canvas too
+						// todo: work
+
+						//stickerCount = 0;
+						var shouldDoStickers = (imageRequest.channel === "marquee" || (!!imageRequest.item && imageRequest.item.marquee == ""));
+						if( shouldDoStickers && goodPixelElem.src.indexOf("asset://cache/") === 0 && !!oldTransform.stickers && oldTransform.stickers.length > 0 )
+						{
+
+							// reset the aspect ratio shit, cuz this is probably not the right place for it.
+							//widthScale = 1.0;
+							//heightScale = 1.0;
+
+							for( var j = 0; j < oldTransform.stickers.length; j++ )
+							{
+								sticker = oldTransform.stickers[j];
+								
+								if( !!!g_allStickers[sticker.name] )
+									continue;
+
+								stickerFileName = g_allStickers[sticker.name].file;
+								if( !!!stickerFileName )
+									continue;
+
+								// only use stickers that were able to pre-load
+								if( !!!imageRequest.preloadedStickers[sticker.name] )
+									continue;
+
+								//stickerCount++;
+								stickerContainerElem = document.createElement("div");
+								stickerContainerElem.className = "stickersContainer";
+
+								stickerElem = document.createElement("img");
+								stickerElem.className = "sticker";
+
+								stickerElem.style.width = (256 * sticker.width * widthScale) + "px";
+								stickerElem.style.height = (256 * sticker.height * heightScale) + "px";
+								stickerElem.style.webkitTransform = "rotate(" + sticker.rot + "deg)";
+								stickerElem.style.left = sticker.left * g_thumbSize + "px";
+								stickerElem.style.top = sticker.top * g_thumbSize + "px";
+
+								//stickerElem.style.maxWidth = g_thumbSize + "px";
+								//stickerElem.style.maxHeight = g_thumbSize + "px";
+								stickerElem.src = stickerFileName;
+								stickerContainerElem.appendChild(stickerElem);
+								g_stickersContainer.appendChild(stickerContainerElem);
+							}
+						}
+
+						imageRequest.rendering = true;
+						break;
+					}
+				}
+
+				if( !!imageRequest )
+				{
+					if( imageRequest.imageElem.goodSrc.indexOf("http://text.txt/?") === 0 )
+					{
+						var text = arcadeHud.getParameterByName("txt", imageRequest.imageElem.goodSrc);
+						var color = arcadeHud.getParameterByName("c", imageRequest.imageElem.goodSrc);
+						var border = arcadeHud.getParameterByName("b", imageRequest.imageElem.goodSrc);
+						if( border != null )
+							border = parseInt(border);
+						var bordercolor = arcadeHud.getParameterByName("bc", imageRequest.imageElem.goodSrc);
+						var borderradius = arcadeHud.getParameterByName("br", imageRequest.imageElem.goodSrc);
+						if( borderradius != null )
+							borderradius = parseInt(borderradius);
+						var foreground = arcadeHud.getParameterByName("fg", imageRequest.imageElem.goodSrc);
+						var background = arcadeHud.getParameterByName("bg", imageRequest.imageElem.goodSrc);
+						var landscape = arcadeHud.getParameterByName("l", imageRequest.imageElem.goodSrc);
+						if( landscape != null )
+							landscape = parseInt(landscape);
+						var padding = arcadeHud.getParameterByName("p", imageRequest.imageElem.goodSrc);
+						if( padding != null )
+							padding = parseInt(padding);
+						var size = arcadeHud.getParameterByName("s", imageRequest.imageElem.goodSrc);
+						if( size != null )
+							size = parseInt(size);
+
+						var options = {
+							"text": text,
+							"bordersize": border,
+							"color": color,
+							"bordercolor": bordercolor,
+							"borderradius": borderradius,
+							"fgcolor": foreground,
+							"bgcolor": background,
+							"padding": padding,
+							"textsize": size,
+							"landscape": landscape
+						};
+						msgContainer.style.display = "block";
+						setMsgText(options);
+					}
+					else
+						msgContainer.style.display = "none";
+
+					//goodPixelElem.offsetHeight;	// not enough!!
+					setTimeout(function()
+					{
+						var goodPixelElem = this.imageElem;// (!!this.tgaElem) ? this.tgaElem : this.imageElem;
+
+						aaapi.cmd("simpleImageReady", this.sessionId, this.channel, this.itemId, this.field, this.goodSrc, (goodPixelElem.src.indexOf("asset://cache/") === 0 || (goodPixelElem.hasOwnProperty('isFromCache') && goodPixelElem.isFromCache === true)));
+					}.bind(imageRequest), 100);	// delay because the image doesn't appear instantly when it is done loading
+				}
+			};
+
+			ImageLoader.prototype.onImageRender = function()
+			{
+				var i;
+				var imageRequest;
+				// find the request that just got rendered
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )
+					{
+						imageRequest = this.imageRequests[i];
+						//imageRequest.removing = true;
+						break;
+					}
+				}
+
+				if( !!!imageRequest )
+				{
+					console.log("ERROR: Could not find the most recent image request!");
+					return;
+				}
+
+				//console.log("Loaded image " + imageRequest.goodSrc (this.imageElem.src.indexOf("asset://cache/") === 0)
+
+				var oldTransform = localStorage.getItem("trans" + imageRequest.itemId);
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				var goodPixelElem = imageRequest.imageElem;//(!!imageRequest.tgaElem) ? imageRequest.tgaElem : imageRequest.imageElem;
+
+				var needsRerender = ( imageRequest.channel == 'marquee' && !!oldTransform && !!oldTransform.stickers && oldTransform.stickers.length > 0 && goodPixelElem.src.indexOf("asset://cache/") !== 0 );
+//console.log(goodPixelElem.src);
+				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+				if( imageRequest.imageElem !== goodPixelElem )
+					goodPixelElem.parentNode.removeChild(goodPixelElem);
+
+				var index = this.imageRequests.indexOf(imageRequest);
+				if( index >= 0 )
+					this.imageRequests.splice(index, 1);
+
+//console.log(!!imageRequest.tgaElem + ": " + needsRerender);
+				if( needsRerender )
+					this.loadImage(imageRequest.sessionId, imageRequest.channel, imageRequest.itemId, imageRequest.hashedItemId, imageRequest.itemTypeTitle);
+
+				if( this.imageRequests.length > 0 )
+					this.renderNextImage();
+			};
+/*
+			ImageLoader.prototype.isImageExtension = function(value)
+			{
+				if( value.indexOf("cdn.steamcommunity") > -1 )
+					return true;
+
+				var extensions = "::tbn::jpg::jpeg::tiff::gif::bmp::png::webp::";
+				var ext = value;
+				var found = ext.lastIndexOf(".");
+				if( found >= 0 )
+				{
+					ext = ext.substring(found+1);
+					ext = ext.toLowerCase();
+
+					if( extensions.indexOf("::" + ext + "::") >= 0 )
+						return true;
+				}
+
+				return false;
+			};
+*/
+			ImageLoader.prototype.resetSession = function(sessionId)
+			{
+				console.log("Image loading session reset.");
+				var max = this.imageRequests.length;
+				var i;
+				for( i = 0; i < max; i++ )
+					this.imageRequests[i].invalid = true;
+
+				//this.waitingToRender = false;
+				this.imageRequests = [];
+
+				var imgElems = document.body.querySelectorAll(".dynamicImage");//("img");
+				max = imgElems.length;
+				for( i = 0; i < max; i++ )
+					imgElems[i].parentNode.removeChild(imgElems[i]);
+
+				this.sessionId = sessionId;
+			};
+
+			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId, hashedItemId, itemTypeTitle)//, regularImage)//
+			{
+				// check if we should reset our session
+				if( sessionId !== this.sessionId )
+					this.resetSession(sessionId);
+
+				// make sure this entry isn't already on the queue
+				for( var i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].itemId == itemId && this.imageRequests[i].channel == channel )
+					{
+						console.log("Image already exists on loading queue - skipping.");
+						return;
+					}
+				}
+
+				// build our request
+				var imageRequest = {
+					"sessionId": sessionId,
+					"channel": channel,	// the preferred image channel
+					"itemId": itemId,
+					"hashedItemId": hashedItemId,	// for legacy workshop support
+					"itemTypeTitle": itemTypeTitle,	// for legacy workshop support
+					"fields":	// Unknown, Bad
+					{
+						"marquee_auto_cache": "Unknown",
+						"marquee_auto": "Unknown",
+						"marquee_cache": "Unknown",
+						"marquee": "Unknown",
+						"marquee_legacy": "Unknown",
+						"marquee_legacy_cache": "Unknown",
+						"screen_auto_cache": "Unknown",
+						"screen_auto": "Unknown",
+						"screen_cache": "Unknown",
+						"screen": "Unknown",
+						"screen_legacy": "Unknown",
+						"screen_legacy_cache": "Unknown",
+						"preview_auto_cache": "Unknown",
+						"preview_auto": "Unknown",
+						"preview_cache": "Unknown",
+						"preview": "Unknown",
+						"file_auto_cache": "Unknown",
+						"file_auto": "Unknown",
+						"file_cache": "Unknown",
+						"file": "Unknown"
+					},
+					"screenshots": [],
+					"preloadedStickers": {},
+					"preloadingStickers": {},
+					"field": "",
+					"goodSrc": "",
+					"item": undefined,
+					"imageElem": undefined,
+					//"tgaElem": undefined,	// only used for TGA files
+					"rendering": false	// true = waiting for AArcade to capture the 12x512 imageElem
+				};
+//console.log(JSON.stringify(imageRequest));
+				// if we aren't working with an actual item, mark all fields as Bad
+				//if( !!regularImage )
+				if( channel === "avatar" )
+				{
+					for( var x in imageRequest.fields )
+						imageRequest.fields[x] = "Bad";
+				}
+
+				this.imageRequests.push(imageRequest);
+				//imageLoaderStatus.log.push({sessionId: sessionId, channel: channel, itemId: itemId});
+				//localStorage.setItem('imageLoaderStatus', JSON.stringify(imageLoaderStatus));
+
+				var nextField;
+				//if( !!!regularImage )
+				if( channel !== "avatar" )
+				{
+					var item = aaapi.cmdEx("getLibraryItem", itemId);
+					if( !item )
+					{
+						//console.log("Could not find item w/ ID " + itemId);
+						this.onCompleteFailure(imageRequest);
+						return;
+					}
+					else
+					{
+						//wconsole.log("Rendering " + imageRequest.channel + " for " + item.title);
+						imageRequest.item = item;
+					}
+
+					nextField = this.getNextField(imageRequest);
+					if( !!!nextField )
+					{
+						this.onCompleteFailure(imageRequest);
+						return;
+					}
+				}
+//console.log("Start with trying field " + nextField);
+				//imageRequest.field = nextField;
+
+				if( !!imageRequest.imageElem )
+				{
+					var goodPixelElem = imageRequest.imageElem;//(!!imageRequest.tgaElem) ? imageRequest.tgaElem : imageRequest.imageElem;
+
+					imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+
+					if( imageRequest.imageElem !== goodPixelElem )
+						goodPixelElem.parentNode.removeChild(goodPixelElem);
+				}
+
+				imageRequest.imageElem = document.createElement("img");
+				imageRequest.imageElem.className = "dynamicImage";
+				imageRequest.imageElem.style.display = "none";
+
+				document.body.appendChild(imageRequest.imageElem);
+				imageRequest.imageElem.addEventListener("load", this.onImageLoad.bind(imageRequest), false);
+				imageRequest.imageElem.addEventListener("error", this.onImageError.bind(imageRequest), false);
+
+				/*imageRequest.imageElem.timeout = setTimeout(function()
+				{
+					console.log("Image load timed out.");
+					this.imageElem.src = '';	// cancel image load
+					imageLoader.onImageError.call(this);
+				}.bind(imageRequest), 1000);*/
+
+				//if( !!regularImage )
+				if( channel === "avatar" )
+				{
+					console.log("Loading avatar image...");
+					var user = aaapi.cmdEx("getUser", itemId);
+					var userAvatarUrl = (!!user && !!user.avatarUrl && user.avatarUrl !== "") ? user.avatarUrl : "http://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/c9/c9ef4b52bc9044683951d93c48277617b665703e_full.jpg";
+					imageRequest.imageElem.goodSrc = userAvatarUrl;
+				}
+				else
+				{
+					if( nextField === "file" )
+					{
+							//console.log("wubauballaafa");
+						//var type = aaapi.cmdEx('getLibraryType', item.type);
+						//if( !!type && type.title.toLowerCase() == 'node' )
+						if( imageRequest.itemTypeTitle.toLowerCase() == 'node' )
+						{
+							// legacy node screenshot...
+							var legacyNodeShotUrl = "library\\node\\screens\\";
+							legacyNodeShotUrl += aapi.cmdEx('generateHashId', item.file);
+							legacyNodeShotUrl += ".tbn";
+							imageRequest.imageElem.goodSrc = legacyNodeShotUrl;
+							console.log(legacyNodeShotUrl);
+						}
+						else
+							imageRequest.imageElem.goodSrc = this.getFieldValue(imageRequest, nextField);
+					}
+					else
+						imageRequest.imageElem.goodSrc = this.getFieldValue(imageRequest, nextField);
+				}
+//console.log(nextField + ": " + this.getFieldValue(imageRequest, "screen"));
+//console.log(nextField + ": " + imageRequest.imageElem.goodSrc);
+				if( imageRequest.imageElem.goodSrc.indexOf("http://text.txt/?") === 0 )
+				{
+					imageLoader.onImageLoad.call(imageRequest);
+				}
+				// check for screenshots
+				else if( imageRequest.imageElem.goodSrc.toLowerCase().indexOf("travel.html?") > 0 && !!arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc) && arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc) !== "")
+				{
+					var screenshotId = arcadeHud.getParameterByName("screenshot", imageRequest.imageElem.goodSrc);
+
+					var ourScreenshot = (!!screenshotId && screenshotId != "") ? aaapi.cmdEx('getScreenshot', screenshotId) : null;
+					if( !!ourScreenshot && !!!ourScreenshot.screenshot )
+						ourScreenshot = null;
+					else if( !!ourScreenshot )
+						ourScreenshot = ourScreenshot.screenshot;
+
+					if(  !!!ourScreenshot )
+					{
+						var mapFileName = arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc);
+						var map = aaapi.cmdEx("findMap", mapFileName + ".bsp");
+						if( !!map && !!map.map )
+						{
+							map = map.map;
+							ourScreenshot = arcadeHud.getBestMapScreenshot(map.info.id);
+						}
+					}
+
+					if( !!ourScreenshot )
+					{
+						screenshotId = ourScreenshot.id;
+
+						if( ourScreenshot.hasBigFile != 0 )
+						{
+							imageRequest.imageElem.isFromCache = true;
+							imageRequest.imageElem.src = "asset://ui/screenshots/" + screenshotId.toLowerCase() + ".jpg";
+						}
+						else
+						{
+							//console.log('small screen');
+							imageRequest.tgaTimeout = setTimeout(function()
+							{
+								imageLoader.onImageError.call(this);
+							}.bind(imageRequest), 1000);
+
+							tga.open( "screenshots/" + screenshotId.toLowerCase() + ".tga", function()
+							{
+								clearTimeout(this.tgaTimeout);
+								delete this.tgaTimeout;
+								this.imageElem.isFromCache = true;
+								this.imageElem.src = tga.getCanvas().toDataURL('image/jpeg', 0.9);
+							}.bind(imageRequest));
+						}
+					}
+					else
+					{
+						imageRequest.imageElem.isFromCache = true;
+						imageRequest.imageElem.src = "asset://ui/map.jpg";
+					}
+					//else
+					//	imageLoader.onImageError.call(imageRequest);
+				}
+				else if(imageRequest.imageElem.goodSrc.toLowerCase().indexOf(".tga") == imageRequest.imageElem.goodSrc.length-4) // check for actual TGAs
+				{
+					//console.log("Yarddar2: " + imageRequest.imageElem.goodSrc);
+					// 1 second to load local TGAs before aborting.
+					imageRequest.tgaTimeout = setTimeout(function()
+					{
+						//console.log("Aborted this one.");
+						imageLoader.onImageError.call(this);
+					}.bind(imageRequest), 1000);
+
+					tga.open( imageRequest.imageElem.goodSrc, function(){
+						clearTimeout(this.tgaTimeout);
+						delete this.tgaTimeout;
+						//console.log("TGA opened!");
+						var elem = tga.getCanvas();
+						this.imageElem.isFromCache = true;
+						this.imageElem.src = elem.toDataURL('image/jpeg', 1);
+					}.bind(imageRequest));
+				}
+				else
+					imageRequest.imageElem.src = imageRequest.imageElem.goodSrc;
+			};
+
+			ImageLoader.prototype.getNextField = function(imageRequest)
+			{
+				// use channel-specific field priority to increase variety
+				var fieldPriority;
+				//var useStickers = (imageRequest.channel === "marquee" || imageRequest.item.screen == imageRequest.item.marquee || imageRequest.item.marquee == "");
+				if( imageRequest.channel === "marquee" )
+				{
+					if(prioritizeLegacyWorkshopImages == "0")
+						fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto", "file_cache", "file", "file_auto_cache", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "marquee_legacy_cache", "marquee_legacy", "screen_legacy_cache", "screen_legacy"];
+					else if(prioritizeLegacyWorkshopImages == "1")
+						fieldPriority = ["marquee_legacy_cache", "marquee_legacy", "screen_legacy_cache", "screen_legacy", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto", "file_cache", "file", "file_auto_cache", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen"];
+					else if(prioritizeLegacyWorkshopImages == "-1")
+						fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto", "file_cache", "file", "file_auto_cache", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen"];
+				}
+				else if( imageRequest.channel === "screen" )
+				{
+					if(prioritizeLegacyWorkshopImages == "0")
+						fieldPriority = ["screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_legacy_cache", "screen_legacy", "marquee_legacy_cache", "marquee_legacy"];
+					else if(prioritizeLegacyWorkshopImages == "1")
+						fieldPriority = ["screen_legacy_cache", "screen_legacy", "marquee_legacy_cache", "marquee_legacy", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee"];
+					else if(prioritizeLegacyWorkshopImages == "-1")
+						fieldPriority = ["screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee"];
+				}
+				else	// should never happen
+				{
+					if(prioritizeLegacyWorkshopImages == "0")
+						fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache", "marquee_legacy_cache", "marquee_legacy", "screen_legacy_cache", "screen_legacy"];
+					else if(prioritizeLegacyWorkshopImages == "1")
+						fieldPriority = ["marquee_legacy_cache", "marquee_legacy", "screen_legacy_cache", "screen_legacy", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache"];
+					else if(prioritizeLegacyWorkshopImages == "-1")
+						fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto", "file_cache", "file", "file_auto_cache"];
+				}
+
+				var fieldName, fieldValue;
+				for( var i = 0; i < fieldPriority.length; i++ )
+				{
+					fieldName = fieldPriority[i];
+					fieldValue = this.getFieldValue(imageRequest, fieldName);
+
+					if( !!fieldValue )
+						return fieldName;
+					else
+						imageRequest.fields[fieldName] = "Bad";
+				}
+
+				// else return undefined
+			};
+
+			ImageLoader.prototype.getFieldValue = function(imageRequest, fieldName)
+			{
+				//console.log(JSON.stringify(Object.keys(imageRequest.fields)));
+				fieldStatus = imageRequest.fields[fieldName];
+				//console.log(fieldName + ' - ' + fieldStatus);
+				if( fieldStatus === "Unknown" )
+				{
+					underscorePos = fieldName.indexOf("_");
+					baseFieldName = (underscorePos >= 0) ? fieldName.substring(0, underscorePos) : fieldName;
+					//console.log("mark 1 - " + fieldName);
+					baseFieldValue = (!!imageRequest.item) ? imageRequest.item[baseFieldName] : imageRequest.imageElem.goodSrc;
+					fieldVariation = (underscorePos >= 0) ? fieldName.substring(underscorePos+1) : "";
+//console.log(fieldVariation);
+					if( !!baseFieldValue )
+					{
+						//baseFieldValue.log(fieldName);
+						// generate the variation we want of this field
+						if( fieldName == "file_auto_cache" )//&& fieldVariation === "auto_cache" )
+						{
+							// try to extract a YouTube ID
+							extractedId = arcadeHud.extractYouTubeId(baseFieldValue);
+							if( !!extractedId )
+							{
+								// generate the YouTube thumbnail image URL
+								var fieldValue = arcadeHud.generateYouTubeImageURL(extractedId);
+
+								// generate the CRC to the cached version of this web image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+							else// if( !arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								// generate the CRC to the cached version of this web image
+								var fieldValue = arcadeHud.generateCRC(baseFieldValue);
+
+								fieldValue = "cache/snapshots/" + fieldValue + ".tga";
+								//console.log("Cache thing: " + fieldValue);
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "auto" )
+						{
+							//console.log("Base: " + baseFieldValue);
+							// try to extract a YouTube ID
+							extractedId = arcadeHud.extractYouTubeId(baseFieldValue);
+							if( !!extractedId )
+							{
+								// generate the YouTube thumbnail image URL
+								var fieldValue = arcadeHud.generateYouTubeImageURL(extractedId);
+
+								//console.log("B: " + fieldValue);
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "cache" )
+						{
+							// confirm this baseFieldValue probably is an image
+							if( arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								var fieldValue = baseFieldValue;
+
+								//extractedId = arcadeHud.extractYouTubeId(fieldValue);
+								//if( !!extractedId )
+								//	fieldValue = arcadeHud.generateYouTubeImageURL(extractedId);
+
+								if( fieldValue.indexOf(":") === 1 )
+									fieldValue = "asset://local/" + fieldValue;
+								
+								// generate the CRC to the cached version of this image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "legacy_cache" )
+						{
+							if( imageRequest.itemTypeTitle !== "" )
+							{
+								var legacyTypeFolder = (baseFieldName == "marquee") ? "marquees" : "screens";
+								var fieldValue = "asset://local/library/" + imageRequest.itemTypeTitle + "/" + legacyTypeFolder + "/" + imageRequest.hashedItemId + ".tbn";
+								
+								// generate the CRC to the cached version of this image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+								//console.log(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+						}
+						///*
+						else if( fieldVariation === "legacy" )
+						{
+							//itemId
+							//imageRequest.fields[fieldName]
+							// confirm this baseFieldValue probably is an image
+							if( imageRequest.itemTypeTitle !== "" )//arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								//fieldValue = "resource/imageRequest.fields.file;//baseFieldValue;
+
+								//if( fieldValue.indexOf(":") === 1 )
+								//fieldValue = "asset://local/" + fieldValue;
+								
+								// generate the CRC to the cached version of this image
+								//fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								//fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								//fieldValue = "library/" + imageRequest.itemTypeTitle + "/" + arcadeHud.generateCRC(imageRequest.itemId) + ".tbn";
+								var legacyTypeFolder = (baseFieldName == "marquee") ? "marquees" : "screens";
+								var fieldValue = "asset://local/library/" + imageRequest.itemTypeTitle + "/" + legacyTypeFolder + "/" + imageRequest.hashedItemId + ".tbn";//aaapi.cmdEx('generateHashId', imageRequest.itemId) + ".tbn";
+								return fieldValue;
+							}
+						}
+						//*/
+						else if( fieldVariation === "" )
+						{
+							//console.log(baseFieldValue);
+							// confirm this baseFieldValue probably is an image
+							if( baseFieldValue.indexOf('travel.html?') == 0 || arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								var fieldValue = baseFieldValue;
+								//console.log("Field value is: " + fieldValue);
+								//if( fieldValue.indexOf(":") === 1 )
+								if( fieldValue.toLowerCase().indexOf("http") !== 0 )
+									fieldValue = "asset://local/" + fieldValue;
+								return fieldValue;
+							}
+						}
+					}
+
+					imageRequest.fields[fieldName] = "Bad";
+				}
+			};
+
+			ImageLoader.prototype.onAllStickerImagesReady = function()
+			{
+				// THIS will be an imageRequest
+				var fieldName = imageLoader.getNextField(this);
+				if( !!fieldName )
+				{
+					var underscorePos = fieldName.indexOf("_");
+					var baseFieldName = (underscorePos >= 0) ? fieldName.substring(0, underscorePos) : fieldName;
+
+//this.fields[baseFieldName + "_auto_cache"] = "Unknown";
+//this.fields[baseFieldName + "_auto"] = "Unknown";
+//this.fields[baseFieldName + "_cache"] = "Unknown";
+					this.field = baseFieldName;
+//console.log(this.field + ": " + fieldName + " vs " + baseFieldName + "_auto_cache");
+				}
+
+				this.ready = true;
+				this.goodSrc = this.imageElem.src;
+
+				//localStorage.setItem('imageLoaderStatus', JSON.stringify(imageLoaderStatus));
+
+				//console.log("Image loaded: " + this.goodSrc);
+				imageLoader.renderNextImage();
+			}
+
+			ImageLoader.prototype.onStickerImageLoaded = function(e)
+			{
+				//console.log("sticker loaded.");
+
+				// THIS will be a sticker image w/ imageRequest & stickerName properties on it.
+				var imageRequest = this.imageRequest;
+				delete imageRequest.preloadingStickers[this.stickerName];
+				imageRequest.preloadedStickers[this.stickerName] = true;
+
+				if( Object.keys(imageRequest.preloadingStickers).length === 0 )
+					imageLoader.onAllStickerImagesReady.call(imageRequest);
+			};
+
+			ImageLoader.prototype.onStickerImageErrored = function(e)
+			{
+				//console.log("Failed to load sticker image.");
+				// THIS will be a sticker image w/ imageRequest & stickerName properties on it.
+				var imageRequest = this.imageRequest;
+				delete imageRequest.preloadingStickers[this.stickerName];
+
+				if( Object.keys(imageRequest.preloadingStickers).length === 0 )
+					imageLoader.onAllStickerImagesReady.call(imageRequest);
+			};
+
+			ImageLoader.prototype.onImageLoad = function(e)
+			{
+				/*if( !!this.imageElem.timeout )
+				{
+					clearTimeout(this.imageElem.timeout);
+					this.imageElem.timeout = null;
+				}*/
+
+				if( !!this.invalid )
+					return;
+
+				var goodPixelElem = this.imageElem;//(!!this.tgaElem) ? this.tgaElem : this.imageElem;
+//console.log(this.imageElem.goodSrc);
+				// check for abnormal load fails false &&
+				if( (goodPixelElem.src.indexOf("img.youtube.com/") >= 0 || goodPixelElem.src.indexOf("file:///") === 0) && goodPixelElem.width == 120 && goodPixelElem.height == 90 )
+				{
+					console.log("Abnormal failed image detected!");
+					imageLoader.onImageError.call(this);//().bind(this);
+				}
+				else
+				{
+					// check if this image has any stickers
+					var oldTransform = localStorage.getItem("trans" + this.itemId);
+
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					var shouldDoStickers = (this.channel === "marquee" || (!!this.item && this.item.marquee == ""));
+					if( shouldDoStickers && goodPixelElem.src.indexOf("asset://cache/") === 0 && !!oldTransform.stickers && oldTransform.stickers.length > 0 )
+					{
+						fetchAllStickers(!!!g_allStickers);
+
+						var sticker;
+						var stickerImage;
+						var stickerFileName;
+						for( var j = 0; j < oldTransform.stickers.length; j++ )
+						{
+							sticker = oldTransform.stickers[j];
+							if( !!!g_allStickers[sticker.name] )
+								continue;
+
+							stickerFileName = g_allStickers[sticker.name].file;
+							if( !!!stickerFileName )
+								continue;
+
+							if( !!!this.preloadedStickers[sticker.name] && !!!this.preloadingStickers[sticker.name] )
+							{
+								this.preloadingStickers[sticker.name] = true;
+
+								stickerImage = new Image();
+								stickerImage.stickerName = sticker.name;
+								stickerImage.imageRequest = this;
+								stickerImage.addEventListener("load", imageLoader.onStickerImageLoaded.bind(stickerImage));
+								stickerImage.addEventListener("error", imageLoader.onStickerImageErrored.bind(stickerImage));
+								stickerImage.src = stickerFileName;
+							}
+						}
+
+						if( !!!stickerImage )	// this will still be undefined if no valid stickers
+							imageLoader.onAllStickerImagesReady.call(this);
+					}
+					else
+						imageLoader.onAllStickerImagesReady.call(this);
+				}
+			};
+
+			ImageLoader.prototype.onCompleteFailure = function(imageRequest)
+			{
+				//localStorage.setItem('imageLoaderStatus', JSON.stringify(imageLoaderStatus));
+				console.log("Image complete fail.");
+
+				// empty field means failed to load image
+				setTimeout(function()
+				{
+					var index = imageLoader.imageRequests.indexOf(this);
+					if( index >= 0 )
+						imageLoader.imageRequests.splice(index, 1);
+
+					aaapi.cmd("simpleImageReady", this.sessionId, this.channel, this.itemId, "", "", false);
+				}.bind(imageRequest), 100);
+			};
+
+			/*var g_screenshots;
+			var screenshotKeys;
+
+			function getMapScreenshots(mapId)
+			{
+				g_screenshots = aaapi.cmdEx("getAllMapScreenshots", mapId);
+				screenshotKeys = Object.keys(g_screenshots);
+			}*/
+
+			function compareIds(testId, baseId)
+			{
+				var intTestId = Number(testId);
+				var intBaseId = Number(baseId);
+				
+				if( testId === baseId || (!isNaN(intTestId) && !isNaN(intBaseId) && intTestId === intBaseId) )
+					return true;
+				else
+					return false;
+			}
+
+			ImageLoader.prototype.onImageError = function(e)
+			{
+				/*if( !!this.imageElem.timeout )
+				{
+					clearTimeout(this.imageElem.timeout);
+					this.imageElem.timeout = null;
+				}*/
+
+				if( !!this.invalid )
+					return;
+
+				var imageRequest = this;
+
+				var nextField = imageLoader.getNextField(imageRequest);
+				imageRequest.fields[nextField] = "Bad";
+
+				nextField = imageLoader.getNextField(imageRequest);
+				if( !!!nextField )
+				{
+					imageLoader.onCompleteFailure(imageRequest);
+					return;
+				}
+
+				imageRequest.imageElem.goodSrc = imageLoader.getFieldValue(imageRequest, nextField);
+
+				if( imageRequest.imageElem.goodSrc.indexOf("http://text.txt/?") === 0 )
+				{
+					imageLoader.onImageLoad.call(imageRequest);
+				}
+				// check for screenshots
+				else if( imageRequest.imageElem.goodSrc.toLowerCase().indexOf("travel.html?") > 0 && !!arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc) && arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc) !== "")
+				{
+					var screenshotId = arcadeHud.getParameterByName("screenshot", imageRequest.imageElem.goodSrc);
+
+					var ourScreenshot = (!!screenshotId && screenshotId != "") ? aaapi.cmdEx('getScreenshot', screenshotId) : null;
+					if( !!ourScreenshot && !!!ourScreenshot.screenshot )
+						ourScreenshot = null;
+					else if( !!ourScreenshot )
+						ourScreenshot = ourScreenshot.screenshot;
+
+					if(  !!!ourScreenshot )
+					{
+						var mapFileName = arcadeHud.getParameterByName("mapfile", imageRequest.imageElem.goodSrc);
+						var map = aaapi.cmdEx("findMap", mapFileName + ".bsp");
+						if( !!map && !!map.map )
+						{
+							map = map.map;
+							ourScreenshot = arcadeHud.getBestMapScreenshot(map.info.id);
+						}
+					}
+
+					if( !!ourScreenshot )
+					{
+						screenshotId = ourScreenshot.id;
+
+						if( ourScreenshot.hasBigFile != 0 )
+						{
+							imageRequest.imageElem.isFromCache = true;
+							imageRequest.imageElem.src = "asset://ui/screenshots/" + screenshotId.toLowerCase() + ".jpg";
+						}
+						else
+						{
+							//console.log('small screen');
+							imageRequest.tgaTimeout = setTimeout(function()
+							{
+								imageLoader.onImageError.call(this);
+							}.bind(imageRequest), 1000);
+
+							tga.open( "screenshots/" + screenshotId.toLowerCase() + ".tga", function()
+							{
+								clearTimeout(this.tgaTimeout);
+								delete this.tgaTimeout;
+								this.imageElem.isFromCache = true;
+								this.imageElem.src = tga.getCanvas().toDataURL('image/jpeg', 0.9);
+							}.bind(imageRequest));
+						}
+					}
+					else
+						imageLoader.onImageError.call(imageRequest);
+				}
+				else if(imageRequest.imageElem.goodSrc.toLowerCase().indexOf(".tga") == imageRequest.imageElem.goodSrc.length-4) // check for actual TGAs
+				{
+					//console.log("Yarddar");
+					// 1 second to load local TGAs before aborting.
+					imageRequest.tgaTimeout = setTimeout(function()
+					{
+						imageLoader.onImageError.call(this);
+					}.bind(imageRequest), 1000);
+
+					tga.open( imageRequest.imageElem.goodSrc, function(){
+						clearTimeout(this.tgaTimeout);
+						delete this.tgaTimeout;
+						//console.log("TGA opened!");
+						var elem = tga.getCanvas();
+						this.imageElem.isFromCache = true;
+						this.imageElem.src = elem.toDataURL('image/jpeg', 1);
+					}.bind(imageRequest));
+				}
+				else
+					imageRequest.imageElem.src = imageRequest.imageElem.goodSrc;
+			};
+
+			var imageLoader = new ImageLoader();
+
+			// all empty args means initialize
+			aaapi.cmd("simpleImageReady", "ready", "", "", "", "", false);
+		</script>
+
+		<!-- TEXT MSG STUFF -->
+		<style>
+			.msgContainer
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+				z-index: 2;
+				background-size: 100% 100%;
+			}
+
+			.msgSlate
+			{
+				position: relative;
+				text-align: center;
+				top: 50%;
+				left: 50%;
+				display: block;
+				-webkit-transform: translateY(-50%);
+				transform: translateY(-50%);
+			}
+
+			.msgFrame
+			{
+				top: 0;
+				left: 0;
+				position: absolute;
+				margin: 0;
+				padding: 0;
+				display: inline-block;
+			}
+
+			.msgPreformat
+			{
+				margin: 0;
+				padding: 0;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline-block;
+				background-size: 100% 100%;
+			}
+		</style>
+		<div class="msgContainer">
+			<div class="msgSlate">
+				<div class="msgFrame">
+					<pre class="msgPreformat"></pre>
+				</div>
+			</div>
+		</div>
+		<script>
+		// style="background-image: url('https://i.gifer.com/J4o.gif'); background-size: 100% 100%;"
+			var msgContainer = document.querySelector(".msgContainer");
+			var msgSlate = msgContainer.querySelector(".msgSlate");
+			var msgFrame = msgSlate.querySelector(".msgFrame");
+			var msgPreformat = msgFrame.querySelector(".msgPreformat");
+			var msgWidth = 512;//document.body.offsetWidth;
+			var msgHeight = 512;//document.body.offsetHeight;
+			function setMsgText(options)
+			{
+				if( !!!options )
+					options = {};
+
+				var defaultOptions = {
+					"color": "white",
+					"shadowcolor": "black",
+					"fgcolor": "",
+					"bgcolor": "",
+					"borderstyle": "outset",
+					"bordersize": 0,
+					"borderradius": 6,
+					"bordercolor": "gray",
+					"padding": 5,
+					"textsize": 6,
+					"text": "",
+					"landscape": 1
+				};
+
+				for( var x in defaultOptions )
+				{
+					if( !options.hasOwnProperty(x) || options[x] == null )
+						options[x] = defaultOptions[x];
+				}
+
+
+				var targetWidth = (options.landscape != 0) ? 1280 : 720;
+				var targetHeight = (options.landscape != 0) ? 720 : 1280;
+
+				var backgroundImage = "";
+				if(options.bgcolor.indexOf(".") > 0)
+					backgroundImage = options.bgcolor;
+				else if( true && options.bgcolor == "" )
+					options.bgcolor = "black";	// for thumnail rendering
+
+				var foregroundImage = "";
+				if(options.fgcolor.indexOf(".") > 0)
+					foregroundImage = options.fgcolor;
+
+				var msgWidthRatio = msgWidth / msgHeight;
+				var msgHeightRatio = msgHeight / msgWidth;
+				var canvasWidthRatio = msgWidth / targetWidth;
+				var canvasHeightRatio = msgHeight / targetHeight;
+
+				if( msgHeight > 512 )
+				{
+					if( options.landscape == 0 )
+						canvasWidthRatio -= 0.68;
+					else
+						msgWidthRatio -= 0.45;
+				}
+
+				var zoomRatio = (options.landscape != 0) ? canvasHeightRatio * msgWidthRatio : 1.0 + canvasWidthRatio * msgWidthRatio;
+
+				var textSize = Math.ceil(40.0 * canvasHeightRatio) + Math.ceil(10.0 * canvasHeightRatio * options.textsize);
+
+				var lineScale = 1.0;
+				msgPreformat.style.lineHeight = (textSize * lineScale) + "px";
+
+				var shadowAmount = Math.ceil(2.0 * canvasHeightRatio);
+
+				var borderScaleFactor = 10.0 * canvasHeightRatio;
+
+				msgContainer.style.width = msgWidth + "px";
+				msgContainer.style.height = msgHeight + "px";
+
+				msgSlate.style.width = msgWidth + "px";
+				msgSlate.style.color = options.color;
+				
+				var xAmount =  (50 / zoomRatio);
+				msgFrame.style.transform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+				msgFrame.style.webkitTransform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+
+				if( foregroundImage == "")
+					msgPreformat.style.backgroundColor = options.fgcolor;
+				msgPreformat.style.backgroundImage = 'url("' + foregroundImage + '")';
+				
+				var paddingAmount = Math.ceil(10.0 * canvasHeightRatio * options.padding);
+				msgPreformat.style.padding = paddingAmount + "px";
+
+				var borderSize = Math.ceil(10.0 * canvasHeightRatio * options.bordersize);
+				if( options.bordersize == "0" )
+					borderSize = 0;
+				msgPreformat.style.border = borderSize + "px " + options.borderstyle + " " + options.bordercolor;
+				msgPreformat.style.borderRadius = Math.ceil(10 * canvasHeightRatio * options.borderradius) + "px";
+
+				if( backgroundImage == "")
+					msgContainer.style.backgroundColor = options.bgcolor;
+				msgContainer.style.backgroundImage = 'url("' + backgroundImage + '")';
+
+				msgContainer.style.fontSize = textSize + "px";
+
+				msgPreformat.textContent = "";
+				msgPreformat.textContent = options.text;
+
+				msgSlate.style.textShadow = shadowAmount + "px " + shadowAmount + "px #000";
+			}
+		</script>
+	</body>
+</html>

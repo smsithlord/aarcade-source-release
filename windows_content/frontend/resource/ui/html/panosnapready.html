@@ -1,0 +1,94 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			.screenId
+			{
+				display: inline;
+			}
+		</style>
+	</head>
+	<body>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var givenScreenshotId = arcadeHud.getParameterByName("id");
+			
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//if( !uiBack )
+			//	uiBack = "window.location='asset://ui/import.html';";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Interactive 360 Screenshot Ready", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				<div style="text-align: left; font-family: Arial;" class="aaTitleTextSizeFontSize aaTextColorTwoColor">
+					Saved to the following folder & files:<br />
+					<ul class="aaTextSizeFontSize">
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/*</li>
+						<!--
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/index.html</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/front.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/front.js</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/back.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/back.js</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/left.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/left.js</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/right.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/right.js</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/bottom.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/bottom.js</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/top.jpg</li>
+						<li>aarcade_user/screenshots/<div class="screenId"></div>/top.js</li>-->
+						<li style="opacity: 0.6;">aarcade_user/screenshots/<div class="screenId"></div>.html</li>
+						<li style="opacity: 0.6;">aarcade_user/screenshots/<div class="screenId"></div>.jpg</li>
+						<li style="opacity: 0.6;">aarcade_user/screenshots/<div class="screenId"></div>.js</li>
+						<li style="opacity: 0.6;">aarcade_user/screenshots/<div class="screenId"></div>.txt</li>
+						<li style="opacity: 0.6;">aarcade_user/screenshots/<div class="screenId"></div>.tga</li>
+					</ul>
+				</div>
+				<input id="linkbox" type="text" style="display: none; width: 100%;" class="aaTextSizeFontSize" />
+			</div>
+
+			<br />
+
+			<!-- Continue -->
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="OK" onclick="aaapi.cmd('deactivateInputMode');" help="360 screenshots ONLY work if they are hosted on a web server.  You'll have to manually upload those files somewhere to view the 360 screenshot.  Only the files inside of the subfolder are needed for the 360 screenshot to work." style="float: right; padding-left: 24px; padding-right: 24px;" />
+
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Open" onclick="aaapi.cmd('openScreenshot', givenScreenshotId);" help="Opens the HTML file of the initial screenshot in your web browser. (360 screenshots only work if hosted on a web server.)" style="float: right; padding-left: 24px; padding-right: 24px;" />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+
+			var elems = document.querySelectorAll(".screenId");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				elems[i].innerHTML = givenScreenshotId;
+			}
+
+			var urlValue = aaapi.cmdEx("getConVarValue", "interactive_directory_url");
+			if( !!urlValue && urlValue != "" )
+			{
+				var elem = document.querySelector("#linkbox");
+				elem.style.display = "block";
+				elem.value = urlValue + givenScreenshotId + "/";// + ".html";
+			}
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReloadx" style="position: fixed; top: 200; right: 10px;">&bull;&nbsp;</a>
+
+	</body>
+</html>

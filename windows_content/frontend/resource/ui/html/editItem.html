@@ -1,0 +1,2527 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?c=14"></link>
+		<script src="asset://ui/hud.js?b=7"></script>
+		<style>
+			.aaOnlyIfItemIsNotRemoteOnly
+			{
+				display: none;
+			}
+
+			.aaOnlyIfItemIsRemoteOnly
+			{
+				display: none;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+	    		border-radius: 3px;
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+		</style>
+		<!--<script src="asset://ui/stickers.js"></script>-->
+		<script>
+			var g_allStickers;
+
+			function requestGameAchievements(appId)
+			{
+				//console.log(appId);
+				aaapi.cmd("fetchGameAchievements", appId);
+			}
+
+			var g_cachedAchievementStickers;
+			function onGameSchemaFetched(achievements)
+			{
+				localStorage.setItem("schema" + g_steamAppId, JSON.stringify(achievements));
+
+				fetchAllStickers(true);
+
+				var achievement;
+				for( var i = 0; i < achievements.length; i++ )
+				{
+					achievement = achievements[i];
+					g_allStickers[achievement.name] = {
+						"file": achievement.icon,
+						"isAchievement": true,
+						"appId": g_steamAppId
+					};
+				}
+				localStorage.setItem("allStickers", JSON.stringify(g_allStickers));
+
+				g_stickerCanvasNeedsInit = false;
+				prepStickerCanvas();
+			}
+
+			function fetchAllStickers(forceDetect)
+			{
+				if( !!!forceDetect )
+					g_allStickers = localStorage.getItem("allStickers");
+
+				if( !!!forceDetect && !!g_allStickers )
+					g_allStickers = JSON.parse(g_allStickers);
+				else
+				{
+					g_allStickers = {};
+
+					var allStickers = (!!forceDetect) ? aaapi.cmdEx("detectAllStickers") : aaapi.cmd("getAllStickers");
+					for( var i = 0; i < allStickers.length; i++ )
+					{
+						g_allStickers[allStickers[i]] = {
+							"file": "stickers/" + allStickers[i] + ".png"
+						};
+					}
+					localStorage.setItem("allStickers", JSON.stringify(g_allStickers));
+				}
+
+				g_cachedAchievementStickers = localStorage.getItem("achievementStickers");
+				if( !!g_cachedAchievementStickers )
+					g_cachedAchievementStickers = JSON.parse(g_cachedAchievementStickers);
+				else
+					g_cachedAchievementStickers = {};
+
+				for( var x in g_cachedAchievementStickers )
+				{
+					//if( g_cachedAchievementStickers[x].appId === g_steamAppId )
+					g_allStickers[x] = g_cachedAchievementStickers[x];
+				}
+			}
+		</script>
+
+		<script>
+			var id = arcadeHud.getParameterByName("id");
+			var item = aaapi.cmdEx("getLibraryItem", id);
+			//var keys = Object.keys(item);
+
+			//console.log(JSON.stringify(Object.keys(item)));
+			var g_steamAppId = (!isNaN(parseInt(item.file))) ? item.file : "";
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//window.location='asset://ui/libraryBrowser.html?category=items';
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Item Properties", "width: 600px;", false, true, uiBack, "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+
+			var titleIconHTML = arcadeHud.generateIconHTML("titleicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var typeIconHTML = arcadeHud.generateIconHTML("typeicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var appIconHTML = arcadeHud.generateIconHTML("appicon.png", 18, 18, "aaTextColorTwoHighColor");	
+			var fileIconHTML = arcadeHud.generateIconHTML("fileicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var screenIconHTML = arcadeHud.generateIconHTML("screenicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var marqueeIconHTML = arcadeHud.generateIconHTML("marqueeicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var previewIconHTML = arcadeHud.generateIconHTML("previewicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var streamIconHTML = arcadeHud.generateIconHTML("streamicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var downloadIconHTML = arcadeHud.generateIconHTML("downloadicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var referenceIconHTML = arcadeHud.generateIconHTML("referenceicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var descriptionIconHTML = arcadeHud.generateIconHTML("descriptionicon.png", 18, 18, "aaTextColorTwoHighColor");
+			var tagsIconHTML = arcadeHud.generateIconHTML("tagsicon.png", 18, 18, "aaTextColorTwoHighColor");
+		</script>
+
+		<style>
+			.msgContainer
+			{
+				position: absolute;
+				/*top: 0;
+				left: 0;*/
+				width: 512px;
+				height: 512px;
+				z-index: 2;
+				background-size: 100% 100%;
+			}
+
+			.msgSlate
+			{
+				position: relative;
+				text-align: center;
+				top: 50%;
+				left: 50%;
+				display: block;
+				-webkit-transform: translateY(-50%);
+				transform: translateY(-50%);
+			}
+
+			.msgFrame
+			{
+				top: 0;
+				left: 0;
+				position: absolute;
+				margin: 0;
+				padding: 0;
+				display: inline-block;
+			}
+
+			.msgPreformat
+			{
+				margin: 0;
+				padding: 0;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline-block;
+				background-size: 100% 100%;
+			}
+		</style>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var isTextItem = (item.file.indexOf("http://text.txt/") == 0);
+			var activeTabName = (isTextItem) ? "text" : "general";
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "text",
+						"title": "Text",
+						"class": "onlyIfText"
+					},
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "visual",
+						"title": "Visual"
+					},
+					{
+						"id": "other",
+						"title": "Other"
+					},
+					{
+						"id": "stickers",
+						"title": "Stickers"
+					}
+				],
+				"activeTabId": activeTabName,
+				"onChangeCallbackName": "onChangeCallback"
+			});
+
+			var g_stickerCanvasNeedsInit = true;
+			function onChangeCallback(tabId)
+			{
+				if( tabId === "text" )
+				{
+					var text = arcadeHud.getParameterByName("txt", item.file);
+					var color = arcadeHud.getParameterByName("c", item.file);
+					var border = arcadeHud.getParameterByName("b", item.file);
+					if( border != null )
+						border = parseInt(border);
+					var radius = arcadeHud.getParameterByName("br", item.file);
+					if( radius != null )
+						radius = parseInt(radius);
+					var bordercolor = arcadeHud.getParameterByName("bc", item.file);
+					var foreground = arcadeHud.getParameterByName("fg", item.file);
+					var background = arcadeHud.getParameterByName("bg", item.file);
+					var landscape = arcadeHud.getParameterByName("l", item.file);
+					if( landscape != null )
+						landscape = parseInt(landscape);
+
+					var model = arcadeHud.getParameterByName("m", item.file);
+					if( model != null )
+						landscape = '2';
+
+					var padding = arcadeHud.getParameterByName("p", item.file);
+					if( padding != null )
+						padding = parseInt(padding);
+					var size = arcadeHud.getParameterByName("s", item.file);
+					if( size != null )
+						size = parseInt(size);
+
+					var options = {
+						"text": text,
+						"bordersize": border,
+						"borderradius": radius,
+						"color": color,
+						"bordercolor": bordercolor,
+						"fgcolor": foreground,
+						"bgcolor": background,
+						"padding": padding,
+						"textsize": size,
+						"landscape": landscape
+					};
+
+					var defaultOptions = {
+						"color": "white",
+						"shadowcolor": "black",
+						"fgcolor": "",
+						"bgcolor": "",
+						"borderstyle": "outset",
+						"bordersize": 0,
+						"borderradius": 6,
+						"bordercolor": "gray",
+						"padding": 5,
+						"textsize": 6,
+						"text": "",
+						"landscape": 1
+					};
+
+					for( var x in defaultOptions )
+					{
+						if( !options.hasOwnProperty(x) || options[x] == null )
+							options[x] = defaultOptions[x];
+					}
+
+					var elems = document.querySelector("#textColor").querySelectorAll(".color");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.remove("aaThemeColorOneBorderColor");
+
+					var goodSearchColor = (options.color === "") ? "transparent" : options.color;
+					var colorElem = document.querySelector("#textColor .color[colorname=" + goodSearchColor + "]");
+					if( !!colorElem )
+						colorElem.classList.add("aaThemeColorOneBorderColor");
+
+					//document.querySelector("#textColor").value = options.color;
+					document.querySelector("#textForeground").value = options.fgcolor;
+					elems = document.querySelector("#textForeground").querySelectorAll(".color");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.remove("aaThemeColorOneBorderColor");
+
+					if( options.fgcolor == "" )
+					{
+						colorElem = document.querySelector("#textForeground .color[isTransparent='1']");
+					}
+					else
+					{
+						colorElem = document.querySelector("#textForeground .color[colorname='" + options.fgcolor + "']");
+					}
+
+					if( !!colorElem )
+						colorElem.classList.add("aaThemeColorOneBorderColor");
+
+					document.querySelector("#textBackground").value = options.bgcolor;
+					elems = document.querySelector("#textBackground").querySelectorAll(".color");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.remove("aaThemeColorOneBorderColor");
+
+					if( options.bgcolor == "" )
+					{
+						colorElem = document.querySelector("#textBackground .color[isTransparent='1']");
+					}
+					else
+					{
+						colorElem = document.querySelector("#textBackground .color[colorname='" + options.bgcolor + "']");
+					}
+
+					if( !!colorElem )
+						colorElem.classList.add("aaThemeColorOneBorderColor");
+
+					document.querySelector("#textBorder").value = options.bordersize + "";
+					document.querySelector("#textBorderRadius").value = options.borderradius + "";
+					document.querySelector("#textPadding").value = options.padding + "";
+
+					document.querySelector("#textBorderColor").value = options.bordercolor;
+					elems = document.querySelector("#textBorderColor").querySelectorAll(".color");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].classList.remove("aaThemeColorOneBorderColor");
+
+					goodSearchColor = (options.bordercolor === "") ? "transparent" : options.bordercolor;
+					colorElem = document.querySelector("#textBorderColor .color[colorname=" + goodSearchColor + "]");
+					if( !!colorElem )
+						colorElem.classList.add("aaThemeColorOneBorderColor");
+
+					document.querySelector("#textSize").value = options.textsize + "";
+					document.querySelector("#textText").value = options.text;
+					document.querySelector("#textLandscape").value = options.landscape + "";
+
+					if( options.landscape == "1" )
+						document.querySelector('#landscape').checked = true;
+					else if( options.landscape == "2" )
+						document.querySelector('#text3d').checked = true;
+					else
+						document.querySelector('#portrait').checked = true;
+
+					updateTextPreview(options);
+				}
+				else if( tabId === "stickers" && g_stickerCanvasNeedsInit )
+				{
+					if( !!!g_allStickers )
+					{
+						if( g_steamAppId !== "" )
+						{
+							// Check for cached achievements
+							var cachedGameSchema = localStorage.getItem("schema" + g_steamAppId);
+
+							if( !!cachedGameSchema )
+							{
+								cachedGameSchema = JSON.parse(cachedGameSchema);
+								onGameSchemaFetched(cachedGameSchema);
+							}
+							else
+								requestGameAchievements(g_steamAppId);
+						}
+						else
+						{
+							fetchAllStickers(true);
+							g_stickerCanvasNeedsInit = false;
+							prepStickerCanvas();
+						}
+					}
+
+					//g_stickerCanvasNeedsInit = false;
+					//prepStickerCanvas();
+				}
+			}
+
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" style="overflow-x: hidden;" tabid="text">
+			<table>
+				<tr>
+					<td valign="top">
+						<table class="aaKeyValueTable" style="width: 512px;" cellspacing="0">
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+									Layout:
+								</td>
+								<td class="aaKeyValueTableValue">
+									<label class="aaTitleText aaTitleTextSize" style="font-family: Arial; font-weight: bold;" onclick="document.querySelector('#textLandscape').value='1'; updateTextPreview();"><input type="radio" id="landscape" name="layout" value="1" />Landscape</label>
+									<label class="aaTitleText aaTitleTextSize" style="font-family: Arial; font-weight: bold;" onclick="document.querySelector('#textLandscape').value='0'; updateTextPreview();"><input type="radio" id="portrait" name="layout" value="0" />Portrait</label>
+									<label class="aaTitleText aaTitleTextSize" style="font-family: Arial; font-weight: bold;" onclick="document.querySelector('#textLandscape').value='2'; updateTextPreview();"><input type="radio" id="text3d" name="layout" value="2" />3D Text</label>
+									<select id="textLandscape" style="width: 100%; font-weight: 900; visibility: hidden; position: absolute; pointer-events: none;" class="aaTextSizeFontSize">
+										<option value="2" selected>3d</option>
+										<option value="1" selected>landscape</option>
+										<option value="0">portrait</option>
+									</select>
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="Text color.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize" style="padding-bottom: 8px;">
+									Text:
+								</td>
+								<td class="aaKeyValueTableValue" style="padding-bottom: 8px;">
+									<div id="textColor" class="colorsContainer helpNote" help="color" onselectstart="return false;"></div>
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize" style="padding-bottom: 8px;">
+									Background:
+								</td>
+								<td class="aaKeyValueTableValue" style="padding-bottom: 8px;">
+									<div id="textBackground" class="colorsContainer helpNote" help="color" hasTransparent="1" hasImages="1" onselectstart="return false;"></div>
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize" style="padding-bottom: 8px;">
+									Foreground:
+								</td>
+								<td class="aaKeyValueTableValue" style="padding-bottom: 8px;">
+									<div id="textForeground" class="colorsContainer helpNote" help="color" hasTransparent="1" hasImages="1" onselectstart="return false;"></div>
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize" style="padding-bottom: 8px;">
+									Border:
+								</td>
+								<td class="aaKeyValueTableValue" style="padding-bottom: 8px;">
+									<div id="textBorderColor" class="colorsContainer helpNote" help="color" onselectstart="return false;"></div>
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+									Border Size:
+								</td>
+								<td class="aaKeyValueTableValue">
+									<input id="textBorder" type="range" min="0" max="10" step="1" style="width: 100%;" oninput="updateTextPreview();" />
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+									Border Radius:
+								</td>
+								<td class="aaKeyValueTableValue">
+									<input id="textBorderRadius" type="range" min="0" max="10" step="1" style="width: 100%;" oninput="updateTextPreview();" />
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+									Padding:
+								</td>
+								<td class="aaKeyValueTableValue">
+									<input id="textPadding" type="range" min="0" max="10" step="1" style="width: 100%;" oninput="updateTextPreview();" />
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+							<tr class="helpNote" help="The title of your shortcut.">
+								<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+									Size:
+								</td>
+								<td class="aaKeyValueTableValue">
+									<input id="textSize" type="range" min="1" max="100" step="1" style="width: 100%;" oninput="updateTextPreview();" />
+								</td>
+								<td style="width: 1%; white-space: nowrap;">
+								</td>
+							</tr>
+						</table>
+
+						<br />
+
+						<textarea id="textText" style="font-family: Arial; width: 512px; height: 100px;" class="aaTextSizeFontSize" oninput="updateTextPreview(); update3DText();"></textarea>
+						
+						<!--div class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 0; padding-top: 6px; padding-bottom: 6px; display: block; width: 512px;" onclick="updateTextPreview();">Update</div-->
+						<div class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 0; padding-top: 6px; padding-bottom: 6px; display: block; width: 512px;" onclick="saveText();">Save</div>
+					</td>
+					<td valign="top" class="aaThemeColorOneInverseShadedBorderColor aaThemeColorTwoBackgroundColor" style="border-style: solid; border-width: 2px;">
+						<div style="width: 512px; height: 512px; overflow: hidden;" class="aaThemeColorOneBorderColor" id="textCanvas">
+							<div class="msgContainer" style="overflow: hidden;">
+								<div class="msgSlate">
+									<div class="msgFrame">
+										<pre class="msgPreformat"></pre>
+									</div>
+								</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="The title of your shortcut.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(titleIconHTML);</script></div> Title:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr class="helpNote" help="The type of shortcut. This is useful when searching your library & makes open-with apps work better.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(typeIconHTML);</script></div> Type:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<select fieldname="type" class="aaTextSizeFontSize" style="width: 100%;">
+							<option value="">Other</option>
+						</select>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="editType();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("editicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="createNewType();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("plusicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+				<tr class="helpNote" help="Most files can be opened normally using Windows (default).<br /><br />You should only change this if you require advanced command-line launch options using an Open With app.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(appIconHTML);</script></div> Open With:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<select fieldname="app" class="aaTextSizeFontSize" style="width: 100%;">
+							<option value="">Windows (default)</option>
+						</select>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div id="editAppButton" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: none;" onclick="editApp();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("editicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+				<tr class="helpNote" help="This is what your shortcut will launch. It can be a local file, an internet URL, or a Steam AppID.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(fileIconHTML);</script></div> File Target:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<input fieldname="file" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('file');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('file');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+			</table>
+			<!--
+			<div class="aaOnlyIfNotHost">
+				<div class="aaOnlyIfItemIsNotRemoteOnly">
+					<br />
+					<input class="aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" help="You are in Multiplayer Mode. Changes to your library items are <b>NOT</b> saved unless you <u>manually</u> click this button on the items you want to save." type="button" value="Permanently Save Changes" onclick="aaapi.cmd('saveRemoteChanges', id);" />
+				</div>
+				<div class="aaOnlyIfItemIsRemoteOnly">
+					<br />
+					<input class="aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" help="This item only exists because of the Multiplayer server you are connected to.  If you want to save it into your permanent library, you have to manually click this button." type="button" value="Save Item To Your Library" onclick="aaapi.cmd('saveRemoteChanges', id);" />
+				</div>
+			</div>
+			-->
+			<div id="nodeText" class="aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial;">
+			<br />NOTE<br />The actual contents of a node can only be modified & saved from its space in a HUB map.</div>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="visual">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="This image gets displayed on the cabinet's screen. It is also used in various menus.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(screenIconHTML);</script></div> Screen Image:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr class="helpNote" help="This image gets displayed on the cabinet's marquee surface & often on the sides panels of the cabinet as well. It is also used in various menus.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(marqueeIconHTML);</script></div> Marquee Image:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="marquee" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('marquee');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('marquee');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr class="helpNote" help="This is the preferred URL to load onto the cabinet's screen when the shortcut is first selected. It's usually a short preview video, or a scene from a movie on YouTube, etc.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(previewIconHTML);</script></div> Preview Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="preview" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('preview');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="other">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="This is a URL to a video stream where this item can be watched online. Useful if the shortcut is to a local file that is *also* available for online streaming because it will make the item work better when shared. Usually a YouTube or Netflix URL.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(streamIconHTML);</script></div> Stream Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="stream" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('stream');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr class="helpNote" help="This is a URL to a website that this shortcut's content can be obtained from. Useful when you share this item with friends who don't have the game/file installed yet. Usually a link to an online store or a developer's website.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(downloadIconHTML);</script></div> Download Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="download" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('download');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr class="helpNote" help="This is a URL that has detailed information about this shortcut's content. Usually a URL to a database/wiki website such as TheMovieDb or the Steam Store, etc.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(referenceIconHTML);</script></div> Reference Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="reference" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('reference');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr class="helpNote" help="A brief description of this shortcut's content.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(descriptionIconHTML);</script></div> Description:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="description" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr><tr class="helpNote" help="Your tags will be useful when searching your library.<br /><br />Comma-separated tags, for example: space, zombies, shooter">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						<div style="display: inline-block; width: 20px; vertical-align: top;"><script>document.write(tagsIconHTML);</script></div> Tags:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="keywords" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+			</table>
+		</div>
+
+
+		<style>
+			.stickerGizmoParent
+			{
+				position: absolute;/*absolute*/
+				pointer-events: none;
+				overflow: hidden;
+			}
+
+			.stickerGizmoContainer
+			{
+				position: relative;
+				display: inline-block;
+				opacity: 0;
+			}
+
+			.editStickerContainer
+			{
+				/*opacity: 0;*/
+			}
+
+			.stickerGizmo:focus .stickerGizmoContainer
+			{
+				opacity: 1.0;
+			}
+
+			.stickerGizmo:focus
+			{
+				outline: 2px solid white;
+			}
+
+			.stickerGizmo
+			{
+				position: relative;
+				outline: none;
+				pointer-events: all;
+			}
+
+			.stickerGizmoGripContainer
+			{
+				position: absolute;
+				pointer-events: none;
+			}
+
+			.stickerGizmoGrip
+			{
+				pointer-events: all;
+				position: relative;
+				border-radius: 10px;
+				width: 20px;
+				height: 20px;
+				background-color: lime;
+			}
+
+			.stickerGizmoGripCentered
+			{
+				-webkit-transform: translateX(-50%) translateY(-50%);
+			}
+
+			.stickerGizmoGripSquare
+			{
+				border-radius: 0;
+				width: 10px;
+				height: 10px;
+				background-color: yellow;
+			}
+
+			.stickerGizmoGripCorner
+			{
+				opacity: 0;
+				border-radius: 0;
+				border: 1px solid yellow;
+				background-color: rgba(255, 255, 0, 0.6);
+				-webkit-transition: opacity 0.15s ease-in-out;
+			}
+
+			.stickerGizmoGripCorner:hover
+			{
+				opacity: 1.0;
+			}
+
+			.stickerGizmoImageContainer
+			{
+				pointer-events: none;
+				position: absolute;
+				width: 100%;
+				height: 100%;
+			}
+
+			.stickerGizmoImage
+			{
+				position: relative;
+				width: 100%;
+				height: 100%;
+			}
+
+			.stickerPreviewContainer
+			{
+				cursor: pointer;
+				position: relative;
+				display: inline-block;
+				border-width: 2px;
+				border-style: solid;
+				width: 64px;
+				height: 64px;
+			}
+
+			.stickerPreviewImageContainer
+			{
+				pointer-events: none;
+				position: absolute;
+				width: 64px;
+				height: 64px;
+			}
+
+			.emptyStickerSlot .stickerPreviewImageContainer
+			{
+				display: none;
+			}
+
+			.emptyStickerSlot .stickerPreviewTrashImage
+			{
+				display: none;
+			}
+
+			.stickerPreviewImage
+			{
+				position: relative;
+				width: 100%;
+				height: 100%;
+			}
+
+			.stickerPreviewLockContainer
+			{
+				display: none;
+				position: absolute;
+				width: 64px;
+				height: 64px;
+				text-align: right;
+				background-color: rgba(50, 50, 50, 0.5);
+			}
+
+			.stickerPreviewTrashContainer
+			{
+				display: none;
+				position: absolute;
+				width: 64px;
+				height: 64px;
+				text-align: right;
+				background-color: rgba(50, 50, 50, 0.5);
+			}
+
+			.stickerPreviewLockImage
+			{
+				pointer-events: none;
+				position: relative;
+				top: 32px;
+			}
+
+			.stickerPreviewTrashImage
+			{
+				pointer-events: all;
+				position: relative;
+				top: 32px;
+			}
+
+			.stickerLocked .stickerPreviewLockContainer
+			{
+				display: block;
+			}
+		</style>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" style="max-height: 600px;" tabid="stickers">
+			<div style="font-family: Arial; font-weight: bold;" class="aaTextColorTwoColor aaTitleTextSizeFontSize">Sticker Canvas:</div>
+			<div style="overflow: hidden; position: relative;" class="editStickerContainer">
+				<div style="position: absolute;">
+					<img src="" id="stickerCanvasImage" style="display: none; position: relative;" />
+				</div>
+			</div>
+
+			<input type="button" value="Save & Apply Stickers" onclick="applyStickers();" class="aaButton aaTextSizeFontSize" />
+			<br /><br />
+
+			<div class="stickerSlotsList"><div class="emptyStickerSlot stickerPreviewContainer aaThemeColorOneBorderColor aaThemeColorOneShadedBackground" style="position: relative;">
+				<div class="stickerPreviewImageContainer">
+					<img src="" class="stickerPreviewImage" />
+				</div>
+				<div class="stickerPreviewTrashContainer" style="display: block; background-color: transparent;">
+					<img src="trashicon.png" class="stickerPreviewTrashImage" />
+				</div>
+			</div><div class="emptyStickerSlot stickerPreviewContainer aaThemeColorOneBorderColor aaThemeColorOneShadedBackground" style="position: relative;">
+				<div class="stickerPreviewImageContainer">
+					<img src="" class="stickerPreviewImage" />
+				</div>
+				<div class="stickerPreviewTrashContainer" style="display: block; background-color: transparent;">
+					<img src="trashicon.png" class="stickerPreviewTrashImage" />
+				</div>
+			</div><div class="emptyStickerSlot stickerPreviewContainer aaThemeColorOneBorderColor aaThemeColorOneShadedBackground" style="position: relative;">
+				<div class="stickerPreviewImageContainer">
+					<img src="" class="stickerPreviewImage" />
+				</div>
+				<div class="stickerPreviewTrashContainer" style="display: block; background-color: transparent;">
+					<img src="trashicon.png" class="stickerPreviewTrashImage" />
+				</div>
+			</div><div class="emptyStickerSlot stickerPreviewContainer aaThemeColorOneBorderColor aaThemeColorOneShadedBackground" style="position: relative;">
+				<div class="stickerPreviewImageContainer">
+					<img src="" class="stickerPreviewImage" />
+				</div>
+				<div class="stickerPreviewTrashContainer" style="display: block; background-color: transparent;">
+					<img src="trashicon.png" class="stickerPreviewTrashImage" />
+				</div>
+			</div></div>
+
+			<br />
+
+			<div style="font-family: Arial; font-weight: bold;" class="aaTextColorTwoColor aaTitleTextSizeFontSize">Stickers:</div>
+			<div id="stickersList"></div>
+
+			<br />
+
+			<div class="aaTitleTextFontSize aaThemeColorOneColor aaTitleText">CUSTOM STICKERS</div>
+			<div class="aaTextFontSize aaTextColorTwoColor" style="font-family: Arial; font-weight: bold;">
+				Any PNGs in the following folder will be usable:<br />
+				<i>Anarchy Arcade/aarcade_user/resource/ui/html/stickers<br /><br />
+				<!-- <input type="button" value="Clear ALL Cached Achievement Stickers" onclick="gameSchemaClear();" /> -->
+			</div>
+
+			<br />
+
+			<div class="aaTitleTextFontSize aaThemeColorOneColor aaTitleText">ADVANCED</div>
+			<div class="aaTextFontSize aaTextColorTwoColor" style="font-family: Arial; font-weight: bold;">
+				<a href="javascript:gameSchemaClearCache();">Click here</a> to refresh this game's list of achievement images.<br /><br />
+			</div>
+		</div>
+
+		<script>
+			var g_stickerDrag;
+			var g_adjustedWidth;
+			var g_adjustedHeight;
+			var imageElem = document.querySelector("#stickerCanvasImage");
+			var stickersList = document.querySelector("#stickersList");
+			var editStickerContainer = document.querySelector(".editStickerContainer");
+
+			function gameSchemaClearCache()
+			{
+				localStorage.removeItem("schema" + g_steamAppId);
+				window.location.reload();
+			}
+
+			function gameSchemaClear()
+			{
+				localStorage.removeItem("achievementStickers");
+				window.location.reload();
+			}
+
+			function applyStickers()
+			{
+				var needsCachedAchievementStickersSave = false;
+				var sticker;
+				var stickers = [];
+				var gizmo, properties;
+				var gizmos = document.querySelectorAll(".stickerGizmo");
+				for( var i = 0; i < gizmos.length; i++ )
+				{
+					gizmo = gizmos[i];
+
+					var adjustedWidth = (parseFloat(gizmo.style.width) / g_adjustedWidth) * (g_thumbSize / g_stickerSize);
+					var adjustedHeight = (parseFloat(gizmo.style.height) / g_adjustedHeight) * (g_thumbSize / g_stickerSize);
+					var adjustedTop = (parseFloat(gizmo.style.top) / g_adjustedHeight);
+					var adjustedLeft = (parseFloat(gizmo.style.left) / g_adjustedWidth);
+
+					properties = {
+						"name": gizmo.stickerName,
+						"left": adjustedLeft,
+						"top": adjustedTop,
+						"width": adjustedWidth,
+						"height": adjustedHeight,
+						"rot": 0
+					};
+
+					sticker = g_allStickers[gizmo.stickerName];
+					if( !!sticker && !!sticker.isAchievement )
+					{	
+						g_cachedAchievementStickers[gizmo.stickerName] = {
+							"file": sticker.file,
+							"isAchievement": true,
+							"appId": g_steamAppId
+						};
+
+						needsCachedAchievementStickersSave = true;
+					}
+
+					stickers.push(properties);
+				}
+
+				if( needsCachedAchievementStickersSave )
+				{
+					localStorage.setItem("achievementStickers", JSON.stringify(g_cachedAchievementStickers));
+				}
+
+				var itemId = item.info.id;
+				var oldTransform = localStorage.getItem("trans" + itemId);
+				if( !!oldTransform )
+					oldTransform = JSON.parse(oldTransform);
+				else
+					oldTransform = {};
+
+				oldTransform.stickers = stickers;
+				localStorage.setItem("trans" + itemId, JSON.stringify(oldTransform));
+
+				aaapi.cmd("refreshItemTextures", itemId, "ALL");
+				//aaapi.cmd("deactivateInputMode");
+
+				return;
+				/*
+				var itemId = item.info.id;
+
+				var oldTransform = localStorage.getItem("trans" + itemId);
+
+				if( !!!oldTransform )
+				{
+					oldTransform = {
+						"stickers":	// FOR TESTING
+						[
+							{
+								"name": "pwned",
+								"width": 1.0,
+								"height": 2.0,
+								"rot": 0,
+								"left": 0.5,
+								"top": 0
+							}
+						]
+					};
+				}
+				else
+				{
+					oldTransform = JSON.parse(oldTransform);
+					oldTransform.stickers = [	// FOR TESTING
+						{
+							"name": "pwned",
+							"width": 1.0,
+							"height": 2.0,
+							"rot": 0,
+							"left": 0.5,
+							"top": 0
+						}
+					];
+				}
+				localStorage.setItem("trans" + itemId, JSON.stringify(oldTransform));
+
+				aaapi.cmd("refreshItemTextures", itemId, "marquee");
+				aaapi.cmd("deactivateInputMode");*/
+			}
+
+			function removeSticker(e)
+			{
+				var stickerPreviewImage = e.target;
+				var stickerSlot = stickerPreviewImage.parentNode.parentNode;
+
+				stickerSlot.classList.add("emptyStickerSlot");
+				stickerSlot.stickerName = "";
+
+				var parent = stickerSlot.parentNode;
+				parent.removeChild(stickerSlot);
+				parent.appendChild(stickerSlot);
+
+				stickerSlot.stickerGizmo.parentNode.removeChild(stickerSlot.stickerGizmo);
+			}
+
+			function addStickerGizmo(stickerName)
+			{
+				//var editStickerContainer = document.querySelector(".editStickerContainer");
+				//var editStickerContainer = document.createElement("div");//querySelector(".editStickerContainer");
+				//editStickerContainer.className = "editStickerContainer";
+
+				//var stickerGizmoContainer = document.createElement("div");
+				//stickerGizmoContainer.className = "stickerGizmoContainer";
+
+				var sticker = g_allStickers[stickerName];
+				if( !!!sticker )
+					return;
+
+				var stickerGizmoParent = document.createElement("div");
+				stickerGizmoParent.className = "stickerGizmoParent";
+
+
+				var stickerGizmo = document.createElement("div");
+				stickerGizmo.className = "stickerGizmo";
+				stickerGizmo.setAttribute("tabindex", "0");
+				stickerGizmo.stickerName = stickerName;
+
+				stickerGizmoParent.appendChild(stickerGizmo);
+
+				var stickerGizmoImageContainer = document.createElement("div");
+				stickerGizmoImageContainer.className = "stickerGizmoImageContainer";
+
+				stickerGizmo.appendChild(stickerGizmoImageContainer);
+
+				var stickerGizmoImage = document.createElement("img");
+				stickerGizmoImage.className = "stickerGizmoImage";
+				stickerGizmoImage.src = sticker.file;//"stickers/pwned.png";
+
+				stickerGizmoImageContainer.appendChild(stickerGizmoImage);
+
+				var stickerGizmoContainer = document.createElement("div");
+				stickerGizmoContainer.className = "stickerGizmoContainer";
+				stickerGizmoContainer.style.cssText = "pointer-events: none; width: 100%; height: 100%;";
+
+				stickerGizmo.appendChild(stickerGizmoContainer);
+				//stickerGizmoContainer.appendChild(stickerGizmo);
+
+				// 2-AXIS SCALE, BOTTOM-RIGHT
+				var stickerGizmoGripCornerContainerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerContainerBottomRight.className = "stickerGizmoGripContainer";
+				stickerGizmoGripCornerContainerBottomRight.style.left = "100%";
+				stickerGizmoGripCornerContainerBottomRight.style.top = "100%";
+
+				stickerGizmoContainer.appendChild(stickerGizmoGripCornerContainerBottomRight);
+
+				var stickerGizmoGripCornerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerBottomRight.className = "stickerGizmoGrip stickerGizmoGripCorner";
+				stickerGizmoGripCornerBottomRight.style.borderBottom = "0";
+				stickerGizmoGripCornerBottomRight.style.borderRight = "0";
+				stickerGizmoGripCornerBottomRight.style.webkitTransform = "translateX(-100%) translateY(-100%)";
+				stickerGizmoGripCornerBottomRight.setAttribute("gripType", "stretch");
+				stickerGizmoGripCornerBottomRight.setAttribute("gripSide", "bottomright");
+
+				stickerGizmoGripCornerContainerBottomRight.appendChild(stickerGizmoGripCornerBottomRight);
+
+				// 2-AXIS SCALE, TOP-LEFT
+				var stickerGizmoGripCornerContainerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerContainerBottomRight.className = "stickerGizmoGripContainer";
+				stickerGizmoGripCornerContainerBottomRight.style.left = "0";
+				stickerGizmoGripCornerContainerBottomRight.style.top = "0";
+
+				stickerGizmoContainer.appendChild(stickerGizmoGripCornerContainerBottomRight);
+
+				var stickerGizmoGripCornerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerBottomRight.className = "stickerGizmoGrip stickerGizmoGripCorner";
+				stickerGizmoGripCornerBottomRight.style.borderTop = "0";
+				stickerGizmoGripCornerBottomRight.style.borderLeft = "0";
+				stickerGizmoGripCornerBottomRight.setAttribute("gripType", "stretch");
+				stickerGizmoGripCornerBottomRight.setAttribute("gripSide", "topleft");
+
+				stickerGizmoGripCornerContainerBottomRight.appendChild(stickerGizmoGripCornerBottomRight);
+
+				// 2-AXIS SCALE, BOTTOM-LEFT
+				var stickerGizmoGripCornerContainerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerContainerBottomRight.className = "stickerGizmoGripContainer";
+				stickerGizmoGripCornerContainerBottomRight.style.left = "0";
+				stickerGizmoGripCornerContainerBottomRight.style.top = "100%";
+
+				stickerGizmoContainer.appendChild(stickerGizmoGripCornerContainerBottomRight);
+
+				var stickerGizmoGripCornerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerBottomRight.className = "stickerGizmoGrip stickerGizmoGripCorner";
+				stickerGizmoGripCornerBottomRight.style.borderBottom = "0";
+				stickerGizmoGripCornerBottomRight.style.borderLeft = "0";
+				stickerGizmoGripCornerBottomRight.style.webkitTransform = "translateY(-100%)";
+				stickerGizmoGripCornerBottomRight.setAttribute("gripType", "stretch");
+				stickerGizmoGripCornerBottomRight.setAttribute("gripSide", "bottomleft");
+
+				stickerGizmoGripCornerContainerBottomRight.appendChild(stickerGizmoGripCornerBottomRight);
+
+				// 2-AXIS SCALE, TOP-RIGHT
+				var stickerGizmoGripCornerContainerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerContainerBottomRight.className = "stickerGizmoGripContainer";
+				stickerGizmoGripCornerContainerBottomRight.style.left = "100%";
+				stickerGizmoGripCornerContainerBottomRight.style.top = "0";
+
+				stickerGizmoContainer.appendChild(stickerGizmoGripCornerContainerBottomRight);
+
+				var stickerGizmoGripCornerBottomRight = document.createElement("div");
+				stickerGizmoGripCornerBottomRight.className = "stickerGizmoGrip stickerGizmoGripCorner";
+				stickerGizmoGripCornerBottomRight.style.borderTop = "0";
+				stickerGizmoGripCornerBottomRight.style.borderRight = "0";
+				stickerGizmoGripCornerBottomRight.style.webkitTransform = "translateX(-100%)";
+				stickerGizmoGripCornerBottomRight.setAttribute("gripType", "stretch");
+				stickerGizmoGripCornerBottomRight.setAttribute("gripSide", "topright");
+
+				stickerGizmoGripCornerContainerBottomRight.appendChild(stickerGizmoGripCornerBottomRight);
+
+
+
+
+
+
+				editStickerContainer.appendChild(stickerGizmoParent);
+
+				//var stickerGizmo = document.querySelector(".stickerGizmo");
+				//var stickerGizmoImage = document.querySelector(".stickerGizmoImage");
+				stickerGizmo.addEventListener("mousedown", stickerMouseDownHandler, false);
+				stickerGizmo.addEventListener("blur", function()
+				{
+					stickerGizmo.parentNode.style.opacity = "0.5";
+					stickerGizmo.parentNode.offsetWidth;
+					stickerGizmo.parentNode.style.opacity = "1.0";
+				}, false);
+
+				var stretchGrips = stickerGizmo.querySelectorAll(".stickerGizmoGrip[gripType='stretch']");
+				for( var i = 0; i < stretchGrips.length; i++ )
+				{
+					stretchGrips[i].addEventListener("mousedown", stickerMouseDownHandler, false);
+				}
+				
+				stickerGizmo.style.left = "0";
+				stickerGizmo.style.top = "0";
+				stickerGizmo.image = stickerGizmoImage;
+				stickerGizmoImage.gizmo = stickerGizmo;
+
+				//g_adjustedWidth = imageElem.offsetWidth;
+				//g_adjustedHeight = imageElem.offsetHeight;
+
+				stickerGizmoParent.style.width = g_adjustedWidth + "px";
+				stickerGizmoParent.style.height = g_adjustedHeight + "px";
+
+				var smallerValue = (g_adjustedWidth < g_adjustedHeight) ? g_adjustedWidth : g_adjustedHeight;
+				stickerGizmo.style.width = smallerValue + "px";
+				stickerGizmo.style.height = smallerValue + "px";
+				
+				stickerGizmo.focus();
+
+				return stickerGizmo;
+
+				/*
+					<div class="stickerGizmo" tabindex="0">
+						<div class="stickerGizmoImageContainer">
+							<img src="stickers/pwned.png" class="stickerGizmoImage" />
+						</div>
+
+						<div class="stickerGizmoContainer">
+							<div class="stickerGizmoGripContainer" style="left: 100%; top: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCorner" style="border-bottom: 0; border-right: 0; -webkit-transform: translateX(-100%) translateY(-100%);" gripType="stretch" gripSide="bottomright"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 0; top: 0;">
+								<div class="stickerGizmoGrip stickerGizmoGripCorner" style="border-top: 0; border-left: 0;" gripType="stretch" gripSide="topleft"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="top: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCorner" style="border-bottom: 0; border-left: 0; -webkit-transform: translateY(-100%);" gripType="stretch" gripSide="bottomleft"></div>
+							</div>
+
+
+
+
+							<div class="stickerGizmoGripContainer" style="left: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCorner" style="border-top: 0; border-right: 0; -webkit-transform: translateX(-100%); translateY(-100%);" gripType="stretch" gripSide="topright"></div>
+							</div>
+							<div class="stickerGizmoGripContainer">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 100%; top: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="top: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="top: 50%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered stickerGizmoGripSquare" gripType="stretch" gripSide="left"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 100%; top: 50%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered stickerGizmoGripSquare" gripType="stretch" gripSide="right"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 50%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered stickerGizmoGripSquare" gripType="stretch" gripSide="top"></div>
+							</div>
+							<div class="stickerGizmoGripContainer" style="left: 50%; top: 100%;">
+								<div class="stickerGizmoGrip stickerGizmoGripCentered stickerGizmoGripSquare" gripType="stretch" gripSide="bottom"></div>
+							</div>
+						</div>
+					</div>
+				*/
+			}
+
+			function stickerMouseDownHandler(e)
+			{
+				if( !!g_stickerDrag )
+					stickerMouseUpHandler();
+
+				g_stickerDrag = {
+					"startX": e.clientX,
+					"startY": e.clientY,
+					"prevX": -1,
+					"prevY": -1,
+					"active": false,
+					"target": e.target
+				};
+
+				document.addEventListener("mousemove", stickerMouseMoveHandler, false);
+				document.addEventListener("mouseup", stickerMouseUpHandler, false);
+
+				//e.preventDefault();
+				//e.stopPropagation();
+				//return false;
+			}
+
+			function stickerMouseUpHandler(e)
+			{
+				if( !!!g_stickerDrag )
+					return;
+
+				document.removeEventListener("mouseup", stickerMouseUpHandler, false);
+				document.removeEventListener("mousemove", stickerMouseMoveHandler, false);
+				g_stickerDrag = undefined;
+			}
+
+			function stickerMouseMoveHandler(e)
+			{
+				if( !!!g_stickerDrag )
+					return;
+
+				if( !g_stickerDrag.active && (e.clientX !== g_stickerDrag.startX || e.clientY !== g_stickerDrag.startY) )
+				{
+					g_stickerDrag.active = true;
+					g_stickerDrag.prevX = g_stickerDrag.startX;
+					g_stickerDrag.prevY = g_stickerDrag.startY;
+				}
+
+				if( g_stickerDrag.prevX === -1 || g_stickerDrag.prevY === -1 )
+					return;
+
+				var deltaX = e.clientX - g_stickerDrag.prevX;
+				var deltaY = e.clientY - g_stickerDrag.prevY;
+
+				g_stickerDrag.prevX = e.clientX;
+				g_stickerDrag.prevY = e.clientY;
+
+				//var gizmo = g_stickerDrag.target.parentNode.parentNode.parentNode;
+
+				//if( g_stickerDrag.target.classList.contains("stickerGizmoImage") )
+				//{
+				//	
+				//}
+				if( g_stickerDrag.target.getAttribute("gripType") === "stretch" )
+				{
+					var gizmo = g_stickerDrag.target.parentNode.parentNode.parentNode;
+
+					if( g_stickerDrag.target.getAttribute("gripSide") === "left" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) - deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX + "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "right" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) + deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX - "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "top" )
+					{
+						gizmo.style.height = parseInt(gizmo.style.height) - deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY + "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "bottom" )
+					{
+						gizmo.style.height = parseInt(gizmo.style.height) + deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY - "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "bottomright" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) + deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX - "px";
+						gizmo.style.height = parseInt(gizmo.style.height) + deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY - "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "bottomleft" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) - deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX + "px";
+						gizmo.style.height = parseInt(gizmo.style.height) + deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY - "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "topleft" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) - deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX + "px";
+						gizmo.style.height = parseInt(gizmo.style.height) - deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY + "px";
+					}
+					else if( g_stickerDrag.target.getAttribute("gripSide") === "topright" )
+					{
+						gizmo.style.width = parseInt(gizmo.style.width) + deltaX + "px";
+						gizmo.style.left = parseInt(gizmo.style.left) + deltaX - "px";
+						gizmo.style.height = parseInt(gizmo.style.height) - deltaY + "px";
+						gizmo.style.top = parseInt(gizmo.style.top) + deltaY + "px";
+					}
+				}
+				else
+				{
+					var gizmo = g_stickerDrag.target;
+
+					gizmo.style.left = parseInt(gizmo.style.left) + deltaX + "px";
+
+					gizmo.style.top = parseInt(gizmo.style.top) + deltaY + "px";
+				}
+			}
+
+			var g_thumbSize = 512;
+			var g_stickerSize = 256;
+			var g_widthFactor;
+			var g_heightFactor;
+			function activateSticker(stickerName, properties)
+			{
+				var sticker = g_allStickers[stickerName];
+				if( !!!sticker )
+					return;
+
+				var stickerSlot = document.querySelector(".emptyStickerSlot");
+				if( !!!stickerSlot )
+					return;
+
+				stickerSlot.classList.remove("emptyStickerSlot");
+				stickerSlot.stickerName = stickerName;
+
+				var stickerPreviewImage = stickerSlot.querySelector(".stickerPreviewImage");
+				stickerPreviewImage.src = sticker.file;
+
+				var stickerGizmo = addStickerGizmo(stickerName);
+				stickerSlot.stickerGizmo = stickerGizmo;
+
+				if( !!!properties )
+					properties = {
+						"name": stickerName,
+						"width": 0.5 * (g_thumbSize / g_adjustedWidth),
+						"height": 0.5 * (g_thumbSize / g_adjustedHeight),
+						"rot": 0,
+						"left": 0,
+						"top": 0
+					};
+
+				//var smallerValue = (g_adjustedWidth < g_adjustedHeight) ? g_adjustedWidth : g_adjustedHeight;
+
+				//var largerValue = (g_adjustedWidth > g_adjustedHeight) ? g_adjustedWidth : g_adjustedHeight;
+				//var aspectScaleFactor = smallerValue / g_thumbSize;
+
+				var commonFactor = (g_widthFactor < g_heightFactor) ? g_widthFactor : g_heightFactor;
+
+				//console.log(;);
+
+				stickerGizmo.style.width = (commonFactor * properties.width) * (g_adjustedWidth / g_thumbSize) + "px";
+				stickerGizmo.style.height = (commonFactor * properties.height) * (g_adjustedHeight / g_thumbSize) + "px";
+				stickerGizmo.style.webkitTransform = "rotate(" + properties.rot + "deg)";
+				stickerGizmo.style.left = properties.left * g_adjustedWidth + "px";
+				stickerGizmo.style.top = properties.top * g_adjustedHeight + "px";
+			}
+
+			var stickerRemoveImages = document.querySelectorAll(".stickerPreviewTrashImage");
+			for( var i = 0; i < stickerRemoveImages.length; i++ )
+			{
+				stickerRemoveImages[i].addEventListener("click", removeSticker);
+			}
+
+/*
+			var stickerSlots = document.querySelectorAll(".stickerPreviewContainer");
+			for( var i = 0; i < stickerSlots.length; i++ )
+			{
+				stickerSlots[i].addEventListener("mouseover", function(e)
+				{
+					this.stickerGizmo.focus();
+				}.bind(stickerSlots[i]), false);
+				stickerSlots[i].addEventListener("mouseout", function(e)
+				{
+					this.stickerGizmo.blur();
+				}.bind(stickerSlots[i]), false);
+			}*/
+
+			function addStickerPreview(stickerName)
+			{
+				var sticker = g_allStickers[stickerName];
+				if( !!!sticker )
+					return;
+
+				var stickerPreviewContainer = document.createElement("div");
+				stickerPreviewContainer.className = "stickerPreviewContainer aaThemeColorOneBorderColor aaThemeColorOneHoverShadedBackground";
+				stickerPreviewContainer.stickerName = stickerName;
+				stickerPreviewContainer.addEventListener("click", function()
+				{
+					this.stickerGizmo = activateSticker(this.stickerName);
+					aaapi.cmd("statAction", "aa_stickers_applied", 1);
+				}.bind(stickerPreviewContainer), false);
+				stickersList.appendChild(stickerPreviewContainer);
+
+				var stickerPreviewImageContainer = document.createElement("div");
+				stickerPreviewImageContainer.className = "stickerPreviewImageContainer";
+				stickerPreviewContainer.appendChild(stickerPreviewImageContainer);
+
+				var stickerPreviewImage = document.createElement("img");
+				stickerPreviewImage.className = "stickerPreviewImage";
+				stickerPreviewImage.src = sticker.file;
+				stickerPreviewImageContainer.appendChild(stickerPreviewImage);
+
+				var stickerPreviewLockContainer = document.createElement("div");
+				stickerPreviewLockContainer.className = "stickerPreviewLockContainer";
+				stickerPreviewContainer.appendChild(stickerPreviewLockContainer);
+			}
+
+			function prepStickerCanvas()
+			{
+				var sticker;
+				var stickerNames = Object.keys(g_allStickers);
+				for( var i = 0; i < stickerNames.length; i++ )
+				{
+					sticker = g_allStickers[stickerNames[i]];
+
+					if( !!!sticker.isAchievement || sticker.appId === g_steamAppId )
+						addStickerPreview(stickerNames[i]);
+				}
+
+				arcadeHud.loadItemBestImage(imageElem, item, function()
+				{
+					this.style.display = "block";
+
+					var maxWidth = 512;
+					var maxHeight = 512;
+					var realWidth = this.offsetWidth;
+					var realHeight = this.offsetHeight;
+
+					if( realWidth >= realHeight )
+						this.style.width = maxWidth + "px";
+					else
+						this.style.height = maxHeight + "px";
+
+					g_adjustedWidth = this.offsetWidth;
+					g_adjustedHeight = this.offsetHeight;	
+
+					//g_thumbSize = (g_adjustedHeight > g_adjustedWidth) ? g_adjustedHeight : g_adjustedWidth;
+
+					g_widthFactor = g_stickerSize * (g_thumbSize / g_adjustedWidth);
+					g_heightFactor = g_stickerSize * (g_thumbSize / g_adjustedHeight);
+/*
+					var smallerValue = (adjustedWidth < adjustedHeight) ? adjustedWidth : adjustedHeight;
+					stickerGizmo.style.width = (smallerValue / 3) + "px";
+					stickerGizmo.style.height = (smallerValue / 3) + "px";
+*/
+					this.parentNode.parentNode.style.width = g_adjustedWidth + "px";
+					this.parentNode.parentNode.style.height = g_adjustedHeight + "px";
+
+					var itemId = item.info.id;
+					var oldTransform = localStorage.getItem("trans" + itemId);
+					if( !!oldTransform )
+					{
+						oldTransform = JSON.parse(oldTransform);
+
+						if( !!oldTransform.stickers && oldTransform.stickers.length > 0 )
+						{
+							var oldSticker;
+							for( var i = 0; i < oldTransform.stickers.length; i++ )
+							{
+								oldSticker = oldTransform.stickers[i];
+								activateSticker(oldSticker.name, oldSticker);
+							}
+						}
+					}
+
+					//stickerGizmo.focus();
+				}.bind(imageElem));
+			}
+		</script>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>			
+			if( !!!uiBack )
+				uiBack = "";
+
+			var entryForm = document.querySelector("#entryForm");
+
+			function metaSearch(filedName)
+			{
+				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(filedName);
+				return;
+			}
+
+			function fileBrowse(fieldName)
+			{
+				var fieldElem = document.querySelector(".aaKeyValueTableValue > input[fieldname='" + fieldName + "'], .aaKeyValueTableValue > select[fieldname='" + fieldName + "']");
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					if(chosenFile !== "")
+					{
+						if( item.app !== "" )
+						{
+							var app = aaapi.cmdEx("getLibraryApp", item.app);
+							var x, testerPath;
+							var testerFile = chosenFile
+							testerFile = testerFile.replace(/\\/g, "/");
+							var lastSlash = testerFile.lastIndexOf("/");
+							if( lastSlash === -1 )
+								lastSlash = testerFile.lastIndexOf("\\");
+
+							for( x in app.filepaths )
+							{
+								testerPath = app.filepaths[x].path;
+								testerPath = testerPath.replace(/\\/g, "/");
+
+
+								if( testerFile.indexOf(testerPath) === 0 )
+								{
+									chosenFile = chosenFile.substring(lastSlash+1);
+									break;
+								}
+							}
+						}
+
+						this.value = chosenFile;
+						this.focus();
+						entryForm.querySelector("input[type='submit']").click();//submit();
+
+						/*
+						// update the item
+						var args = [myInput.field, chosenFile];
+						var success = aaapi.cmdEx("updateItem", item.info.id, args);
+						if( success )
+						{
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
+							{
+								if( myInput.field == "all" || args[i] === myInput.field )
+									item[args[i]] = args[i+1];
+							}
+
+							console.log("Item updated!");
+
+							//aaapi.cmd("autoInspect", this.itemId);
+						}
+						else
+							console.log("Item update rejected!");
+						*/
+					}
+				}.bind(fieldElem));
+			}
+
+			// PREPARE FORM
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				var focusedFieldName = focusedElem.getAttribute("fieldname");
+				var focusedFieldValue = focusedElem.value;
+
+				//if( focusedFieldValue.toLowerCase().indexOf("https://") === 0 )
+				//	focusedFieldValue = "http://" + focusedFieldValue.substring(8);
+
+				if( !focusedFieldName )
+					focusedElem = null;
+
+				// DO WORK
+				if( !!focusedElem )
+				{
+					//console.log("Entry form submitted with field " + focusedFieldName + " focused.");
+
+					var success = aaapi.cmdEx("updateItem", id, [focusedFieldName, focusedFieldValue]);
+
+					aaapi.cmdEx("threadBlock");	// wait for the engine to catch up.
+
+					if( success )
+					{
+						focusedElem.style.webkitTransition = "initial";
+						focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+						focusedElem.offsetTop;
+						focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+						item[focusedFieldName] = focusedFieldValue;
+						console.log("Item updated!");
+
+						aaapi.cmd("sendEntryUpdate", "Item", id);
+					}
+					else
+						console.log("Item update rejected!");
+				}
+				else
+					console.log("Entry form submitted via button click.");
+
+				// done doing work
+				if( !!focusedElem )
+					focusedElem.blur();
+			}, true);
+
+			// PREPARE TYPES
+			var allTypes = aaapi.cmdEx("getAllLibraryTypes");
+			for( var x in allTypes )
+			{
+				// FIXME: There needs to be a standard way to deal with types that are missing required fields!! (ie. corrupted types)
+				if( !!!allTypes[x].title )
+					allTypes[x].title = "Untitled Type";
+			}
+
+			var allTypesSorted = [];
+
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE APPS
+			var allApps = aaapi.cmdEx("getAllLibraryApps");
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( !!!a.title || (!!b.title && a.title.toLowerCase() < b.title.toLowerCase()) )
+					return -1;
+				else if( !!!b.title || (!!a.title && a.title.toLowerCase() > b.title.toLowerCase()) )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE THE ITEM
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				if( fieldName === "type" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						//if( fieldValue.toLowerCase().indexOf("https://") === 0 )
+						//	fieldValue = "http://" + fieldValue.substring(8);
+
+						var success = aaapi.cmdEx("updateItem", id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							item[fieldName] = fieldValue;
+							console.log("Item updated!");
+
+							aaapi.cmd("sendEntryUpdate", "Item", id);
+						}
+						else
+							console.log("Item update rejected!");
+					}, true);
+
+					// populate any TYPE lists
+					for( var j = 0; j < allTypesSorted.length; j++ )
+					{
+						if( !!allTypes[item.type] && allTypes[item.type].title !== "node" && allTypesSorted[j].title === "node" )
+							continue;
+
+						var optionElem = document.createElement("option");
+						optionElem.type = allTypesSorted[j];
+						optionElem.text = allTypesSorted[j].title;
+						optionElem.value = allTypesSorted[j].info.id;
+
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else if( fieldName === "app" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						//if( fieldValue.toLowerCase().indexOf("https://") === 0 )
+						//	fieldValue = "http://" + fieldValue.substring(8);
+
+						var success = aaapi.cmdEx("updateItem", id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							item[fieldName] = fieldValue;
+							console.log("Item updated!");
+
+							aaapi.cmd("sendEntryUpdate", "Item", id);
+						}
+						else
+							console.log("Item update rejected!");
+
+						var appElem = document.querySelector("select[fieldname='app']");
+						var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+						var editAppButtonElem = document.querySelector("#editAppButton");
+						if( !!!appElemSelectedOption.app )
+						{
+							editAppButtonElem.classList.remove("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "none";
+						}
+						else
+						{
+							editAppButtonElem.classList.add("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "inline-block";
+						}
+					}, true);
+
+					// populate any APP lists
+					for( var j = 0; j < allAppsSorted.length; j++ )
+					{
+						if( !!!allAppsSorted[j].info )
+							continue;
+						
+						var optionElem = document.createElement("option");
+						optionElem.app = allAppsSorted[j];
+						optionElem.text = allAppsSorted[j].title;
+						optionElem.value = allAppsSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != item[fieldName] )
+							elem.value = (!!item[fieldName]) ? item[fieldName] : "";
+					}, true);
+
+					dummyElem.addEventListener('mousedown', function(e)
+					{
+						if( document.activeElement != this )
+							this.giveMeFocus = true;
+					}.bind(dummyElem));
+
+					dummyElem.addEventListener('mouseup', function(e)
+					{
+						if( this.giveMeFocus === true )
+						{
+							this.giveMeFocus = false;
+							this.select();
+						}
+					}.bind(dummyElem));
+				}
+
+				if( item.hasOwnProperty(fieldName) )
+				{
+					dummyElem.value = item[fieldName];
+
+					if( fieldName === "type" )
+					{
+						if(!!allTypes[item[fieldName]] && allTypes[item[fieldName]].title === "node")
+						{
+							document.querySelector("select[fieldname='type']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='file']").parentNode.parentNode.style.display = "none";
+							document.querySelector("select[fieldname='app']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='stream']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='download']").parentNode.parentNode.style.display = "none";
+							document.querySelector("#nodeText").style.display = "initial";
+							document.querySelector(".aaTitleBar div.aaTitleText").innerHTML = "Node Properties";
+						}
+						else
+						{
+							document.querySelector("#nodeText").style.display = "none";
+						}
+					}
+					else if( fieldName === "app" )
+					{
+						var appElem = document.querySelector("select[fieldname='app']");
+						var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+						var editAppButtonElem = document.querySelector("#editAppButton");
+
+						if( !!appElemSelectedOption.app )
+						{
+							editAppButtonElem.classList.add("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "inline-block";
+						}
+					}
+				}
+			}
+
+			function editApp()
+			{
+				var appElem = document.querySelector("select[fieldname='app']");
+				var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+				var app = appElemSelectedOption.app;
+				if( app )
+				{
+					var ourUIBack = "window.location='asset://ui/editItem.html?id=" + id + "';";
+
+					window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent(ourUIBack);
+				}
+			}
+
+			function editType()
+			{
+				var typeElem = document.querySelector("select[fieldname='type']");
+				var typeElemSelectedOption = typeElem.options[typeElem.selectedIndex];
+				var type = typeElemSelectedOption.type;
+				if( type )
+				{
+					var ourUIBack = "window.location='asset://ui/editItem.html?id=" + id + "';";
+
+					window.location = "asset://ui/editType.html?id=" + encodeURIComponent(type.info.id) + "&uiback=" + encodeURIComponent(ourUIBack);
+				}
+			}
+
+			function createNewType()
+			{
+				createModalPrompt('Create New Type', 'Type Title:', 'canceledCreateNewType();');
+			}
+
+			function canceledCreateNewType()
+			{
+				console.log("Noperz.");
+			}
+
+			function confirmedCreateNewType(typeTitle)
+			{
+				var createdType = arcadeHud.createNewType(typeTitle, null, false);
+				if( !!!createdType )
+					console.log("ERROR creating new type!");
+				else
+				{
+					// Set the item's type to the createdType.info.id value, then reload this page.
+//console.log(JSON.stringify(createdType));
+					var success = aaapi.cmdEx("updateItem", id, ["type", createdType.info.id]);
+					if( success )
+					{
+						allTypes[createdType.info.id] = createdType;
+						var typeInputElem = document.querySelector("select[fieldname='type']");
+
+						// 1. Add the new TYPE to the list.
+						var optionElem = document.createElement("option");
+						optionElem.type = createdType;
+						optionElem.text = createdType.title;
+						optionElem.value = createdType.info.id;
+						typeInputElem.appendChild(optionElem);
+
+						// 2. Select the new TYPE that just got added to the list.
+						typeInputElem.selectedIndex = typeInputElem.options.length - 1;
+						
+						// 3. Do the regular "changed" color animation on it.
+						typeInputElem.style.webkitTransition = "initial";
+						typeInputElem.classList.add("aaThemeColorOneBackgroundColor");
+						typeInputElem.offsetTop;
+						typeInputElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						typeInputElem.classList.remove("aaThemeColorOneBackgroundColor");
+						
+						console.log("Item updated!");
+						aaapi.cmd("sendEntryUpdate", "Item", id);	// Note: The act of updating the item on the network will auto-handle the new item on the network for us too.
+					}
+					else
+						console.log("Item update rejected!");
+				}
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				modalHTML += text + "<br />";
+				modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="submit" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedCreateNewType(this.value);
+					}
+				}.bind(nodeNameInput), true);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				/*
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+				*/
+
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			var universeInfo = aaapi.cmdEx("getConnectedSession");
+			if( universeInfo )
+			{
+				if(!aaapi.cmdEx("isItemRemoteOnly", id))
+				{
+					var elems = document.querySelectorAll(".aaOnlyIfItemIsNotRemoteOnly");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].style.display = "block";
+				}
+				else
+				{
+					var elems = document.querySelectorAll(".aaOnlyIfItemIsRemoteOnly");
+					for( var i = 0; i < elems.length; i++ )
+						elems[i].style.display = "block";
+				}
+			}
+
+			if( !isTextItem )
+			{
+				var elems = document.querySelectorAll(".onlyIfText");
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].style.display = "none";
+			}
+			else
+			{
+				var elem = document.querySelector("#textText");
+				elem.value = arcadeHud.getParameterByName("txt", item.file);
+			}
+				
+
+			var msgContainer = document.querySelector(".msgContainer");
+			var msgSlate = msgContainer.querySelector(".msgSlate");
+			var msgFrame = msgSlate.querySelector(".msgFrame");
+			var msgPreformat = msgFrame.querySelector(".msgPreformat");
+			var msgWidth = 512;//document.body.offsetWidth;
+			var msgHeight = 512;//document.body.offsetHeight;
+			function setMsgText(options)
+			{
+				if( !!!options )
+					options = {};
+
+				var defaultOptions = {
+					"color": "white",
+					"shadowcolor": "black",
+					"fgcolor": "",
+					"bgcolor": "",
+					"borderstyle": "outset",
+					"bordersize": 0,
+					"borderradius": 6,
+					"bordercolor": "gray",
+					"padding": 5,
+					"textsize": 6,
+					"text": "",
+					"landscape": 1
+				};
+
+				for( var x in defaultOptions )
+				{
+					if( !options.hasOwnProperty(x) || options[x] == null )
+						options[x] = defaultOptions[x];
+				}
+
+				var targetWidth = (options.landscape != 0) ? 1280 : 720;
+				var targetHeight = (options.landscape != 0) ? 720 : 1280;
+
+				var backgroundImage = "";
+				if(options.bgcolor.indexOf(".") > 0)
+					backgroundImage = options.bgcolor;
+				else if( false && options.bgcolor == "" )
+					options.bgcolor = "black";	// for thumnail rendering
+
+				var foregroundImage = "";
+				if(options.fgcolor.indexOf(".") > 0)
+					foregroundImage = options.fgcolor;
+
+				var msgWidthRatio = msgWidth / msgHeight;
+				var msgHeightRatio = msgHeight / msgWidth;
+				var canvasWidthRatio = msgWidth / targetWidth;
+				var canvasHeightRatio = msgHeight / targetHeight;
+
+				if( msgHeight > 512 )
+				{
+					if( options.landscape == 0 )
+						canvasWidthRatio -= 0.68;
+					else
+						msgWidthRatio -= 0.45;
+				}
+
+				var zoomRatio = (options.landscape != 0) ? canvasHeightRatio * msgWidthRatio : 1.0 + canvasWidthRatio * msgWidthRatio;
+
+				var textSize = Math.ceil(40.0 * canvasHeightRatio) + Math.ceil(10.0 * canvasHeightRatio * options.textsize);
+
+				var lineScale = 1.0;
+				msgPreformat.style.lineHeight = (textSize * lineScale) + "px";
+
+				var shadowAmount = Math.ceil(2.0 * canvasHeightRatio);
+
+				var borderScaleFactor = 10.0 * canvasHeightRatio;
+
+				msgContainer.style.width = msgWidth + "px";
+				msgContainer.style.height = msgHeight + "px";
+
+				msgSlate.style.width = msgWidth + "px";
+				msgSlate.style.color = options.color;
+				
+				var xAmount =  (50 / zoomRatio);
+				msgFrame.style.transform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+				msgFrame.style.webkitTransform = "scale(" + zoomRatio + ", 1) translate(-" + xAmount + "%, -50%)";
+
+				if( foregroundImage == "")
+					msgPreformat.style.backgroundColor = options.fgcolor;
+				msgPreformat.style.backgroundImage = 'url("' + foregroundImage + '")';
+				
+				var paddingAmount = Math.ceil(10.0 * canvasHeightRatio * options.padding);
+				msgPreformat.style.padding = paddingAmount + "px";
+
+				var borderSize = Math.ceil(10.0 * canvasHeightRatio * options.bordersize);
+				if( options.bordersize == "0" )
+					borderSize = 0;
+				msgPreformat.style.border = borderSize + "px " + options.borderstyle + " " + options.bordercolor;
+				msgPreformat.style.borderRadius = Math.ceil(10 * canvasHeightRatio * options.borderradius) + "px";
+
+				if( backgroundImage == "")
+					msgContainer.style.backgroundColor = options.bgcolor;
+				msgContainer.style.backgroundImage = 'url("' + backgroundImage + '")';
+
+				msgContainer.style.fontSize = textSize + "px";
+
+				msgPreformat.textContent = "";
+				msgPreformat.textContent = options.text;
+
+				msgSlate.style.textShadow = shadowAmount + "px " + shadowAmount + "px #000";
+			}
+
+			var oldParams;
+			function saveText()
+			{
+				var extra3DParams = "";
+				//console.log(document.querySelector("#textLandscape").value);
+				if( document.querySelector("#textLandscape").value == '2' )
+				{
+					extra3DParams = "&m=1";
+					aaapi.cmd('updateItem3DText', id, encodeURIComponent(oldParams.text));
+				}
+				else
+					aaapi.cmd('updateItem3DText', id, '');
+
+				var landscapeValue = (extra3DParams != '') ? '1' : oldParams.landscape;
+				var url = "http://text.txt/?txt=" + encodeURIComponent(oldParams.text) + "&c=" + encodeURIComponent(oldParams.color) + "&b=" + encodeURIComponent(oldParams.bordersize) + "&bc=" + encodeURIComponent(oldParams.bordercolor) + "&br=" + encodeURIComponent(oldParams.borderradius) +"&fg=" + encodeURIComponent(oldParams.fgcolor) + "&bg=" + encodeURIComponent(oldParams.bgcolor) + "&l=" + encodeURIComponent(landscapeValue) + "&p=" + encodeURIComponent(oldParams.padding) + "&s=" + encodeURIComponent(oldParams.textsize) + extra3DParams;
+
+
+				var success = aaapi.cmdEx("updateItem", id, ["file", url]);
+				if( success )
+					aaapi.cmd("deactivateInputMode");
+			}
+
+			function setColor(elem)
+			{
+				var parent = elem.parentNode.parentNode;
+				var elems = parent.querySelectorAll(".color");
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].classList.remove("aaThemeColorOneBorderColor");
+
+				elem.classList.add("aaThemeColorOneBorderColor");
+				updateTextPreview();
+			}
+
+			function update3DText()
+			{
+				if( document.querySelector("#textLandscape").value == '2' )
+					aaapi.cmd('updateItem3DText', id, encodeURIComponent(document.querySelector("#textText").value));
+				else
+					aaapi.cmd('updateItem3DText', id, '');
+			}
+
+			function updateTextPreview(in_params)
+			{
+				var params;
+				if( !!in_params )
+					params = in_params;
+				else
+				{
+					params = oldParams;
+					params.color = document.querySelector("#textColor .aaThemeColorOneBorderColor").getAttribute("colorname");
+					params.fgcolor = document.querySelector("#textForeground .aaThemeColorOneBorderColor").getAttribute("colorname");
+					params.bgcolor = document.querySelector("#textBackground .aaThemeColorOneBorderColor").getAttribute("colorname");
+					params.bordersize = document.querySelector("#textBorder").value;
+					params.borderradius = document.querySelector("#textBorderRadius").value;
+					params.padding = document.querySelector("#textPadding").value;
+					params.bordercolor = document.querySelector("#textBorderColor .aaThemeColorOneBorderColor").getAttribute("colorname");
+					params.textsize = parseInt(document.querySelector("#textSize").value);
+					params.text = document.querySelector("#textText").value;
+					params.landscape = parseInt(document.querySelector("#textLandscape").value);
+				}
+
+				oldParams = params;
+				setMsgText(params);
+
+				var elem = document.querySelector("#textCanvas");
+
+				var ratio = (720/1080.0);
+				var xRatio = (params.landscape != 0) ? 1 : ratio;
+				var yRatio = (params.landscape != 0) ? ratio : 1;
+
+				var smallNumber = (ratio * 512.0) / 2;
+				var yNumber = smallNumber;
+
+				elem.style.webkitTransform = "scale(" + xRatio + ", " + yRatio + ")";
+
+				if( params.landscape != 0 )
+				{
+					elem.style.marginLeft = "0";
+					elem.style.marginRight = "0";
+					elem.style.marginTop = "-" + 50 + "px";
+					elem.style.marginBottom = "-" + 50 + "px";
+				}
+				else
+				{
+					elem.style.marginLeft = "-" + 50 + "px";
+					elem.style.marginRight = "-" + 50 + "px";
+					elem.style.marginTop = "0";
+					elem.style.marginBottom = "0";
+				}
+			}
+
+			var colors = [
+				"white",
+				"silver",
+				"gray",
+				"black",
+				"red",
+				"maroon",
+				"orange",
+				"yellow",
+				"olive",
+				"lime",
+				"green",
+				"aqua",
+				"teal",
+				"blue",
+				"navy",
+				"fuchsia",
+				"purple"
+			];
+
+			var images = [
+				"nocolor.png",
+				"textbg/Frame.jpg",
+				"textbg/Letterboard.jpg",
+				"textbg/Chalkboard.jpg?c=gdf",
+				"textbg/Corkboard.jpg?a=b",
+				"textbg/Retro.jpg",
+				"textbg/Grid.jpg",
+				"textbg/Grid Tech.jpg",
+				"textbg/Showtime.jpg",
+				"textbg/Note.jpg",
+				"textbg/Purple.jpg",
+				"textbg/Green.jpg",
+				"textbg/Pumpkin.jpg",
+				"textbg/Cubes.gif",
+				"textbg/Bubbles.gif",
+				"textbg/Blips.gif",
+				"textbg/Binary.gif",
+				"textbg/Tune.gif"
+			];
+
+			var elems = document.querySelectorAll(".colorsContainer");
+			var elem, colorName, imageName;
+			for( var i = 0; i < elems.length; i++ )
+			{
+				for( var j = 0; j < colors.length; j++ )
+				{
+					colorName = colors[j];
+					elem = document.createElement("div");
+					elem.setAttribute("colorname", colorName);
+					elem.setAttribute("help", colorName);
+					elem.style.cssText = "border-style: solid; border-width: 2px; width: 16px; height: 16px; display: inline-block;";
+					elem.style.backgroundColor = colorName;
+					elem.className = "color aaThemeColorTwoBorderColor helpNote";
+					elem.addEventListener("click", function(e){ setColor(e.target); });
+					elems[i].appendChild(elem);
+				}
+
+				if( elems[i].getAttribute("hasTransparent") == "1" )
+				{
+					imageName = images[0];
+					elem = document.createElement("div");
+					elem.setAttribute("colorname", "");
+					elem.setAttribute("isTransparent", "1");
+
+					elem.setAttribute("help", "transparent");
+					elem.style.cssText = "border-style: solid; border-width: 2px; width: 16px; height: 16px; display: inline-block;";
+					elem.style.backgroundSize = "100% 100%";
+					elem.style.backgroundImage = "url('" + imageName + "')";
+					elem.className = "color aaThemeColorTwoBorderColor helpNote";
+					elem.addEventListener("click", function(e){ setColor(e.target); });
+					elems[i].appendChild(elem);
+				}
+
+				if( elems[i].getAttribute("hasImages") == "1" )
+				{
+					for( var j = 1; j < images.length; j++ )
+					{
+						imageName = images[j];
+						elem = document.createElement("div");
+						elem.setAttribute("colorname", imageName);
+
+						elem.setAttribute("help", imageName);
+						elem.style.cssText = "border-style: solid; border-width: 2px; width: 16px; height: 16px; display: inline-block;";
+						elem.style.backgroundSize = "100% 100%";
+
+						var thumbName = imageName;
+						var found = thumbName.lastIndexOf(".");
+						thumbName = thumbName.substring(0, found) + "_thumb.jpg";
+
+						elem.style.backgroundImage = "url('" + thumbName + "')";
+						elem.className = "color aaThemeColorTwoBorderColor helpNote";
+						elem.addEventListener("click", function(e){ setColor(e.target); });
+						elems[i].appendChild(elem);
+					}
+				}
+			}
+		</script>
+	</body>
+</html>

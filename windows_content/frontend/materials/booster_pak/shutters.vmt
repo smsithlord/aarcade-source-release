@@ -1,0 +1,5 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "booster_pak/shutters"
+	"$bumpmap" "booster_pak/shutters_normal"
+}

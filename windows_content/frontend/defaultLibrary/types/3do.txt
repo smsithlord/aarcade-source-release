@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-KexS_Hh1hfSsMGKICWT"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"3do"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

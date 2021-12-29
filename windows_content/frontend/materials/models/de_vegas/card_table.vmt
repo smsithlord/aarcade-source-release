@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\de_vegas/card_table"
+	"$surfaceprop" "wood"
+	"$bumpmap" "models\de_vegas/card_table_normal"
+	"$envmap" "env_cubemap"
+	"$normalmapalphaenvmapmask" 1
+}

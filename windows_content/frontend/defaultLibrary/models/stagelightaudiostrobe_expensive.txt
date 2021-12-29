@@ -1,0 +1,21 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"18735b1c"
+		}
+		"title"		"Stage Light Audio Strobe (Expensive)"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\sithlord\stagelightaudiostrobe_expensive.mdl"
+			}
+		}
+	}
+}

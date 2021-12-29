@@ -1,0 +1,16 @@
+"Unlittwotexture"
+{
+	"$baseTexture" "sm_arcade/lightglow"
+	"$texture2" "dev/dev_scanline"//sm_arcade/audioglowbox"
+	//"$color" "[1 1 1]"
+
+	"Proxies"
+	{
+		"TextureScroll"
+		{
+			"textureScrollVar" "$texture2transform"
+			"textureScrollRate" 0.25
+			"textureScrollAngle" 90
+		}
+	}
+}

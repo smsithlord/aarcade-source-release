@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-LedERMifmzZsd"
+		}
+		"title"		"JNES"
+		"file"		"X:\Emulators\JNES\jnes.exe"
+		"commandformat"		"$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-LScXMqyrHlddq"
+		"download"		"http://www.jabosoft.com/"
+		"reference"		"http://www.jabosoft.com/"
+		"filepaths"
+		{
+			"-om88gxLg7TuTRkBFv2j"
+			{
+				"id"		"-om88gxLg7TuTRkBFv2j"
+				"path"		"X:\Emulators\NES\Roms\"
+			}
+		}
+	}
+}

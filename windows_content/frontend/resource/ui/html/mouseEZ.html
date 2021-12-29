@@ -1,0 +1,544 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css?buster=4b"></link>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+			//console.log(!!tga);
+		</script>
+		<script src="asset://ui/hud.js?a=b2"></script>
+
+		<style>
+			.entryMarkerContainer
+			{
+				z-index: 100000;
+				position: absolute;
+				-webkit-transform: translateY(-50%) translateX(-50%);
+				border-width: 2px;
+				border-style: solid;
+				border-radius: 16px;
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				pointer-events: none;
+				background-color: rgba(0, 0, 0, 1.0);/*0.97);*/
+				color: #ccc;
+				/*border: 0;*/
+			}
+		</style>
+		<script>
+			var g_opts;
+
+			function getDist(in_posA, in_posB)
+			{
+				var bufPosA = in_posA.split(" ");
+				var posA = {
+					"x": parseFloat(bufPosA[0]),
+					"y": parseFloat(bufPosA[1]),
+					"z": parseFloat(bufPosA[2])
+				};
+
+				var bufPosB = in_posB.split(" ");
+				var posB = {
+					"x": parseFloat(bufPosB[0]),
+					"y": parseFloat(bufPosB[1]),
+					"z": parseFloat(bufPosB[2])
+				};
+//(x2 x1)2 + (y2 y1)2 + (z2 z1)2
+
+				return Math.sqrt(((posB.x - posA.x)*(posB.x - posA.x)) + ((posB.y - posA.y)*(posB.y - posA.y)) + ((posB.z - posA.z)*(posB.z - posA.z)));
+			}
+
+			function clearOldMarker()
+			{
+				if( g_activeEntryMarker )
+				{
+					g_activeEntryMarker.parentNode.removeChild(g_activeEntryMarker);
+					g_activeEntryMarker = null;
+				}
+			}
+
+			var g_playerEyeOrigin;
+			function createEntryMarker(entry, pos)
+			{
+				if( !!!g_playerEyeOrigin )
+					g_playerEyeOrigin = aaapi.cmdEx('getPlayerEyeOrigin');
+				clearOldMarker();
+
+				var container = document.createElement("div");
+				container.className = "entryMarkerContainer aaTextSizeFontSize"; //aaThemeColorTwoShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				container.entry = entry;
+
+				var dist = getDist(entry.origin, g_playerEyeOrigin);
+				//console.log(dist);
+				var zoomFactor = 150 / dist;//0.3;
+				if( zoomFactor > 1.0 )
+					zoomFactor = 1.0;
+				else if( zoomFactor < 0.2 )
+					zoomFactor = 0.2;
+
+				container.style.zoom = 100 * zoomFactor + "%";
+				container.style.left = pos.x / zoomFactor;
+				container.style.top = pos.y / zoomFactor;
+				//container.style.webkitTransform = "scale(0.2)";
+
+				var item = aaapi.cmdEx('getLibraryItem', entry.item);
+				var model = aaapi.cmdEx('getLibraryModel', entry.model);
+				container.item = item;
+				container.model = model;
+				container.slaveEntry = undefined;
+				container.slaveItem = undefined;
+				container.slaveModel = undefined;
+
+				var title = document.createElement("div");
+				// NOTE: If this is a screen mirror & it's item is NOT active, then the DisplayTask's item info should be used instead, and even it's Object (in some cases.)
+
+				title.className = "entryMarkerTitle";
+
+				var goodTitle = "";
+				if( !!!item )
+					goodTitle = model.title;
+				else if( !entry.slave )
+					goodTitle = item.title;
+				else
+				{
+					var testTaskId = "auto" + entry.item;
+					var testTask = aaapi.cmdEx('getTaskInfo', testTaskId);
+					if( !!testTask )
+					{
+						goodTitle = item.title;
+					}
+					else
+					{
+						var displayTask = aaapi.cmdEx('getDisplayTaskInfo');
+						if( displayTask )
+						{
+							var displayObject = aaapi.cmdEx('getObject', displayTask.objectId);
+							container.slaveEntry = displayObject;
+							if( !!displayObject )
+							{
+								var displayItem = aaapi.cmdEx('getLibraryItem', displayObject.item);
+								container.slaveItem = displayItem;
+
+								var displayModel = aaapi.cmdEx('getLibraryModel', displayObject.model);
+								container.slaveModel = displayModel;
+
+								if( !!displayItem )
+									goodTitle = displayItem.title;
+							}
+						}
+
+						if( goodTitle === "" )
+							goodTitle = item.title;
+					}
+				}
+
+				//var goodTitle = (!!item) ? item.title : model.title;
+				title.appendChild(document.createTextNode(goodTitle));
+
+				container.appendChild(title);
+/*
+				container.addEventListener("mouseover", function(e)
+				{
+					aaapi.system.objectHover(this.entry.id);
+				}.bind(container), false);
+*/
+				document.body.appendChild(container);
+				g_activeEntryMarker = container;
+			}
+		</script>
+
+		<style>
+			#mouseSlate
+			{
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+			}
+
+			.displayTask td
+			{
+				font-weight: 900;
+				/*text-decoration: underline;*/
+				font-style: italic;
+			}
+
+			.aaDownArrow
+			{
+				width: 0; 
+				height: 0; 
+				border-left: 12px solid transparent;
+				border-right: 12px solid transparent;
+
+				border-top-style: solid;
+				border-top-width: 12px;/* solid #555;*/
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="mouseSlate"></div>
+
+		<!--div id="clipboard" style="position: absolute; bottom: 20px; right: 20px;"><img src="ezclipboard.png" /></div-->
+
+		<style>
+			.slot
+			{
+				width: 112px;
+				height: 112px;
+				border: 2px solid black;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
+
+		<div style="position: absolute; bottom: 0; left: 0; right: 0; pointer-events: none;">
+			<table style="width: 100%;" cellspacing="0" cellpadding="0">
+				<tr>
+					<td>
+						<select id="listSelect" style="width: 400px; -webkit-appearance: none; appearance: none; font-weight: normal; letter-spacing: 0.2em; padding: 2px; border-radius: 8px; border-style: inset; border-width: 1px; outline: none; font-size: 27px; padding-right: 30px; pointer-events: all;" class="aaTextColorTwoColor aaThemeColorTwoBorderColor aaTitleText aaTitleTextSizeFontSize aaThemeColorTwoBackgroundColor helpNote" help="Set your active favorites list. This is also the list that favorite/unfavorite buttons will use.">
+							<!--option value=''>Search Results</option-->
+							<!--option>Christmas Stuff</option-->
+						</select>
+						<div style="position: relative; display: inline-block; vertical-align: top; left: -38px; margin-top: 16px;">
+							<div class="aaDownArrow aaTextColorTwoHIghBorderColor" style="position: absolute;"></div>
+						</div>
+					</td>
+					<td align="right">
+						<div class="aaHelpContainer"></div>
+					</td>
+				</tr>
+				<tr><td colspan="2">
+					<div style="pointer-events: all; background-image: -webkit-linear-gradient(transparent, rgba(0, 0, 0, 0.9), black); overflow-x: scroll; overflow-y: hidden; height: 150px; white-space: nowrap;" id="clipboard"><img src="ezlist.png" style="width: 112px;" /></div>
+				</td></tr>
+			</table>
+		</div>
+
+		<script>
+			function unglowall(e)
+			{
+				if( g_glowingObjectId !== -1 )
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}
+
+			var clipboard = document.querySelector("#clipboard");
+
+			var g_glowingObjectId = "";
+			var g_activeEntryMarker = null;
+			var mouseSlate = document.querySelector("#mouseSlate");
+			mouseSlate.addEventListener("mousemove", function(e)
+			{
+				if( !!g_dragObject )
+					return;
+
+				var x = e.clientX;
+				var y = e.clientY;
+				var objectId = aaapi.cmdEx('getObjectUnderCursor', x, y);
+				if( !!objectId )
+				{
+					if( g_glowingObjectId !== objectId )
+					{
+						g_glowingObjectId = objectId;
+						aaapi.cmd('objectHover', objectId);
+
+						var object = aaapi.cmdEx('getObject', objectId);
+						if( !!object )
+						{
+							var posResponse = aaapi.cmdEx('getObjectPosScreenSpace', objectId);
+
+							if( !!posResponse && posResponse.onScreen && posResponse.x > 0 && posResponse.y > 0 )
+							{
+								createEntryMarker(object, posResponse);
+							}
+							else
+							{
+								clearOldMarker();
+							}
+						}
+					}
+				}
+				else
+				{
+					g_glowingObjectId = -1;
+					aaapi.cmd('objectHover', -1);
+					clearOldMarker();
+				}
+			}, false);
+
+			function lookListener(e)
+			{
+				//if( aaapi.system.getConVarValue("tempfreelook") == "0")
+				//{
+					aaapi.cmd('deactivateInputMode');
+					aaapi.cmd('consoleCommand', "tempfreelook 1");
+				//}
+			}
+
+			function removeLookListeners()
+			{
+				document.removeEventListener("mousemove", lookListener, false);
+				document.removeEventListener("mouseup", lookUpListener, false);
+			}
+
+			function lookUpListener(e)
+			{
+				removeLookListeners();
+			}
+
+			function doNothing()
+			{
+				// nothing
+			}
+
+			var g_wasDragClick = false;
+			var g_dragObject = null;
+			var g_dragTile = null;
+			var g_dragItem = null;
+
+			function tileDrag(e)
+			{
+				if( g_dragTile.style.display === "none" )
+					g_dragTile.style.display = "block";
+				g_dragTile.style.left = e.pageX + "px";
+				g_dragTile.style.top = e.pageY + "px";
+				g_wasDragClick = true;
+			}
+
+			mouseSlate.addEventListener("mousedown", function(e)
+			{
+				if( e.button !== 0 )
+					return;
+
+				if( g_glowingObjectId !== -1 )
+				{
+					var object = aaapi.cmdEx('getObject', g_glowingObjectId);
+					if( !!object )
+					{
+						var mode = "items";
+						var item = aaapi.cmdEx('getLibraryItem', object.item);
+						if( !!!item )
+						{
+							item = aaapi.cmdEx('getLibraryModel', object.item);
+							if( !!item )
+								mode = "models";
+						}
+						
+						if( !!item )
+						{
+							g_dragObject = object;
+							g_dragItem = item;
+
+//function(item, tilesContainer, mode, searchText, clickCallback)
+							var tile = arcadeHud.createTile(g_dragItem, document.body, mode, "", doNothing);
+							tile.style.cssText = "pointer-events: none; position: absolute; -webkit-transition: inherit;";
+							tile.style.display = "none";
+
+							g_dragTile = tile;
+							document.addEventListener("mousemove", tileDrag);
+						}
+					}
+				}
+			}, false);
+
+			function removeDragTile(deleteAlso)
+			{
+				if( !!g_dragObject )
+				{
+					//console.log(JSON.stringify(g_dragObject));
+
+					document.removeEventListener("mousemove", tileDrag);
+
+					g_dragObject = null;
+
+					if( deleteAlso )
+						g_dragTile.parentNode.removeChild(g_dragTile);
+
+					g_dragTile = null;
+					g_dragItem = null;
+				}
+			}
+
+			mouseSlate.addEventListener("mouseup", function(e)
+			{
+				if( e.button !== 0 )
+					return;
+
+				if( !!g_dragObject )
+					removeDragTile(true);
+			}, false);
+
+			clipboard.addEventListener("mouseup", function(e)
+			{
+				if( !!!g_dragItem )
+					return;
+
+				if( !!g_dragObject )
+				{
+					clipboard.appendChild(g_dragTile);
+					g_dragTile.style.position = "static";
+					g_dragTile.style.display = "inline-block";
+					g_dragTile.style.pointerEvents = "all";
+					removeDragTile(false);
+				}
+
+				/*
+				var goodUrl = g_dragItem.file;
+				console.log(goodUrl);
+
+				var el = document.createElement('input');
+				el.type = "text";
+				el.style.cssText = "position: absolute; pointer-events: none; opacity: 0;";
+				el.value = goodUrl;
+				document.body.appendChild(el);
+				el.select();
+				aaapi.system.doCopy();
+				//aaapi.system.addToastMessage("Copied To Clipboard - " + goodUrl);
+				setTimeout(function(){document.body.removeChild(el);}, 1000);
+
+				removeDragTile();
+				*/
+			}, true);
+
+			mouseSlate.addEventListener("click", function(e)
+			{
+				if( g_wasDragClick )
+				{
+					g_wasDragClick = false;
+					return;
+				}
+
+				if( !!g_activeEntryMarker )
+				{
+					if( e.button === 0 || e.button === 2)
+					{
+						var entry = g_activeEntryMarker.entry;
+
+						if( !!entry.item )
+						{
+							var usedSlave = false;
+
+							// If we are also a task, fullscreen us instead.
+							var existingInstance = aaapi.cmdEx('getTaskInfo', "auto" + entry.item);
+							if( !!existingInstance )
+							{
+								aaapi.cmd('attemptSelectEntity', existingInstance.entityIndex, true);
+							}
+							else if( entry.slave && g_activeEntryMarker.slaveEntry)
+							{
+								aaapi.cmd('attemptSelectEntity', g_activeEntryMarker.slaveEntry.entity, true);
+							}
+							else
+							{
+								aaapi.cmd('consoleCommand', "quick_remember " + entry.entity);
+							}
+						}
+					}
+					else if(e.button === 1)
+					{
+						var stuff = "&uiback=" + encodeURIComponent("window.location='asset://ui/welcome.html';");
+						var entry = g_activeEntryMarker.entry;
+						window.location = "asset://ui/buildModeContext.html?entity=" + entry.entity + "" + stuff;
+					}
+				}
+				else if(e.button === 1)
+				{
+					showLibrary();
+				}
+			}, false);
+
+
+
+			function lookListener(e)
+			{
+				//if( aaapi.system.getConVarValue("tempfreelook") == "0")
+				//{
+					aaapi.cmd('deactivateInputMode');
+					aaapi.cmd('consoleCommand', "tempfreelook 1");
+				//}
+			}
+
+			function removeLookListeners()
+			{
+				document.removeEventListener("mousemove", lookListener, false);
+				document.removeEventListener("mouseup", lookUpListener, false);
+			}
+
+			function lookUpListener(e)
+			{
+				removeLookListeners();
+			}
+
+			mouseSlate.addEventListener("mousedown", function(e)
+			{
+				if( e.button !== 2 )
+					return;
+
+				document.addEventListener("mousemove", lookListener, false);
+				document.addEventListener("mouseup", lookUpListener, false);
+			}, false);
+
+			function sortModelsToBack(a, b)
+			{
+				if( !!a.item && !!!b.item )
+					return -1;
+				else if( !!b.item && !!!a.item )
+					return 1;
+				// else don't alter order.
+			}
+			var backpackEntries = arcadeHud.favorites;
+
+			/*var backpackMapEntries;
+			backpackMapEntries = localStorage.getItem("myBackpackMaps");
+			if( !!backpackMapEntries )
+				backpackMapEntries = JSON.parse(backpackMapEntries);
+			else
+				backpackMapEntries = [];*/
+
+			backpackEntries.sort(sortModelsToBack);
+
+			var entry, entryItem, entryMode, entryTile;
+			for( var i = 0; i < backpackEntries.length; i++ )
+			{
+				entry = backpackEntries[i];
+
+				entryMode = "items";
+				entryItem = aaapi.cmdEx('getLibraryItem', entry.item);
+				if( !!!entryItem )
+				{
+					entryItem = aaapi.cmdEx('getLibraryModel', entry.model);
+					if( !!entryItem )
+						entryMode = "models";
+					else
+						continue;
+				}
+
+				var entryTile = arcadeHud.createTile(entryItem, clipboard, entryMode, "", doNothing);
+				//entryTile.style.cssText = "pointer-events: none; position: absolute; -webkit-transition: inherit;";
+				//entryTile.style.display = "none";
+			}
+
+			var listSelect = document.querySelector('#listSelect');
+
+			// add in all the lists to the box
+			var option, list;
+			for( var listId in arcadeHud.favoritesLists )
+			{
+				list = arcadeHud.favoritesLists[listId];
+				option = document.createElement("option");
+				option.value = listId;
+				option.text = list.title;
+
+				if( listId === arcadeHud.activeFavoritesList )
+					option.selected = true;
+
+				listSelect.appendChild(option);
+			}
+		</script>
+	</body>
+</html>

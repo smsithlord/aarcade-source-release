@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-MhOJ6uzCorTMR"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"psp"
+		"priority"		"1"
+		"fileformat"		"/(.zip|.bin|.img|.iso)$/i"
+	}
+}

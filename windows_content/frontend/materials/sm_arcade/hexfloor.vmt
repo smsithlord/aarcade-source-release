@@ -1,0 +1,7 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/audiohex"
+	"$bumpmap" "sm_arcade/audiohex_norm"
+	"$envmap" "env_cubemap"
+	"$envmapmask" "sm_arcade/audiohex_spec"
+}

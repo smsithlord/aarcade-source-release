@@ -1,0 +1,9 @@
+vertexlitgeneric
+{
+	$basetexture models/cabinets/floorsign_01
+	$bumpmap models/cabinets/floorsign_01_nor
+		
+	$phong 1
+	$phongboost 1
+	$phongfresnelranges "[1 1 .5]"
+}

@@ -1,0 +1,20 @@
+"VertexLitGeneric"
+{
+	"$selfillummask" "models/smarcade/DynScreenGlowMask"
+	"$envmap" "env_cubemap"
+	"$envmaptint" "[0.2 0.2 0.2]"
+	"$model" 1
+
+	"$basetexture" "vgui/canvas"
+	"$selfillum" 1
+	"id"	"images"
+	"simpleimagechannel" "marquee"
+	"autocreate" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+	}
+}

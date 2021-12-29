@@ -1,0 +1,852 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>	
+		<!--script src="asset://ui/tga.js"></script-->	
+		<!--script src="asset://ui/dragscroll.js"--></script><!-- https://github.com/asvd/dragscroll -->
+		<style>
+			html, body
+			{
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				width: 100%;
+				background-color: transparent;
+				color: #ccc;
+			}
+
+			input:focus,
+			select:focus,
+			textarea:focus,
+			button:focus
+			{
+				outline: none;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+	    		border-radius: 3px;
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+
+			#cardTable
+			{
+				background-size: contain;
+				/*background-image: url('cards/masks/oldgrey.png');*/
+			}
+
+			.cardCaption
+			{
+				border: 0;
+				text-align: center;
+				display: inline-block;
+				background-color: rgba(0, 0, 0, 0.7);
+				border-radius: 8px;
+				color: #fff;
+				padding: 8px;
+				padding-left: 16px;
+				padding-right: 16px;
+				font-family: Times New Roman;
+				font-size: 24px;
+				font-weight: bold;
+				margin-bottom: 40px;
+			}
+
+			.cardBackground
+			{
+				background-color: #000;
+				background-image: url('');
+				background-attachment: fixed;
+				background-size: cover;
+				background-position: center center;
+			}
+		</style>
+	</head>
+	<body>
+		<img id="backdropImage" src="" style="position: absolute; z-index: -1; left: 0;" />
+		<img id="preloadImage" src="" style="position: absolute; visibility: hidden; pointer-events: none;" />
+
+		<table id="controlsContainer" style="width: 100%;" cellspacing="0" cellpadding="0" style="position: absolute;">
+			<tr>
+				<td align="center">
+					<div style="position: relative; display: inline-block; z-index: 3;">
+						<div style="position: absolute; -webkit-transform: translateX(-50%);">
+							<table style="width: 640px; margin-top: 8px;" cellspacing="0" cellpadding="0">
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Card Size
+									</td>
+									<td valign="middle" align="left">
+										<input id="sizeSlider" type="range" min="0.5" max="3.0" step="0.1" value="1.0" style="width: 100%;" />
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Card Title
+									</td>
+									<td valign="middle" align="left">
+										<input id="titleInput" type="text" placeholder="Title" value="Card Title" style="width: 100%;" />
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Card Mask
+									</td>
+									<td valign="middle" align="left">
+										<select id="maskImage" style="width: 100%;">
+											<option value="cards/masks/oldgrey.png" selected>Default</option>
+										</select>
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Background Image
+									</td>
+									<td valign="middle" align="left">
+										<select id="backgroundImage" style="width: 100%;">
+											<option value="cards/backgrounds/default.jpg" selected>Default</option>
+											<option value="cards/backgrounds/rays.jpg">Rays</option>
+											<option value="cards/backgrounds/halloween.jpg">Halloween</option>
+										</select>
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Background Scale
+									</td>
+									<td valign="middle" align="left">
+										<select id="backgroundScale" style="width: 100%;">
+											<option value="100% 100%" selected>Stretch</option>
+											<option value="cover">Cover</option>
+											<option value="auto">Tiled</option>
+										</select>
+									</td>
+								</tr>
+							</table>
+							<table style="width: 640px; display: none;" id="backdropOptions" cellspacing="0" cellpadding="0">
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Backdrop Offset X
+									</td>
+									<td valign="middle" align="left">
+										<input id="backdropXSlider" type="range" min="-1200" max="1200" step="1" value="0" style="width: 100%;" />
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Backdrop Offset Y
+									</td>
+									<td valign="middle" align="left">
+										<input id="backdropYSlider" type="range" min="-1000" max="1000" step="1" value="0" style="width: 100%;" />
+									</td>
+								</tr>
+								<tr>
+									<td valign="middle" align="right" style="white-space: nowrap; padding-right: 8px;">
+										Backdrop Scale
+									</td>
+									<td valign="middle" align="left">
+										<input id="backdropScaleSlider" type="range" min="0.3" max="3.0" step="0.1" value="1.0" style="width: 100%;" />
+									</td>
+								</tr>
+							</table>
+						</div>
+					</div></td>
+			</tr>
+		</table>
+
+		<table id="mainTable" style="width: 100%; height: 100%; z-index: 1; border: 0; position: relative; top: 0px; left: -0px;" cellspacing="0" cellpadding="0">
+			<tr class="tallBoxRow">
+				<td class="cardBackground" colspan="3" style="" valign="top" align="center"></td>
+			</tr>
+			<tr>
+				<td class="cardBackground wideBoxCell" style="width: 50%;"></td>
+				<td style="width: 1%; height: 1%; padding: 0;">
+					<table id="cardTable" cellspacing="0" cellpadding="0" style="background-size: 100% 100%;">
+						<tr>
+							<td align="center" valign="top"></td>
+						</tr>
+						<tr>
+							<td align="center"></td>
+						</tr>
+						<tr>
+							<td align="center" valign="bottom">
+								<table cellspacing="0" cellpadding="0" style="width: 100%;">
+									<tr>
+										<td align="left" valign="bottom" width="1%">
+											<div style="position: relative; display: inline-block;">
+												<div style="position: absolute; -webkit-transform: translateY(-100%);">
+													<!--img src="cards/stamps/pumpkin.png" width="150" /-->
+												</div>
+											</div>
+										</td>
+										<td align="center" valign="bottom">
+											<div class="cardCaption aaTitleText" id="cardTitle">Card Title</div>
+										</td>
+										<td align="right" valign="bottom" width="1%"></td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+					</table>
+				</td>
+				<td class="cardBackground wideBoxCell" style="width: 50%;"></td>
+			</tr>
+			<tr class="tallBoxRow">
+				<td class="cardBackground" colspan="3" style=""></td>
+			</tr>
+		</table>
+
+		<script>
+			var controlsContainerElem = document.querySelector('#controlsContainer');
+
+			var cardMakerMasks = localStorage.getItem('cardMakerMasks');
+			if( !!cardMakerMasks )
+				cardMakerMasks = JSON.parse(cardMakerMasks);
+			else
+				cardMakerMasks = {};
+
+			var cardMakerBackgrounds = localStorage.getItem('cardMakerBackgrounds');
+			if( !!cardMakerBackgrounds )
+				cardMakerBackgrounds = JSON.parse(cardMakerBackgrounds);
+			else
+				cardMakerBackgrounds = {};
+
+			//var cardMakerBackdrop = localStorage.getItem('cardMakerBackdrop');
+			//if( !!cardMakerBackdrop )
+			//	cardMakerBackdrop = JSON.parse(cardMakerBackdrop);
+			//else
+			//	cardMakerBackdrop = {};
+
+			var cardMakerSettings = localStorage.getItem('cardMakerSettings');
+			if( !!cardMakerSettings )
+				cardMakerSettings = JSON.parse(cardMakerSettings);
+			else
+				cardMakerSettings = {
+					cardSize: 1.0,
+					//backdropXOffset: 0,
+					//backdropYOffset: 0,
+					//backdropScale: 1.0,
+					backgroundScale: '100% 100%',
+					backgroundImage: 'cards/backgrounds/default.jpg',
+					maskImage: 'cards/masks/oldgrey.png',
+					cardTitle: 'Card Title'
+				};
+
+			var sizeSlider = document.querySelector('#sizeSlider');
+			var backdropXSlider = document.querySelector('#backdropXSlider');
+			var backdropYSlider = document.querySelector('#backdropYSlider');
+			var backdropScaleSlider = document.querySelector('#backdropScaleSlider');
+			var backgroundScaleElem = document.querySelector('#backgroundScale');
+			var backgroundImageElem = document.querySelector('#backgroundImage');
+			var maskImageElem = document.querySelector('#maskImage');
+			var titleInput = document.querySelector('#titleInput');
+			var backdropOptions = document.querySelector('#backdropOptions');
+			var cardTable = document.querySelector('#cardTable');
+			var cardTitle = document.querySelector('#cardTitle');
+			var preloadImageElem = document.querySelector('#preloadImage');
+			var backdropImageElem = document.querySelector('#backdropImage');
+
+			for( var x in cardMakerMasks )
+			{
+				var option = document.createElement('option');
+				option.value = x;
+				option.text = cardMakerMasks[x];
+				maskImageElem.appendChild(option);
+			}
+
+			for( var x in cardMakerBackgrounds )
+			{
+				var option = document.createElement('option');
+				option.value = x;
+				option.text = cardMakerBackgrounds[x];
+				backgroundImageElem.appendChild(option);
+			}
+
+			sizeSlider.value = cardMakerSettings.cardSize;
+			//backdropXSlider.value = cardMakerSettings.backdropXOffset;
+			//backdropYSlider.value = cardMakerSettings.backdropYOffset;
+			//backdropScaleSlider.value = cardMakerSettings.backdropScale;
+			backgroundScaleElem.value = cardMakerSettings.backgroundScale;
+			backgroundImageElem.value = cardMakerSettings.backgroundImage;
+			maskImageElem.value = cardMakerSettings.maskImage;
+			titleInput.value = cardMakerSettings.cardTitle;
+
+			cardTitle.innerHTML = titleInput.value;
+			if( titleInput.value == '' )
+				cardTitle.style.display = 'none';
+
+			function saveCardMakerSettings()
+			{
+				cardMakerSettings = {
+					cardSize: sizeSlider.value,
+					//backdropXOffset: backdropXSlider.value,
+					//backdropYOffset: backdropYSlider.value,
+					//backdropScale: backdropScaleSlider.value,
+					backgroundScale: backgroundScaleElem.options[backgroundScaleElem.selectedIndex].value,
+					backgroundImage: backgroundImageElem.options[backgroundImageElem.selectedIndex].value,
+					maskImage: maskImageElem.options[maskImageElem.selectedIndex].value,
+					cardTitle: titleInput.value
+				};
+
+				localStorage.setItem('cardMakerSettings', JSON.stringify(cardMakerSettings));
+			}
+
+			var g_backdropWidth = 0;
+			var g_backdropHeight = 0;
+			var g_cardWidth = 0;
+			var g_cardHeight = 0;
+			preloadImageElem.addEventListener('load', function(e)
+			{
+				g_cardWidth = preloadImageElem.offsetWidth;
+				g_cardHeight = preloadImageElem.offsetHeight;
+				//sizeSlider.value = "1";
+
+				var file = maskImageElem.options[maskImageElem.selectedIndex].value;
+				file = (file[1] == ':') ? 'asset://local/' + encodeURIComponent(file) : encodeURIComponent(file);
+
+				cardTable.style.backgroundImage = 'url("' + file + '")';
+
+				var width = Math.round(g_cardWidth * g_cardSize);
+				var height = Math.round(g_cardHeight * g_cardSize);
+
+				if( parseInt(sizeSlider.value) == parseInt(sizeSlider.max) )
+				{
+					width = 1920;
+					height = 1080;
+				}
+
+				if( width >= 1920 )
+				{
+					width = 1920;
+
+					var elems = document.querySelectorAll('.wideBoxCell');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'none';
+					}
+				}
+				else
+				{
+					var elems = document.querySelectorAll('.wideBoxCell');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'table-cell';
+					}
+				}
+
+				if( height >= 1080 )
+				{
+					height = 1081;
+
+					var elems = document.querySelectorAll('.tallBoxRow');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'none';
+					}
+				}
+				else
+				{
+					var elems = document.querySelectorAll('.tallBoxRow');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'table-row';
+					}
+				}
+
+				cardTable.style.width = width + 'px';
+				cardTable.style.height = height + 'px';
+			});
+
+			backdropImageElem.addEventListener('load', function(e)
+			{
+				backdropOptions.style.display = 'block';
+				g_backdropWidth = preloadImageElem.offsetWidth;
+				g_backdropHeight = preloadImageElem.offsetHeight;
+			});
+
+			var g_cardSize = sizeSlider.value;
+			sizeSlider.addEventListener('input', function(e)
+			{
+				g_cardSize = sizeSlider.value;
+				var width = Math.round(g_cardWidth * g_cardSize);
+				var height = Math.round(g_cardHeight * g_cardSize);
+
+				if( parseInt(sizeSlider.value) == parseInt(sizeSlider.max) )
+				{
+					width = 1920;
+					height = 1080;
+				}
+
+				if( width >= 1920 )
+				{
+					width = 1920;
+
+					var elems = document.querySelectorAll('.wideBoxCell');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'none';
+					}
+				}
+				else
+				{
+					var elems = document.querySelectorAll('.wideBoxCell');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'table-cell';
+					}
+				}
+
+				if( height >= 1080 )
+				{
+					height = 1081;
+
+					var elems = document.querySelectorAll('.tallBoxRow');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'none';
+					}
+				}
+				else
+				{
+					var elems = document.querySelectorAll('.tallBoxRow');
+					for( var i = 0; i < elems.length; i++ )
+					{
+						elems[i].style.display = 'table-row';
+					}
+				}
+
+				cardTable.style.width = width + 'px';
+				cardTable.style.height = height + 'px';
+
+				saveCardMakerSettings();
+			});
+
+			titleInput.addEventListener('input', function(e)
+			{
+				cardTitle.innerHTML = titleInput.value;
+				if( titleInput.value == '' )
+					cardTitle.style.display = 'none';
+				else
+					cardTitle.style.display = 'inline-block';
+
+				saveCardMakerSettings();
+			});
+
+			backdropXSlider.addEventListener('input', function(e)
+			{
+				backdropImageElem.style.left = backdropXSlider.value + "px";
+			});
+
+			backdropYSlider.addEventListener('input', function(e)
+			{
+				backdropImageElem.style.top = backdropYSlider.value + "px";
+			});
+
+			var g_backdropSize = 1.0;
+			backdropScaleSlider.addEventListener('input', function(e)
+			{
+				g_backdropSize = backdropScaleSlider.value;
+				backdropImageElem.style.webkitTransform = 'scale(' + g_backdropSize + ')';
+			});
+
+			backgroundScaleElem.addEventListener('change', function(e)
+			{
+				var elems = document.querySelectorAll('.cardBackground');
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elems[i].style.backgroundSize = backgroundScaleElem.options[backgroundScaleElem.selectedIndex].value;
+				}
+
+				saveCardMakerSettings();
+			});
+
+			backgroundImageElem.addEventListener('change', function(e)
+			{
+				g_droppedFileToUse = backgroundImageElem.options[backgroundImageElem.selectedIndex].value;
+				useAsBackground();
+			});
+
+			maskImageElem.addEventListener('change', function(e)
+			{
+				g_droppedFileToUse = maskImageElem.options[maskImageElem.selectedIndex].value;
+				useAsMask();
+			});
+
+			var oldClientX = 0;
+			var oldClientY = 0;
+			var g_droppedFile = '';
+			var g_droppedFileToUse = '';
+
+			function useAsBackdrop()
+			{
+				g_cardSize = 1.0;
+				sizeSlider.value = g_cardSize;
+				cardTable.style.width = Math.round(g_cardWidth * g_cardSize) + 'px';
+				cardTable.style.height = Math.round(g_cardHeight * g_cardSize) + 'px';
+				g_backdropSize = backdropScaleSlider.value;
+
+				backdropXSlider.value = 0;
+				backdropYSlider.value = 0;
+				backdropScaleSlider.value = 1.0;
+
+				backdropImageElem.style.left = '0';
+				backdropImageElem.style.top = '0';
+				backdropImageElem.style.webkitTransform = 'scale(1.0)';
+				backdropImageElem.src = "asset://local/" + g_droppedFileToUse;
+			}
+
+			function useAsBackground()
+			{
+				var alreadyExists = false;
+				for( var i = 0; i < backgroundImageElem.options.length; i++ )
+				{
+					if( backgroundImageElem.options[i].value == g_droppedFileToUse )
+					{
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var option = document.createElement('option');
+					option.value = g_droppedFileToUse;
+
+					var shortTitle = g_droppedFileToUse;
+					var lastSlash = shortTitle.lastIndexOf('/');
+					if( lastSlash < 0 )
+						lastSlash = shortTitle.lastIndexOf('\\');
+					if( lastSlash > 0 )
+						shortTitle = shortTitle.substring(lastSlash+1);
+
+					option.text = shortTitle;
+					backgroundImageElem.appendChild(option);
+					backgroundImageElem.selectedIndex = backgroundImageElem.options.length - 1;
+
+					cardMakerBackgrounds[g_droppedFileToUse] = shortTitle;
+					localStorage.setItem('cardMakerBackgrounds', JSON.stringify(cardMakerBackgrounds));
+				}
+				else
+				{
+					backgroundImageElem.selectedIndex = i;
+				}
+
+
+				var file = (g_droppedFileToUse[1] == ':') ? 'asset://local/' + encodeURIComponent(g_droppedFileToUse) : encodeURIComponent(g_droppedFileToUse);
+
+				var elems = document.querySelectorAll('.cardBackground');
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elems[i].style.backgroundSize = backgroundScaleElem.options[backgroundScaleElem.selectedIndex].value;
+					elems[i].style.backgroundImage = 'url("' + file + '")';
+				}
+				
+				saveCardMakerSettings();
+			}
+
+			function useAsSticker()
+			{
+
+			}
+
+			function useAsMask()
+			{
+				var alreadyExists = false;
+				for( var i = 0; i < maskImageElem.options.length; i++ )
+				{
+					if( maskImageElem.options[i].value == g_droppedFileToUse )
+					{
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var option = document.createElement('option');
+					option.value = g_droppedFileToUse;
+
+					var shortTitle = g_droppedFileToUse;
+					var lastSlash = shortTitle.lastIndexOf('/');
+					if( lastSlash < 0 )
+						lastSlash = shortTitle.lastIndexOf('\\');
+					if( lastSlash > 0 )
+						shortTitle = shortTitle.substring(lastSlash+1);
+
+					option.text = shortTitle;
+					maskImageElem.appendChild(option);
+					maskImageElem.selectedIndex = maskImageElem.options.length - 1;
+
+					cardMakerMasks[g_droppedFileToUse] = shortTitle;
+					localStorage.setItem('cardMakerMasks', JSON.stringify(cardMakerMasks));
+				}
+				else
+				{
+					maskImageElem.selectedIndex = i;
+				}
+
+				var file = (g_droppedFileToUse[1] == ':') ? 'asset://local/' + g_droppedFileToUse : g_droppedFileToUse;
+
+				preloadImageElem.src = file;
+				
+				saveCardMakerSettings();
+			}
+
+			function useAsNothing()
+			{
+				
+			}
+
+			document.addEventListener('mousemove', function(e)
+			{
+				if( g_droppedFile != '')
+				{
+					g_droppedFileToUse = g_droppedFile;
+					g_droppedFile = '';
+
+					//sticker background mask backdrop cancel
+					createModalPrompt('Add Image To Card', 'How would you like this image to be used on your card?', g_droppedFileToUse, 'useAsSticker();', 'useAsBackground();', 'useAsMask();', 'useAsBackdrop();', 'useAsNothing();');
+				}
+			});
+
+			function dropListener(files_in)
+			{				
+				g_droppedFile = (Array.isArray(files_in)) ? files_in[0] : files_in;
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, image, firstAction, secondAction, thirdAction, fourthAction, fifthAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 100; left: 0; top: 0;";
+				modalContainer.addEventListener("click", function(e)
+				{
+					if( e.currentTarget !== e.target )
+						return;
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+
+				modalHTML += '<table style="margin-left: 0; margin-right: 0;">\
+					<tr>\
+						<td>\
+							<img src="asset://local/' + image + '" style="width: 78px;" />\
+						</td>\
+						<td style="padding-left: 15px;">';
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+
+				modalHTML += "</div>";
+				modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Sticker" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Background" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Mask" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Backdrop" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				//mainTable.style.display = 'none';
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(firstAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(secondAction);
+				}, true);
+
+				buttons[2].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(thirdAction);
+				}, true);
+
+				buttons[3].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(fourthAction);
+				}, true);
+
+				buttons[4].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(fifthAction);
+				}, true);
+			}
+
+			// Load in actual images last, now that all listeners are good to go.
+			var file = backgroundImageElem.options[backgroundImageElem.selectedIndex].value;
+				file = (file[1] == ':') ? 'asset://local/' + encodeURIComponent(file) : encodeURIComponent(file);
+
+			var elems = document.querySelectorAll('.cardBackground');
+			for( var i = 0; i < elems.length; i++ )
+			{
+				//console.log(elems[i].style.backgroundImage);
+				elems[i].style.backgroundSize = backgroundScaleElem.options[backgroundScaleElem.selectedIndex].value;
+
+
+				elems[i].style.backgroundImage = 'url("' + file + '")';
+			}
+
+			file = maskImageElem.options[maskImageElem.selectedIndex].value;
+				file = (file[1] == ':') ? 'asset://local/' + file : file;
+
+			preloadImageElem.src = file;
+
+			function hideControls()
+			{
+				if( document.activeElement.tagName == 'INPUT' )
+				{
+					hideControlsTimeout = setTimeout(hideControls, 3000);
+					return;
+				}
+
+				hideControlsTimeout = null;
+				controlsContainerElem.style.display = 'none';
+			}
+
+			function showControls()
+			{
+				controlsContainerElem.style.display = 'table';
+			}
+
+			var hideControlsTimeout = setTimeout(hideControls, 3000);
+
+			document.addEventListener('mousemove', function(e)
+			{
+				if( !!hideControlsTimeout )
+					clearTimeout(hideControlsTimeout);
+				else
+					showControls();
+
+				hideControlsTimeout = setTimeout(hideControls, 3000);
+			});
+
+		</script>
+
+	</body>
+</html>

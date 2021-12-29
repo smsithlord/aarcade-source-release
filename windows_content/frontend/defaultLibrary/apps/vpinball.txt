@@ -1,0 +1,26 @@
+"app"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-NL4ht-RDtIVIt"
+		}
+		"title"		"VPinball"
+		"file"		"X:\Emulators\Visual Pinball\VPinball8.exe"
+		"commandformat"		"-Play -$QUOTE$FILE$QUOTE"
+		"type"		"-ohTuY-NIzOC5eU5Wx5h"
+		"download"		"http://www.vpforums.org/index.php?app=downloads&showcat=5"
+		"reference"		"http://www.vpforums.org/index.php?app=downloads&showcat=5"
+		"filepaths"
+		{
+			"-om88gxMXT-Oy3y7TYcp"
+			{
+				"id"		"-om88gxMXT-Oy3y7TYcp"
+				"path"		"X:\Emulators\Pinball\Visual Pinball\Tables\"
+			}
+		}
+	}
+}

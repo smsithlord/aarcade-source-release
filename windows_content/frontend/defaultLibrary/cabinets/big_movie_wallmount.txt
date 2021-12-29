@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"713dca03"
+		}
+		"title"		"big_movie_wallmount"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\cabinets\big_movie_wallmount.mdl"
+			}
+		}
+		"dynamic"		"1"
+	}
+}

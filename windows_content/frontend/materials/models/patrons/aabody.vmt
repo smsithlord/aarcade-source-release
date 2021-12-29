@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\patrons/aabody"
+	"$bumpmap" "models\patrons/aabody_normal"
+	"$model" "1"
+}

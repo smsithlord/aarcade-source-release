@@ -1,0 +1,7 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\players\heads/zombiejoe_eyewear_diffuse"
+	"$bumpmap" "models\players\heads/zombiejoe_Eyewear_normal"
+	"$model" "1"
+	"$translucent" "1"
+}

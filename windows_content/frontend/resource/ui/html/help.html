@@ -1,0 +1,726 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			.linkList
+			{
+				text-align: left;
+				font-weight: bold;
+				font-size: 24px;
+				font-family: Arial;
+			}
+
+			.listLink
+			{
+				display: inline-block;
+				padding: 8px;
+				padding-top: 2px;
+				padding-bottom: 2px;
+				white-space: nowrap;
+			}
+
+			.smallStuff
+			{
+				font-size: 14px;
+				font-weight: normal;
+				display: inline;
+				pointer-events: none;
+			}
+
+			.listLink:hover
+			{
+				text-decoration: underline;
+				/*background-color: #333;*/
+			}
+
+			.activeListLink
+			{
+				text-decoration: underline;
+				/*background-color: #222;*/
+			}
+
+			.helpHeader
+			{
+				font-size: 24px;
+				font-family: Arial;
+				font-weight: bold;
+			}
+
+			.helpDetails
+			{
+				display: none;
+				margin-top: 20px;
+			}
+
+			.activeListLinkHelp
+			{
+				display: inline-block;
+			}
+
+			.helpDetails li
+			{
+				margin-top: 12px;
+				margin-bottom: 12px;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var givenScreenshotId = arcadeHud.getParameterByName("id");
+			
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//if( !uiBack )
+			//	uiBack = "window.location='asset://ui/import.html';";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Help Documentation", "width: 1200px;", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+
+			var browseIconHTML = arcadeHud.generateIconHTML("ezfolder.png", 24, 24, "aaTextColorTwoColor");
+			var wwwIconHTML = arcadeHud.generateIconHTML("ezwww.png", 24, 24, "aaTextColorTwoColor");
+			var wizardIconHTML = arcadeHud.generateIconHTML("ezwizard.png", 24, 24, "aaTextColorTwoColor");
+			var wizard2IconHTML = arcadeHud.generateIconHTML("wizardicon.png", 24, 24, "aaTextColorTwoColor");
+			var switchIconHTML = arcadeHud.generateIconHTML("switchicon.png", 24, 24, "aaTextColorTwoColor");
+			var steamIconHTML = arcadeHud.generateIconHTML("ezsteam.png", 24, 24, "aaTextColorTwoColor");
+			var moveIconHTML = arcadeHud.generateIconHTML("moveicon.png", 24, 24, "aaTextColorTwoColor");
+			var editIconHTML = arcadeHud.generateIconHTML("editicon.png", 24, 24, "aaTextColorTwoColor");
+			var steam2IconHTML = arcadeHud.generateIconHTML("steamicon.png", 24, 24, "aaTextColorTwoColor");
+			var mirrorIconHTML = arcadeHud.generateIconHTML("screenmirror.png", 24, 24, "aaTextColorTwoColor");
+			var deleteIconHTML = arcadeHud.generateIconHTML("eraseicon.png", 24, 24, "aaTextColorTwoColor");
+
+			var mountableGames = [
+				"Counter-Strike: Source",
+				"Team Fortress 2",
+				"Portal",
+				"Half-Life 2: Deathmatch",
+				"Half-Life 2: Episode 2",
+				"Half-Life 2: Episode 1",
+				"Half-Life 2",
+				"Half-Life 2: Lost Coast",
+				"Garry's Mod",
+				"Double Action",
+				"No More Room In Hell",
+				"Day of Defeat: Source",
+				"Pirates, Vikings, and Knights II",
+				"Age of Chivalry",
+				"D.I.P.R.I.P",
+				"Dystopia",
+				"Empires Mod",
+				"Eternal Silence",
+				"Fistful of Frags",
+				"Neotokyo",
+				"Minerva",
+				"Battlegrounds 2",
+				"Jurassic",
+				"GoldenEye: Source",
+				"Black Mesa Mod",
+				"Perfect Dark",
+				"Halloween",
+				"WeekdayWarrior",
+				"Hidden",
+				"Korsakovia",
+				"Dear Esther",
+				"Insurgency Mod"
+			];
+		</script>
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "intro",
+						"title": "Intro"
+					},
+					{
+						"id": "basics",
+						"title": "Basics"
+					},
+					{
+						"id": "advanced",
+						"title": "Advanced"
+					},
+					{
+						"id": "addons",
+						"title": "Addons"
+					}
+				],
+				"activeTabId": tabId
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="intro">
+			<table style="width: 100%;" class="dashboardsContainer">
+				<tr>
+					<td style="width: 1%;" valign="top">
+						<div style="border-size: 2px; border-style: solid; height: 750px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+							<ul class="linkList">
+								<li><div class="listLink activeListLink" helpName="welcome">Welcome</div></li>
+								<li><div class="listLink" helpName="usingwindows">Using Windows</div></li>
+								<li><div class="listLink" helpName="3ddesktop">3D Desktop</div></li>
+								<li><div class="listLink" helpName="gettingstarted">Getting Started</div></li>
+							</ul>
+						</div>
+					</td>
+					<td>
+						<div style="border-size: 2px; border-style: solid; height: 750px; text-align: center; padding-right: 20px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+						<div class="widgetPane">
+							<div class="helpDetails activeListLinkHelp" helpName="welcome">
+								<div class="helpHeader">Welcome</div>
+								<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+									<li>The metaverse is real, and has existed since the dawn of the computer age.  Through the power of meta-data & personal human curation, Anarchy Arcade will improve the enjoyment & excitement of using your PC.</li>
+									<li>AArcade is a 3D representation of your computer & the internet. It visualizes your metaverse into a game world.</li>
+									<li>It launches shortcuts, and can run some stuff on the in-game screens too.</li>
+									<li>AArcade takes less than 0.1% of your CPU and GPU while it's paused in the background, on average.</li>
+									<li>You leave it open in the background like a desktop wallpaper.</li>
+									<li>Pause AArcade if you aren't walking around in it.</li>
+								</ul>
+							</div>
+							<div class="helpDetails" helpName="usingwindows">
+								<div class="helpHeader">Using Windows</div>
+								<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+									<li>AArcade features next-gen OTP-based technology allowing Windows and standalone apps to be displayed as if they were part of AArcade's HUD (Kappa).</li>
+									<li>Alt+Tab to switch between programs.</li>
+									<li>Use the Windows key to access your Windows Start Menu.</li>
+									<li>Press ESC to access your task bars.</li>
+									<li>Copy & paste text with Ctrl+C & Ctrl+V.</li>
+									<li>Pause AArcade when you aren't using it.</li>
+								</ul>
+							</div>
+							<div class="helpDetails" helpName="3ddesktop">
+								<div class="helpHeader">3D Desktop</div>
+								<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+									<li>AArcade is your 3D desktop.</li>
+									<li>You spawn 3D shortcuts into it.</li>
+									<li>They launch your programs exactly like 2D shortcuts do.</li>
+									<li>Some stuff can run on the in-game screens too.</li>
+									<li>You can customize how your 3D shortcuts look.</li>
+									<li>They are just generic looking, by default.</li>
+								</ul>
+							</div>
+							<div class="helpDetails" helpName="gettingstarted">
+								<div class="helpHeader">Getting Started</div>
+								<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+									<li>Go to the Atlas and click Play > Local.</li>
+									<li>This will put you in a blank world for you to build in.</li>
+									<li>Middle-click on an empty spot and start spawning shortcuts.</li>
+									<li>Launch your shortcuts & play your games.</li>
+									<li>AArcade pauses in the background and uses less than 0.1% of your CPU & GPU, on average.</li>
+									<li>Enjoy your interactive 3D desktop wallpaper!</li>
+									<li>Further instructions in Main Menu > Atlas > Help.</li>
+								</ul>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="basics">
+			<table style="width: 100%;" class="dashboardsContainer">
+				<tr>
+					<td style="width: 1%;" valign="top">
+						<div style="border-size: 2px; border-style: solid; height: 750px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="spawnaprop"><div class="smallStuff">Spawn a </div>Prop</div></li>
+								<li><div class="listLink" helpName="spawnalocalpicture"><div class="smallStuff">Spawn a </div>Local Picture</div></li>
+								<li><div class="listLink" helpName="spawnaweblink"><div class="smallStuff">Spawn a </div>Web Link</div></li>
+								<li><div class="listLink" helpName="spawnalocalfile"><div class="smallStuff">Spawn a </div>Local File</div></li>
+								<li><div class="listLink" helpName="spawnayoutubevideo"><div class="smallStuff">Spawn a </div>YouTube Video</div></li>
+								<li><div class="listLink" helpName="spawnasteamgame"><div class="smallStuff">Spawn a </div>Steam Game</div></li>
+								<li><div class="listLink" helpName="spawnahollywoodmovie"><div class="smallStuff">Spawn a </div>Hollywood Movie</div></li>
+								<li><div class="listLink" helpName="spawnaninternetpicture"><div class="smallStuff">Spawn an </div>Internet Picture</div></li>
+								<li><div class="listLink" helpName="moveanobject"><div class="smallStuff">Move an </div>Object</div></li>
+								<li><div class="listLink" helpName="deleteanobject"><div class="smallStuff">Delete an </div>Object</div></li>
+								<li><div class="listLink" helpName="launchashortcut"><div class="smallStuff">Launch a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="interactwithashortcut"><div class="smallStuff">Interact w/ a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="editashortcut"><div class="smallStuff">Edit a </div>Shortcut</div></li>
+								<li><div class="listLink" helpName="itemproperties">Item Properties</div></li>
+								<li><div class="listLink" helpName="artworkimages">Artwork Images</div></li>
+								<li><div class="listLink" helpName="interactivepreview">Interactive Preview</div></li>
+								<li><div class="listLink" helpName="yourmedialibrary">Your Media Library</div></li>
+								<li><div class="listLink" helpName="usecontinuousplay"><div class="smallStuff">Use </div>Continuous Play</div></li>
+								<li><div class="listLink" helpName="closeaningametask"><div class="smallStuff">Close an </div>In-Game Task</div></li>
+								<li><div class="listLink" helpName="setavideomirror"><div class="smallStuff">Set a </div>Video Mirror</div></li>
+							</ul>
+						</div>
+					</td>
+					<td valign="top">
+						<div style="border-size: 2px; border-style: solid; height: 750px; text-align: center; padding-right: 20px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+							<div id="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.<br /><br />There's many different ways to do things in AArcade.<br /><br />Use it how ever is easiest for you.</div>
+								</div>
+								<div class="helpDetails" helpName="spawnaprop">
+									<div class="helpHeader">Spawn a Prop</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose a prop from the list on the right-hand-side of the menu.</li>
+										<li>Look where you want to position the prop.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnalocalpicture">
+									<div class="helpHeader">Spawn a Local Picture</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the BROWSE <script>document.write(browseIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Select the local image file you want to spawn.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnaweblink">
+									<div class="helpHeader">Spawn a Web Link</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the WWW <script>document.write(wwwIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Paste or type your URL Into the box & press ENTER.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnalocalfile">
+									<div class="helpHeader">Spawn a Local File</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Choose the BROWSE <script>document.write(browseIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Select the local file you want to spawn.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnayoutubevideo">
+									<div class="helpHeader">Spawn a YouTube Video</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type what you want to watch into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose YOUTUBE <img src="scrapers/youtube.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the video you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnasteamgame">
+									<div class="helpHeader">Spawn a Steam Game</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type the name of the game into the SEARCH BOX.</li>
+										<li>Choose the STEAM <script>document.write(steamIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose STEAM STORE from the sub-menu.</li>
+										<li>Find the game you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnahollywoodmovie">
+									<div class="helpHeader">Spawn a Hollywood Movie</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type the name of the movie into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose THEMOVIEDB <img src="scrapers/themoviedb.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the movie you want to spawn.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="spawnaninternetpicture">
+									<div class="helpHeader">Spawn an Internet Picture</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an empty spot.</li>
+										<li>Type what you want into the SEARCH BOX.</li>
+										<li>Choose the WIZARDS <script>document.write(wizardIconHTML);</script> button from the bottom of the menu.</li>
+										<li>Choose DUCKDUCKGOIMAGES <img src="scrapers/ddgimages.png" style="height: 24px; vertical-align: bottom;" /> from the sub-menu.</li>
+										<li>Find the image you want to spawn.</li>
+										<li>Click the image so that it is displayed by itself, directly.</li>
+										<li>Click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button on the left-hand-side of the page.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="moveanobject">
+									<div class="helpHeader">Move an Object</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose MOVE <script>document.write(moveIconHTML);</script> from the menu.</li>
+										<li>Look where you want to position the object.</li>
+										<li>(OPTIONAL) Hold down right-mouse to fine-tune the position.</li>
+										<li>Left-click to confirm & spawn your object.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="deleteanobject">
+									<div class="helpHeader">Delete an Object</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose DELETE <script>document.write(deleteIconHTML);</script> from the menu.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="launchashortcut">
+									<div class="helpHeader">Launch a Shortcut</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Click on the item's thumbnail in the center of the menu to launch.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="editashortcut">
+									<div class="helpHeader">Edit a Shortcut</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose the EDIT ITEM <script>document.write(editIconHTML);</script> button from the bottom-center of the menu.</li>
+										<li>Adjust any item properties you wish, pressing ENTER to save changes.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="itemproperties">
+									<div class="helpHeader">Item Properties</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Every item has properties that control how its 3D shortcut functions & looks.</li>
+										<li>The <tt>file target</tt> field is what the shortcut launches.</li>
+										<li>The <tt>open with</tt> field is usually left on <tt>Windows (default)</tt> for all shortcuts.</li>
+										<li>The <tt>type</tt> field is only used when searching through your stuff.</li>
+										<li>The rest of the fields are to change which artwork images & videos are used on its 3D shortcut.</li>
+										<li>You can manually edit an item's properties (pressing ENTER to save changes), or you can use WIZARDS to auto-scrape images & videos from popular internet media databases instead.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="artworkimages">
+									<div class="helpHeader">Artwork Images</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Each 3D shortcut has 2 image channels that it shows based on the item's properties.</li>
+										<li>The <tt>marquee image</tt> is used on the 3D shortcut's display banner so you can tell which game it is at a glance.</li>
+										<li>The <tt>screen image</tt> is used on the 3D shortcut's screen surfaces and is replaced by an interactive preview when the shortcut gets selected.</li>
+										<li>If an item's screen or marquee image is left blank, AArcade will automatically try to determine the best image to use as a replacement.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="interactwithashortcut">
+									<div class="helpHeader">Interactive w/ a Shortcut</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Left-click on a 3D shortcut to select it.</li>
+										<li>When a 3D shortcut is selected, its screen image is replaced by an interactive preview.</li>
+										<li>Look at its screen & hold right-mouse to interact with it, OR left-click the 3D shortcut again to fullscreen it.</li>
+										<li>Press ESC to deselect a 3D shortcut, OR simply left-click on the floor.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="interactivepreview">
+									<div class="helpHeader">Interactive Preview</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>When a 3D shortcut is selected, its screen image is replaced by an interactive preview.</li>
+										<li>AArcade automatically tries to show you the best in-game preview as possible.  If the item has a <tt>preview website</tt>, that will be displayed.  Otherwise, it might be one of the artwork images or the <tt>file target</tt> itself.</li>
+										<li>Web content, local media files, or even in-game emulators are all compatible with being used as in-game interactive previews.</li>
+										<li>Remember that you can launch any of the 3D shortcut to run them in regular standalone mode as well.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="yourmedialibrary">
+									<div class="helpHeader">Your Media Library</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Your media library holds your customizations for all of the shortcuts that you've added to AArcade.</li>
+										<li>Your library is empty at first, with just a few default props in it.  It grows larger with every new shortcut that you add.</li>
+										<li>Spawning things that are already in your library is <b>much faster & easier</u> than the very 1st time that you spawn them.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="usecontinuousplay">
+									<div class="helpHeader">Use Continuous Play</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Look at (or select) a 3D shortcut.</li>
+										<li>Press the R button to put it on continuous play. It will keep playing in the background even as you click on other stuff.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="closeaningametask">
+									<div class="helpHeader">Close an In-Game Task</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Hold down the TAB button and choose Tasks.</li>
+										<li>Click the X next to the in-game task you wish to close.</li>
+									</ol>
+								</div>
+								<div class="helpDetails" helpName="setavideomirror">
+									<div class="helpHeader">Set a Video Mirror</div>
+									<ol style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Middle-click on an object.</li>
+										<li>Choose the VIDEO MIRROR <script>document.write(mirrorIconHTML);</script> button from the bottom-center of the menu.</li>
+										<li>Your active in-game task will be shown on this screen now. Hold down TAB and click on a task to change which one gets shown on your video mirrors.  Having lots of video mirrors in your arcade will <i>not</i> hurt your performance.</li>
+									</ol>
+								</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="advanced">
+			<table style="width: 100%;" class="dashboardsContainer">
+				<tr>
+					<td style="width: 1%;" valign="top">
+						<div style="border-size: 2px; border-style: solid; height: 750px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="importsteamlibrary">Import Steam Library</div></li>
+								<li><div class="listLink" helpName="ezmodevsadvancedmode">EZ Mode vs Advanced Mode</div></li>
+								<li><div class="listLink" helpName="usingwizards">Using Wizards</div></li>
+								<li><div class="listLink" helpName="twitch">Twitch</div></li>
+								<li><div class="listLink" helpName="openwith">Open-With</div></li>
+								<li><div class="listLink" helpName="libretroframework">Libretro Framework</div></li>
+								<li><div class="listLink" helpName="leveldesigner">Level Designer</div></li>
+							</ul>
+						</div>
+					</td>
+					<td valign="top" style="text-align: center;">
+						<div style="border-size: 2px; border-style: solid; height: 750px; overflow: auto; padding-right: 20px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor aaScrollBars">
+							<div class="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.</div>
+								</div>
+								<div class="helpDetails" helpName="importsteamlibrary">
+									<div class="helpHeader">Import Steam Library</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Follow these instructions if you wish to bulk-import all of your Steam games at once.</li>
+										<li>Go to Main Menu > Import Steam Games <script>document.write(steam2IconHTML);</script> button.</li>
+										<li>Click CONTINUE and you'll be taken to your Steam profile game list.</li>
+										<li>(NOTE) If you are not signed-in yet, you will have to do so now and then repeat these instructions from the beginning.</li>
+										<li>Click the IMPORT STEAM GAMES <script>document.write(wizard2IconHTML);</script> button that appears on the left-hand-side.</li>
+										<li>Your list of Steam games will then be scraped from your profile and added to your AArcade library.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="ezmodevsadvancedmode">
+									<div class="helpHeader">EZ Mode vs Advanced Mode</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Some menus have both an EZ Mode <u>and</u> an Advanced Mode.</li>
+										<li>You can switch between EZ Mode and Advanced Mode by clicking the <script>document.write(switchIconHTML);</script> button on any menu that supports it.</li>
+										<li>EZ Mode looks like a game console UI, while Advanced Mode looks like the Windows UI.</li>
+										<li>Almost everything you can do in Advanced Mode could also be done from EZ Mode too.</li>
+										<li>The instructions here in the help menu are always talking about EZ Mode, unless they specifically mention Advanced Mode.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="usingwizards">
+									<div class="helpHeader">Using Wizards</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Remember that you can always just use the Edit Item <script>document.write(editIconHTML);</script> menu if it's easier for you.</li>
+										<li>All the basic instructions have you spawn things from Wizards first, and then you'd have to specify a local file when you tried to actually launch the shortcut.  However, you can spawn your local file first instead, and then run the Wizard later.</li>
+										<li>Just middle-click on an object then choose the WIZARDS <script>document.write(wizardIconHTML);</script> button.</li>
+										<li>On the sub-menu, you can choose ALL if you want to deck out your item to the max, or choose POSTER/WALLPAPER to just find a marquee/screen image respectively.</li>
+										<li>Steam Store <img src="scrapers/steamstore.png" style="height: 24px; vertical-align: bottom;" /> is good at marquees & screenshots for games, TheMovieDb <img src="scrapers/themoviedb.png" style="height: 24px; vertical-align: bottom;" /> for hollywood movies, Giant Bomb <img src="scrapers/giantbomb.png" style="height: 24px; vertical-align: bottom;" /> for retro games.  You can also use DuckDuckGoImages <img src="scrapers/ddgimages.png" style="height: 24px; vertical-align: bottom;" /> for generic search terms to fill the item's artwork slots.</li>
+										<li>All wziards work similarly.  When using them, you go directly at either a profile page on a website, or directly at an image file, and click the APPLY WIZARD <script>document.write(wizard2IconHTML);</script> button to save stuff from the page you're looking at onto your item.</li>
+										<li>You'll always be given a chance to customize your search terms prior to choosing which wizard to use.  And you can always use the website's in-page search box to use different terms after the fact.</li>
+										<li>You'll always be given a chance to choose which item property field(s) will be affected.  The presets POSTER/WALLPAPER/TRAILER will go into the SCREEN/MARQUEE/PREVIEW fields respectively.  If you choose ALL, then everything the wizard is able to successfully scrape from the web page will be used.</li>
+										<li>If wizards give you trouble, remember you can just Edit Item <script>document.write(editIconHTML);</script> and customize your item properties like a boss.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="twitch">
+									<div class="helpHeader">Twitch</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>You can log into Twitch using the Main Menu > Settings > Twitch tab.</li>
+										<li>You'll have to follow the instructions there for getting your OAUTH token from Twitch.</li>
+										<li>After you've logged into Twitch, your Twitch chat will show up in AArcade's chat menu (Y button).</li>
+										<li>You can also enable Twitch Bot Commands so that your own viewers can use the !map and !linx commands in chat to get meta info about what you have currently selected inside of AArcade.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="openwith">
+									<div class="helpHeader">Open-With</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Most items use <tt>Windows (default)</tt> as their <tt>Open With</tt> field.  This allows Windows to launch the shortcut as if you double-clicked on its desktop icon.  This is usually the way you'll want to launch your shortcuts.</li>
+										<li>Advanced users may use Open With app profiles for greater control over launch options.</li>
+										<li>For example, Open With apps allow AArcade to launch your standalone emulator app & automatically load your game.</li>
+										<li>Open With apps can be created & modified in the Advanced Library Browser > Apps tab.</li>
+										<li>They consist of an app EXE that will actually be launched, a launch option syntax that controls how the shortcut's <tt>file target</tt> is used during the launch, and a content folder that helps AArcade detect which files are compatible with the app.</li>
+										<li>There are a number of popular Open With app profiles included with AArcade by default.</li>
+										<li>Further details & instructions for Open With apps are in the Advanced Library Browser > Apps tab > Open-With App Properties menu.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="libretroframework">
+									<div class="helpHeader">Libretro Framework</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Libretro is a platform. People create programs that run <i>on</i> Libretro. Programs such as video players, retro emulators, etc.</li>
+										<li>Libretro runs these programs, but it allows AArcade to handle input (such as which buttons you're pressing) <u>and</u> output (such as the pixels to draw onto the screen).  It essentially allows Libretro programs to run as plug-ins to Anarchy Arcade.</li>
+										<li>The only Libretro program <u>included</u> with AArcade is FFMPEG and it is used to play local video files.  However, there are dozens more Libretro programs that are compatible with AArcade as addons.</li>
+										<li>Further details & instructions for Libretro are in Main Menu > Settings > Embedded tab > Libretro.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="leveldesigner">
+									<div class="helpHeader">Level Designer</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Hammer is the program that creates custom maps for the Source engine. It is very difficult to learn & use. It is the same program Valve used to create HL2, TF2, L4D2, CS:GO, etc.</li>
+										<li>There's lots of tutorials for using Hammer on sites like <tt>Interlopers.net</tt>.</li>
+										<li>Launching Hammer from the Main Menu > Maps > Level Designer tab has several benefits.</li>
+										<li>Hammer is properly auto-configured when launched from AArcade.</li>
+										<li>Create New Project will auto-create the correctly named files & folders inside of the <tt>steamapps/common/Anarchy Arcade/aarcade_user/mapsrc</tt> folder.</li>
+										<li>New projects will automatically use a pre-made template that contains all essential entities + some prefabs geared towards novices and can be compiled & tested right away without any issues.</li>
+										<li>After compiling your project & alt+tabbing back to AArcade, the Main Menu will give you a button to load the map that you just compiled.  It will also give you a RELOAD MAP button so you can quickly test newer versions as you alt+tab between Hammer & AArcade.</li>
+										<li>There is a tutorial video for novices in Main Menu > Maps > Level Designer tab that explains how to use Hammer in general, as well as the template prefab specifically.</li>
+										<li>Experienced level designers could simply create a new project & then delete the prefab to start a blank map.  Experienced level designers would also want to rename the VMF to a unique BSP name just prior to final compile.  They'd also want to know that Hammer remains auto-configured even if they launch it from outside of AArcade & that the Level Designer project menu is generated based on folder/VMF file name.  Novice level designers shouldn't care about these things. Keep calm & party.</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div class="aaTabContent aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="addons">
+			<table style="width: 100%;" class="dashboardsContainer">
+				<tr>
+					<td style="width: 1%;" valign="top">
+						<div style="border-size: 2px; border-style: solid; height: 750px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor">
+							<ul class="linkList">
+								<li><div class="listLink" helpName="customcontent">Custom Content</div></li>
+								<li><div class="listLink" helpName="mountedgames">Mounted Games</div></li>
+								<li><div class="listLink" helpName="importmodels">Importing Models</div></li>
+								<li><div class="listLink" helpName="downloadedcontent">Downloaded Content</div></li>
+								<li><div class="listLink" helpName="gmaextraction">GMA Extraction</div></li>
+								<li><div class="listLink" helpName="steamworkshop">Steam Workshop</div></li>
+							</ul>
+						</div>
+					</td>
+					<td valign="top" style="text-align: center;">
+						<div style="border-size: 2px; border-style: solid; height: 750px; overflow: auto; padding-right: 20px;" class="aaThemeColorTwoInverseShadedBorderColor aaThemeColorTwoShadedBackground aaTextColorTwoColor aaScrollBars">
+							<div class="widgetPane">
+								<div class="helpDetails activeListLinkHelp" helpName="choosetopic">
+									<img src="aalogo.png" style="height: 300px;" />
+									<div class="helpHeader">Choose a topic to begin.<br /><br />AArcade is able to use existing addon content from over 30 other Source engine games.<br /><br />There are ten's of thousands of addon props & maps that are compatible with Anarchy Arcade.</div>
+								</div>
+								<div class="helpDetails" helpName="customcontent">
+									<div class="helpHeader">Custom Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Any sub-folder that you create inside of the following folder gets mounted as a base content path: <tt>steamapps/common/Anarchy Arcade/aarcade_user/custom</tt></li>
+										<li>Any compatible Source engine model or map can be manually placed into your custom sub-folder for use with AArcade.</li>
+										<li>You must make sure you put <u>all</u> of the files from your addon into your custom sub-folder, and maintain the folder structure that the addon came with. Forgetting to copy all files usually results in a purple checkerboard texture bug.</li>
+										<li>New custom addon MAPS will be detected & added to your library automatically when AArcade starts, but new custom addon MODELS are only detected when you use Main Menu > Settings > Import > Models.</li>
+										<li>As an example, if you named your custom sub-folder <tt>gmodstuff</tt>, you would have folders such as: <tt>custom/gmodstuff/maps</tt>, <tt>custom/gmodstuff/models</tt>, <tt>custom/gmodstuff/materials</tt>, etc.</li>
+										<li>Some good places to find addon content to manually install are: <tt>GameBanana.com</tt>, <tt>ModDb.com</tt>, <tt>GarrysMod.org</tt>, various Steam Workshops, and <tt>SteamWorkshopDownloader.io</tt>.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="mountedgames">
+									<div class="helpHeader">Mounted Games</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>AArcade will automatically mount the content (such as maps, models, etc.) of any compatible Source engine games that you have installed.</li>
+										<li>The MAPS from these mounted games will be detected & added to your library automatically when AArcade starts, but the MODELS from these mounted games are only detected when you use Main Menu > Settings > Import > Models.</li>
+										<li>The game assets are mounted directly from their game's install folder, so there's no extra harddrive space required.</li>
+										<li>Mountable Source engine games are: <tt><script>document.write(mountableGames.join(", "));</script>.</tt></li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="importmodels">
+									<div class="helpHeader">Importing Models</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>By default, there's only a handful of AArcade props in your library.</li>
+										<li>If you want all the other props that are available to you to be in your library, you must use Main Menu > Settings > Import > Models.</li>
+										<li>This could potentially add many thousands of new props to your library from all of your mounted Source engine games as well as any custom content that you installed into your custom sub-folder.</li>
+										<li>After you've imported models, they will be accessible from your Library Browser.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="downloadedcontent">
+									<div class="helpHeader">Downloaded Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>When you join a multiplayer server, you might get some new custom models downloaded from that arcade.</li>
+										<li>The models downloaded from multiplayer servers are only detected & added to your library when you use Main Menu > Settings > Import > Models.</li>
+										<li>There's no rush.  Models that you downloaded from a multiplayer server will remain in your download folder unless you manually delete them. So just import models the next time that you're back in Singleplayer mode and you'll be all good.</li>
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="gmaextraction">
+									<div class="helpHeader">GMA Extraction</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>Garry's Mod addon content is locked inside of GMA files, so they must be extracted before AArcade can use them.</li>
+										<li>Use gmad.exe (located inside of your <tt>steamapps/common/GarrysMod/bin</tt> folder) to extract the files from the GMA, then install them into a custom sub-folder following the Custom Content instructions.</li>
+										<!--<li>Alternatively, just drag & drop a GMA file onto this menu to extract it for use in AArcade. (gmad.exe extract -file "C:/path/to/some.gma" -out "A:/aarcade/path/custom/autogma" -warninvalid)</li>-->
+									</ul>
+								</div>
+								<div class="helpDetails" helpName="steamworkshop">
+									<div class="helpHeader">Workshop Content</div>
+									<ul style="text-align: left; display: inline-block; font-family: Arial; font-size: 18px; font-weight: bold;">
+										<li>(BETA) AArcade currently has limited Steam Workshop support.</li>
+										<li>Subscribe to an item on the AArcade Steam Workshop to download it.</li>
+										<li>After Steam finishes the download, restart AArcade so that it can detect & add the new content to your library.</li>
+										<li>All compatible workshop content is automatically detected & added to your library when AArcade starts.  You do not have to go to the import menu.</li>
+										<li>Note that some of the very old AArcade workshop items will not yet work in AArcade until workshop support is completed.</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<!--center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				YADDA
+			</div>
+		</center-->
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<script>
+			function showListLink(helpName)
+			{
+				var listElem = document.querySelector(".listLink[helpName='" + helpName + "']");
+				var helpElem = document.querySelector(".helpDetails[helpName='" + helpName + "']");
+				if( helpElem && listElem && !listElem.classList.contains("activeListLink"))
+				{
+					var parentElem = listElem.parentNode;
+					while(!!parentElem && !parentElem.classList.contains("dashboardsContainer"))
+						parentElem = parentElem.parentNode;
+
+					if( !!parentElem )
+					{
+						var oldElem = parentElem.querySelector(".activeListLinkHelp");
+						if( !!oldElem )
+							oldElem.classList.remove("activeListLinkHelp");
+
+						var oldListElem = parentElem.querySelector(".activeListLink");
+						if( oldListElem )
+							oldListElem.classList.remove("activeListLink");
+
+						helpElem.classList.add("activeListLinkHelp");
+						listElem.classList.add("activeListLink");
+					}
+				}
+			}
+
+			function listLinkClicked(e)
+			{
+				showListLink(e.target.getAttribute("helpName"));
+			}
+
+			var elems = document.querySelectorAll(".listLink");
+			for( var i = 0; i < elems.length; i++ )
+			{
+				elems[i].addEventListener("click", listLinkClicked);
+			}
+		</script>
+	</body>
+</html>

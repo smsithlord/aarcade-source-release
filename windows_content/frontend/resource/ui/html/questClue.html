@@ -1,0 +1,863 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#questDialogue
+			{
+				font-family: "Comic Sans MS", cursive, sans-serif;
+				font-size: 40px;
+			}
+
+			.questResponses
+			{
+				font-family: "Comic Sans MS", cursive, sans-serif;
+				font-style: italic;
+				font-size: 20px;
+			}
+
+			.questResponse
+			{
+				display: table;
+				margin-top: 8px;
+				margin-bottom: 8px;
+				border-bottom: 3px solid blue;
+				background-color: rgba(0, 0, 0, 0.9);
+				border-radius: 20px;
+				padding: 8px;
+			}
+
+			#questResponsesLeft > .questResponse
+			{
+				padding-right: 24px;
+				margin-right: 8px;
+				padding-left: 16px;
+			}
+
+			#questResponsesRight > .questResponse
+			{
+				padding-left: 24px;
+				margin-left: 8px;
+				padding-right: 16px;
+			}
+
+			.questResponse:hover
+			{
+				border-bottom-color: #fff;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="ttsConfig" style="width: 100%; text-align: center;"><div style=" background-color: rgba(0, 0, 0, 0.9); padding: 8px; padding-left: 16px; padding-right: 16px; border-radius: 10px; display: inline-block; margin-top: 10px; font-family: Arial; font-weight: bold; cursor: pointer;" onclick="showTTSConfigPanel();">(EDIT TTS VOICE)</div></div>
+		<table style="width: 100%; position: absolute; top: 0; left: 0; display: none;" cellspacing="0" cellpadding="0" id="ttsConfigPanel">
+			<tr><td align="center" valign="middle">
+				<div style="padding: 30px; background-color: rgba(0, 0, 0, 0.9); border: 4px solid #ccc; display: inline-block; border-radius: 20px;">
+					<table cellspacing="0" cellpadding="0" style="font-size: 30px; font-family: Arial;">
+						<tr><td>Voice</td><td>Pitch</td><td>Rate</td><td>Volume</td></tr>
+						<tr><td>
+							<select id="voice" style="font-size: 30px; font-family: Arial; max-width: 300px;" onchange="sampleSpeak();">
+								<option value="UK English Female">UK English Female</option>
+								<option value="UK English Male">UK English Male</option>
+								<option value="US English Female">US English Female</option>
+								<option value="US English Male">US English Male</option>
+								<option value="Spanish Female">Spanish Female</option>
+								<option value="Spanish Male">Spanish Male</option>
+								<option value="French Female">French Female</option>
+								<option value="French Male">French Male</option>
+								<option value="German Female">German Female</option>
+								<option value="German Male">German Male</option>
+								<option value="Italian Female">Italian Female</option>
+								<option value="Italian Male">Italian Male</option>
+								<option value="Greek Female">Greek Female</option>
+								<option value="Greek Male">Greek Male</option>
+								<option value="Hungarian Female">Hungarian Female</option>
+								<option value="Hungarian Male">Hungarian Male</option>
+								<option value="Turkish Female">Turkish Female</option>
+								<option value="Turkish Male">Turkish Male</option>
+								<option value="Russian Female">Russian Female</option>
+								<option value="Russian Male">Russian Male</option>
+								<option value="Dutch Female">Dutch Female</option>
+								<option value="Dutch Male">Dutch Male</option>
+								<option value="Swedish Female">Swedish Female</option>
+								<option value="Swedish Male">Swedish Male</option>
+								<option value="Norwegian Female">Norwegian Female</option>
+								<option value="Norwegian Male">Norwegian Male</option>
+								<option value="Japanese Female">Japanese Female</option>
+								<option value="Japanese Male">Japanese Male</option>
+								<option value="Korean Female">Korean Female</option>
+								<option value="Korean Male">Korean Male</option>
+								<option value="Chinese Female">Chinese Female</option>
+								<option value="Chinese Male">Chinese Male</option>
+								<option value="Chinese (Hong Kong) Female Female">Chinese (Hong Kong) Female Female</option>
+								<option value="Chinese (Hong Kong) Female Male">Chinese (Hong Kong) Female Male</option>
+								<option value="Chinese (Hong Kong) Male Female">Chinese (Hong Kong) Male Female</option>
+								<option value="Chinese (Hong Kong) Male Male">Chinese (Hong Kong) Male Male</option>
+								<option value="Chinese Taiwan Female Female">Chinese Taiwan Female Female</option>
+								<option value="Chinese Taiwan Female Male">Chinese Taiwan Female Male</option>
+								<option value="Hindi Female">Hindi Female</option>
+								<option value="Hindi Male">Hindi Male</option>
+								<option value="Serbian Female">Serbian Female</option>
+								<option value="Serbian Male">Serbian Male</option>
+								<option value="Croatian Female">Croatian Female</option>
+								<option value="Croatian Male">Croatian Male</option>
+								<option value="Bosnian Female">Bosnian Female</option>
+								<option value="Bosnian Male">Bosnian Male</option>
+								<option value="Romanian Female">Romanian Female</option>
+								<option value="Romanian Male">Romanian Male</option>
+								<option value="Catalan Male">Catalan Male</option>
+								<option value="Australian Female">Australian Female</option>
+								<option value="Australian Male">Australian Male</option>
+								<option value="Finnish Female">Finnish Female</option>
+								<option value="Finnish Male">Finnish Male</option>
+								<option value="Afrikaans Female">Afrikaans Female</option>
+								<option value="Afrikaans Male">Afrikaans Male</option>
+								<option value="Arabic Female">Arabic Female</option>
+								<option value="Arabic Male">Arabic Male</option>
+								<option value="Armenian Male">Armenian Male</option>
+								<option value="Czech Female">Czech Female</option>
+								<option value="Czech Male">Czech Male</option>
+								<option value="Danish Female">Danish Female</option>
+								<option value="Danish Male">Danish Male</option>
+								<option value="Esperanto Male">Esperanto Male</option>
+								<option value="Icelandic Male">Icelandic Male</option>
+								<option value="Indonesian Female">Indonesian Female</option>
+								<option value="Indonesian Male">Indonesian Male</option>
+								<option value="Latin Female">Latin Female</option>
+								<option value="Latin Male">Latin Male</option>
+								<option value="Latvian Male">Latvian Male</option>
+								<option value="Macedonian Male">Macedonian Male</option>
+								<option value="Moldavian Male">Moldavian Male</option>
+								<option value="Montenegrin Male">Montenegrin Male</option>
+								<option value="Polish Female">Polish Female</option>
+								<option value="Polish Male">Polish Male</option>
+								<option value="Brazilian Portuguese Female">Brazilian Portuguese Female</option>
+								<option value="Brazilian Portuguese Male">Brazilian Portuguese Male</option>
+								<option value="Portuguese Female">Portuguese Female</option>
+								<option value="Portuguese Male">Portuguese Male</option>
+								<option value="Serbo-Croatian Male">Serbo-Croatian Male</option>
+								<option value="Slovak Female">Slovak Female</option>
+								<option value="Slovak Male">Slovak Male</option>
+								<option value="Spanish Latin American Female">Spanish Latin American Female</option>
+								<option value="Spanish Latin American Male">Spanish Latin American Male</option>
+								<option value="Swahili Male">Swahili Male</option>
+								<option value="Tamil Male">Tamil Male</option>
+								<option value="Thai Female">Thai Female</option>
+								<option value="Vietnamese Female">Vietnamese Female</option>
+								<option value="Vietnamese Male">Vietnamese Male</option>
+								<option value="Welsh Male">Welsh Male</option>
+							</select>
+						</td><td>
+							<select id="pitch" style="font-size: 30px; font-family: Arial; width: 100px;" onchange="sampleSpeak();">
+								<option value="0.0">0.0</option>
+								<option value="0.1">0.1</option>
+								<option value="0.2">0.2</option>
+								<option value="0.3">0.3</option>
+								<option value="0.4">0.4</option>
+								<option value="0.5">0.5</option>
+								<option value="0.6">0.6</option>
+								<option value="0.7">0.7</option>
+								<option value="0.8">0.8</option>
+								<option value="0.9">0.9</option>
+								<option value="1.0" selected>1.0</option>
+								<option value="1.1">1.1</option>
+								<option value="1.2">1.2</option>
+								<option value="1.3">1.3</option>
+								<option value="1.4">1.4</option>
+								<option value="1.5">1.5</option>
+								<option value="1.6">1.6</option>
+								<option value="1.7">1.7</option>
+								<option value="1.8">1.8</option>
+								<option value="1.9">1.9</option>
+								<option value="2.0">2.0</option>
+							</select>
+						</td><td>
+							<select id="rate" style="font-size: 30px; font-family: Arial; width: 100px;" onchange="sampleSpeak();">
+								<option value="0.0">0.0</option>
+								<option value="0.1">0.1</option>
+								<option value="0.2">0.2</option>
+								<option value="0.3">0.3</option>
+								<option value="0.4">0.4</option>
+								<option value="0.5">0.5</option>
+								<option value="0.6">0.6</option>
+								<option value="0.7">0.7</option>
+								<option value="0.8">0.8</option>
+								<option value="0.9">0.9</option>
+								<option value="1.0" selected>1.0</option>
+								<option value="1.1">1.1</option>
+								<option value="1.2">1.2</option>
+								<option value="1.3">1.3</option>
+								<option value="1.4">1.4</option>
+								<option value="1.5">1.5</option>
+							</select>
+						</td><td>
+							<select id="volume" style="font-size: 30px; font-family: Arial; max-width: 300px; width: 100px;" onchange="sampleSpeak();">
+								<option value="0.0">0.0</option>
+								<option value="0.1">0.1</option>
+								<option value="0.2">0.2</option>
+								<option value="0.3">0.3</option>
+								<option value="0.4">0.4</option>
+								<option value="0.5">0.5</option>
+								<option value="0.6">0.6</option>
+								<option value="0.7">0.7</option>
+								<option value="0.8">0.8</option>
+								<option value="0.9">0.9</option>
+								<option value="1.0" selected>1.0</option>
+							</select>
+						</td></tr>
+						<tr><td colspan='4' align='center'>
+							<input type='button' value='Save Voice For Model' id='saveVoiceForModelButton' onclick='saveVoiceForModel();' style="padding: 10px; border-radius: 10px;" /> <input type='button' value='Save As Default Voice' id='saveVoiceAsDefaultButton' onclick='saveVoiceAsDefault();' style="padding: 10px; border-radius: 10px;" /><br />
+							<div id="modelName" style="font-family: Arial; margin-top: 16px;"></div>
+						</td></tr>
+					</table>
+				</div>
+			</td></tr>
+		</table>
+
+		<table style="width: 100%; position: absolute; bottom: 0; left: 0;" cellspacing="0" cellpadding="0">
+			<tr><td align="center" valign="middle">
+				<table cellspacing="0" cellpadding="0">
+					<tr>
+						<td width="1">
+							<div style="height: 20px; width: 20px; background-color: #fff; border: 0px solid #000; border-top-width: 5px; border-left-width: 5px; border-top-left-radius: 100%;"></div>
+						</td>
+						<td align="center">
+							<div style="position: absolute; left: 50%;">
+									<img src="cluecorner.png" style="position: relative; top: -29px; left: -25px; display: none;" id="comicCorner" />
+							</div>
+							<div style="height: 20px; width: 100%; background-color: #fff; border: 0px solid #000; border-top-width: 5px;"></div>
+						</td>
+						<td width="1">
+							<div style="height: 20px; width: 20px; background-color: #fff; border: 0px solid #000; border-top-width: 5px; border-right-width: 5px; border-top-right-radius: 100%;"></div>
+						</td>
+					</tr>
+					<tr>						
+						<td colspan="3" style="padding: 8px; background-color: #fff; color: #000; border: 0px solid #000; border-left-width: 5px; border-right-width: 5px; max-width: 1500px; padding-left: 16px; padding-right: 16px;" align="center">
+							<div id="questDialogue"></div>
+						</td>
+					</tr>
+					<tr>
+						<td width="1">
+							<div style="height: 20px; width: 20px; background-color: #fff; border: 0px solid #000; border-bottom-width: 5px; border-left-width: 5px; border-bottom-left-radius: 100%;"></div>
+						</td>
+						<td>
+							<div style="height: 20px; width: 100%; background-color: #fff; border: 0px solid #000; border-bottom-width: 5px;"></div>
+						</td>
+						<td width="1">
+							<div style="height: 20px; width: 20px; background-color: #fff; border: 0px solid #000; border-bottom-width: 5px; border-right-width: 5px; border-bottom-right-radius: 100%;"></div>
+						</td>
+					</tr>
+				</table>
+
+				<table cellspacing="0" cellpadding="0" style="margin-bottom: 75px; margin-top: 75px; width: 80%;">
+					<tr>
+						<td width="50%" align="right">
+							<div id="questResponsesLeft" class="questResponses"></div>
+						</td>
+						<td valign="middle" align="center">
+							<table id="interactButton" cellspacing="0" cellpadding="0" style="background-color: #5482FF; border-radius: 50%; border: 5px solid #000; width: 100px; height: 100px; pointer-events: none; cursor: pointer;">
+								<tr><td valign="middle" align="center">
+									<div id="interactIcon" style="display: inline-block;"></div>
+								</td></tr>
+							</table>
+						</td>
+						<td width="50%" align="left">
+							<div id="questResponsesRight" class="questResponses"></div>
+						</td>
+					</tr>
+				</table>
+			</td></tr>
+		</table>
+
+		<script>
+			var lastSpokenText = "Hello World.";
+
+			var questId = arcadeHud.getParameterByName("quest");
+			var questClueId = arcadeHud.getParameterByName("id");
+			var questClue = aaapi.cmdEx("getQuestClue", questClueId);
+			var unparsedDialogue = questClue.dialogue;//arcadeHud.getParameterByName("dialogue");
+
+			var comicCornerElem = document.querySelector('#comicCorner');
+			if( questClue.type == 1 )
+				comicCornerElem.style.display = 'block';
+
+			//console.log("Dialogue value:");
+			//console.log(unparsedDialogue);
+
+			var ttsVoiceElem = document.querySelector('#voice');
+			var ttsPitchElem = document.querySelector('#pitch');
+			var ttsRateElem = document.querySelector('#rate');
+			var ttsVolumeElem = document.querySelector('#volume');
+
+			// initial TTS values
+			var ttsModelVoices = localStorage.getItem('ttsModelVoices');
+			if( !!ttsModelVoices )
+				ttsModelVoices = JSON.parse(ttsModelVoices);
+			else
+				ttsModelVoices = {};
+
+			if( !ttsModelVoices.hasOwnProperty('default') )
+				ttsModelVoices['default'] = {
+					voice: "UK English Male",
+					pitch: 1.0,
+					rate: 1.0,
+					volume: 1.0
+				};
+
+			function sampleSpeak()
+			{
+				aaapi.cmd('ttsspeak', lastSpokenText, ttsVoiceElem.value, ttsPitchElem.value, ttsRateElem.value, ttsVolumeElem.value);
+			}
+
+			function saveVoiceForModel()
+			{
+				ttsModelVoices[modelFile] = {
+					"voice": ttsVoiceElem.value,
+					"pitch": ttsPitchElem.value,
+					"rate": ttsRateElem.value,
+					"volume": ttsVolumeElem.value
+				};
+
+				localStorage.setItem("ttsModelVoices", JSON.stringify(ttsModelVoices));
+			}
+
+			function saveVoiceAsDefault()
+			{
+				ttsModelVoices['default'] = {
+					"voice": ttsVoiceElem.value,
+					"pitch": ttsPitchElem.value,
+					"rate": ttsRateElem.value,
+					"volume": ttsVolumeElem.value
+				};
+
+				localStorage.setItem("ttsModelVoices", JSON.stringify(ttsModelVoices));
+			}
+
+			// Parse the dialogue into a dialogue object.
+			function parseRawDialogue(rawDialogue)
+			{
+				function findFirstNotOf(text, character)
+				{
+					for (var i = 0; i < text.length; i++)
+					{
+						if( text[i] != character )
+							return i;
+					}
+					return -1;
+				}
+
+				function getTextActions(line)
+				{
+					var actionRegex = /(\[[^\]]+\])+\r?$/g;
+					var actionResults = line.match(actionRegex);
+
+					if( !actionResults )
+						actionResults = [];
+					else if( Array.isArray(actionResults) && actionResults.length > 0 )
+					{
+						var braceRegex = /[\[\]]+/;
+						actionResults = actionResults[0].split(braceRegex).filter(function(e) { return e; });
+					}
+
+					var validActions = ["exit", "success", "failure", "jump", "jump2", "jump3", "jumplite", "jumplite2", "jumplite3", "menu"];
+					// only keep the actions down to the 1st invalid one found.
+					// TODO: Reverse direction of the array.
+					actionResults.reverse();
+					
+					for( var j = 0; j < actionResults.length; j++ )
+					{
+						if( validActions.indexOf(actionResults[j]) < 0 )
+						{
+							actionResults.splice(j);
+							break;
+						}
+					}
+					actionResults.reverse();
+
+					/*for( var j = actionResults.length-1; j >= 0; j-- )
+					{
+						if( validActions.indexOf(actionResults[j]) < 0 )
+						{
+							if( actionResults.length > j+1 )
+								console.log(JSON.stringify(actionResults.splice(j+1)));
+							else
+								actionResults = [];
+							break;
+						}
+					}*/
+
+					return actionResults;
+				}
+
+				function composeResult(numLines, quest_text, actions, response_text, responses)
+				{
+					var dialogue = {};
+					if( quest_text.length > 0 )
+						dialogue.quest_text = quest_text;
+					if( actions.length > 0 )
+						dialogue.quest_action = actions;
+					if( response_text != "" )
+						dialogue.response_text = response_text;
+					if( responses.length > 0 )
+						dialogue.responses = responses;
+
+					return {numLines: numLines, dialogue: dialogue};
+				}
+
+				// Cannot be empty...
+				if(rawDialogue == "")
+				{
+					console.log("Parsing Error: Dialogue cannot be empty.");
+					return;
+				}
+
+				// Break into lines.
+				var dialogueLines = rawDialogue.match(/[^\r\n]+/g);
+				if( dialogueLines.length == 0 )
+				{
+					console.log("Parsing Error: Dialogue cannot be empty.");
+					return;
+				}
+
+				var depthChar = "\t";
+
+				// Starts with QUEST line
+				// (in other words, it does NOT start with TAB.)
+				if( dialogueLines[0][0] == depthChar )
+				{
+					console.log("Parsing Error: Dialogue cannot start with a TAB character.");
+					return;
+				}
+
+				// START RECURSIVE STUFF HERE
+				function parseDialogueBlock(blockStartLine)
+				{
+					// Blocks may have a response_text, quest_text, response_action, quest_action, and an array of responses.
+
+					if( blockStartLine >= dialogueLines.length )
+					{
+						return {numLines: 0, dialogue: {}};
+					}
+
+					var blockDepth = findFirstNotOf(dialogueLines[blockStartLine], depthChar);
+
+					// Alright. Now start filling up a quest_text array of successive QUEST lines.
+					var quest_text = [];
+					var quest_action = [];
+					var responses = [];
+					var i;
+					var oldActions;
+					for( i = blockStartLine; i < dialogueLines.length; i++ )
+					{
+						var response_action = [];
+						var response_text = "";
+
+						var line = dialogueLines[i];
+
+						var depth = findFirstNotOf(line, depthChar);
+						var deltaDepth = depth - blockDepth;
+						var isResponseLine = (depth % 2 == 1);
+						var isQuestLine = !isResponseLine;
+
+						//console.log(isQuestLine + "Line #" + i + " (depth: " + depth + " | " + deltaDepth + "): " + line);
+
+						// check for actions on EVERY line. (Even though we only want to use actions that are on the LAST line.)
+						var oldActions = actions;
+						var actions = getTextActions(line);
+						//console.log(line + " : " + JSON.stringify(actions));
+						if( actions.length > 0 )
+						{
+							// cull them off the end of the line.
+							var lastNonActionCharIndex = line.length;
+							for( var j = 0; j < actions.length; j++ )
+								lastNonActionCharIndex -= actions[j].length+2;
+							line = line.substring(0, lastNonActionCharIndex);
+						}
+
+						if( deltaDepth == 0 )
+						{
+							if( isResponseLine )
+							{
+								var numLines = i - blockStartLine;
+								var dialogueResultInfo = composeResult(numLines, quest_text, quest_action, response_text, responses);
+								return dialogueResultInfo;
+							}
+
+							if( isQuestLine )
+							{
+								quest_text.push(line.trim());
+							}
+						}
+						else if( deltaDepth > 0 )
+						{
+							var dialogueResultInfo = parseDialogueBlock(i+1);
+							// {dialogue: dialogue, numLines: N}
+
+							i += dialogueResultInfo.numLines;
+
+							if( isResponseLine )
+							{
+								dialogueResultInfo.dialogue.response_text = line.trim();
+								if( actions.length > 0 )
+									dialogueResultInfo.dialogue.response_action = actions;
+
+								responses.push(dialogueResultInfo.dialogue);
+								actions = [];
+							}
+						}
+						else if( deltaDepth < 0 )
+						{
+							var numLines = i - blockStartLine;
+							var dialogueResultInfo = composeResult(numLines, quest_text, oldActions, response_text, responses);
+							return dialogueResultInfo;
+						}
+					}
+
+					var numLines = i - blockStartLine;
+					var dialogueResultInfo = composeResult(numLines, quest_text, actions, response_text, responses);
+					return dialogueResultInfo;
+				}
+
+				var fullDialogueResultInfo = parseDialogueBlock(0);
+				var fullDialogue = fullDialogueResultInfo.dialogue;
+				return fullDialogue;
+			}
+
+			// process dialogues and add in branch_parent references.
+			function processDialogueTree(dialogue, branchParent, branchGrandparent, branchGreatgrandparent, branchGreatgreatgrandparent)
+			{
+				// add our branch parent & grandparent references, even if they are undefined.
+				dialogue.branch_parent = branchParent;
+				dialogue.branch_grandparent = branchGrandparent;
+				dialogue.branch_greatgrandparent = branchGreatgrandparent;
+				dialogue.branch_greatgreatgrandparent = branchGreatgreatgrandparent;
+
+				// set our next branch parent, IF we are a new one.
+				// ONLY if a dialogue has MULTIPLE responses is it a new branch parent.
+				var nextBranchParent = branchParent;
+				var nextBranchGrandparent = branchGrandparent;
+				var nextBranchGreatgrandparent = branchGreatgrandparent;
+				var nextBranchGreatgreatgrandparent = branchGreatgreatgrandparent;
+				if( dialogue.hasOwnProperty('responses') )
+				{
+					if( dialogue.responses.length > 1 )
+					{
+						nextBranchGreatgreatgrandparent = nextBranchGreatgrandparent;
+						nextBranchGreatgrandparent = nextBranchGrandparent;
+						nextBranchGrandparent = nextBranchParent;
+						nextBranchParent = dialogue;
+					}
+
+					for( var i = 0; i < dialogue.responses.length; i++ )
+					{
+						processDialogueTree(dialogue.responses[i], nextBranchParent, nextBranchGrandparent, nextBranchGreatgrandparent, nextBranchGreatgreatgrandparent);
+					}
+				}
+			}
+
+			// we have multiple test dialogues, so gotta process each one.
+			//for( var i = 0; i < dialogues.length; i++ )
+			//{
+			//	processDialogueTree(dialogues[i]);
+			//}
+
+			var g_activeDialogue;
+			var g_activeQuestTextIndex;
+
+			var questDialogueElem = document.querySelector("#questDialogue");
+			var interactIconElem = document.querySelector("#interactIcon");
+			var interactButtonElem = document.querySelector('#interactButton');
+			var questResponsesLeftElem = document.querySelector("#questResponsesLeft");
+			var questResponsesRightElem = document.querySelector("#questResponsesRight");
+
+			function doDialogueSuccess()
+			{
+				console.log("win event!");
+				aaapi.cmd('questDialogueEvent', questId, questClueId, 'success');
+			}
+
+			function doDialogueFailure()
+			{
+				console.log("fail event. :(");
+				aaapi.cmd('questDialogueEvent', questId, questClueId, 'failure');
+			}
+
+			function exitDialogue()
+			{
+				aaapi.cmd('deactivateInputMode');
+			}
+
+			interactButtonElem.addEventListener('click', function()
+			{
+				if( g_activeDialogue.quest_text.length > g_activeQuestTextIndex+1 )
+				{
+					g_activeQuestTextIndex++;
+					showQuestDialogue(g_activeDialogue, g_activeQuestTextIndex);
+				}
+				else if( this.hasOwnProperty('action') )
+				{
+					// mutually exclusive actions: JUMP, EXIT, SUCCESS, FAILURE
+					if( this.action.indexOf('success') >= 0 )
+					{
+						doDialogueSuccess();
+						exitDialogue();
+					}
+					else if( this.action.indexOf('failure') >= 0 )
+					{
+						doDialogueFailure();
+						exitDialogue();
+					}
+					else if( this.action.indexOf('jump') >= 0 )
+					{
+						showQuestDialogue(g_activeDialogue.branch_parent, 0);
+					}
+					else if( this.action.indexOf('jump2') >= 0 )
+					{
+						showQuestDialogue(g_activeDialogue.branch_grandparent, 0);
+					}
+					else if( this.action.indexOf('jump3') >= 0 )
+					{
+						showQuestDialogue(g_activeDialogue.branch_greatgrandparent, 0);
+					}
+					else if( this.action.indexOf('jumplite') >= 0 )
+					{
+						var targetLine = (g_activeDialogue.branch_parent.quest_text.length > 0) ? g_activeDialogue.branch_parent.quest_text.length-1 : 0;
+						showQuestDialogue(g_activeDialogue.branch_parent, targetLine);
+					}
+					else if( this.action.indexOf('jumplite2') >= 0 )
+					{
+						var targetLine = (g_activeDialogue.branch_grandparent.quest_text.length > 0) ? g_activeDialogue.branch_grandparent.quest_text.length-1 : 0;
+						showQuestDialogue(g_activeDialogue.branch_grandparent, targetLine);
+					}
+					else if( this.action.indexOf('jumplite3') >= 0 )
+					{
+						var targetLine = (g_activeDialogue.branch_greatgrandparent.quest_text.length > 0) ? g_activeDialogue.branch_greatgrandparent.quest_text.length-1 : 0;
+						showQuestDialogue(g_activeDialogue.branch_greatgrandparent, targetLine);
+					}
+					else if( this.action.indexOf('menu') >= 0 )
+					{
+						if( g_activeDialogue.branch_parent.hasOwnProperty('responses') && g_activeDialogue.branch_parent.responses.length > 0 )
+						{
+							var goodLineIndex = g_activeDialogue.branch_parent.quest_text.length-1;
+							updateResponses(g_activeDialogue.branch_parent, goodLineIndex);
+							g_activeDialogue = g_activeDialogue.branch_parent;
+							g_activeQuestTextIndex = goodLineIndex;
+						}
+						else
+						{
+							// do nothing.  illogical to do this action if the parent has no responses.
+						}
+					}
+					else if( this.action.indexOf('exit') >= 0 )
+					{
+						exitDialogue();
+					}
+				}
+				else
+				{
+					console.log("Unhandled quest response.");
+
+					// quit the dialogue, for now.
+					exitDialogue();
+				}
+			});
+
+			// get tis object
+			var object = (questClue.objectId != '') ? aaapi.cmdEx('getObject', questClue.objectId) : null;
+			var model = (!!object && !!object.model && object.model != '') ? aaapi.cmdEx('getLibraryModel', object.model) : null;
+			var modelFile = (!!model) ? model.platforms[arcadeHud.platformId].file : "";
+
+			function getVoiceForModel()
+			{
+				if( ttsModelVoices.hasOwnProperty(modelFile) )
+					return ttsModelVoices[modelFile];
+				else
+					return ttsModelVoices.default;
+			}
+
+			var voiceForModel = getVoiceForModel();
+			ttsVoiceElem.value = voiceForModel.voice;
+			ttsPitchElem.value = voiceForModel.pitch;
+			ttsRateElem.value = voiceForModel.rate;
+			ttsVolumeElem.value = voiceForModel.volume;
+
+			// fill our responses.
+			function addQuestResponse(sideElem, response)
+			{
+				var responseElem = document.createElement('div');
+				responseElem.className = 'questResponse';
+				
+				// set some things up for jumping back up a dialogue level.
+				//response.jump1 = jump1;
+				//response.jump2 = jump2;
+
+				responseElem.dialogue = response;
+				responseElem.addEventListener('click', function()
+				{
+					// check for RESPONSE ACTIONS, that happen when user clicks a response.
+					if( this.dialogue.hasOwnProperty('response_action') )
+					{
+						if( this.dialogue.response_action.indexOf('success') >= 0 )
+							doDialogueSuccess();
+						else if( this.dialogue.response_action.indexOf('failure') >= 0 )
+							doDialogueFailure();
+						else if( this.dialogue.response_action.indexOf('jump') >= 0 )
+							showQuestDialogue(this.dialogue.branch_parent, 0);
+						else if( this.dialogue.response_action.indexOf('jump2') >= 0 )
+							showQuestDialogue(this.dialogue.branch_grandparent, 0);
+						else if( this.dialogue.response_action.indexOf('jump3') >= 0 )
+							showQuestDialogue(this.dialogue.branch_greatgrandparent, 0);
+						else if( this.dialogue.response_action.indexOf('jumplite') >= 0 )
+						{
+							var targetLine = (this.dialogue.branch_grandparent.quest_text.length > 0) ? this.dialogue.branch_grandparent.quest_text.length-1 : 0;
+							showQuestDialogue(this.dialogue.branch_grandparent, targetLine);
+						}
+						else if( this.dialogue.response_action.indexOf('jumplite2') >= 0 )
+						{
+							var targetLine = (this.dialogue.branch_greatgrandparent.quest_text.length > 0) ? this.dialogue.branch_greatgrandparent.quest_text.length-1 : 0;
+							showQuestDialogue(this.dialogue.branch_greatgrandparent, targetLine);
+						}
+						else if( this.dialogue.response_action.indexOf('jumplite3') >= 0 )
+						{
+							var targetLine = (this.dialogue.branch_greatgreatgrandparent.quest_text.length > 0) ? this.dialogue.branch_greatgreatgrandparent.quest_text.length-1 : 0;
+							showQuestDialogue(this.dialogue.branch_greatgreatgrandparent, targetLine);
+						}
+						else if( this.dialogue.response_action.indexOf('menu') >= 0 )
+						{
+
+							if( this.dialogue.branch_parent.hasOwnProperty('responses') && this.dialogue.branch_parent.responses.length > 0 )
+							{
+								var goodLineIndex = this.dialogue.branch_parent.quest_text.length-1;
+								updateResponses(this.dialogue.branch_parent, goodLineIndex);
+								g_activeDialogue = this.dialogue.branch_parent;
+								g_activeQuestTextIndex = goodLineIndex;
+							}
+							else
+							{
+								// do nothing.  illogical to do this action if the parent has no responses.
+							}
+						}
+						else if( this.dialogue.response_action.indexOf('exit') >= 0 )
+							exitDialogue();
+					}
+
+					//if( (!this.dialogue.hasOwnProperty('responses') || this.dialogue.responses.length == 0) )
+					//	console.log("Need to end it?");
+
+					if( !!this.dialogue && this.dialogue.hasOwnProperty('quest_text'))
+						showQuestDialogue(this.dialogue, 0);
+					else if( !this.dialogue.hasOwnProperty('response_action') || (this.dialogue.response_action.indexOf("exit") < 0 && this.dialogue.response_action.indexOf("jump") < 0 && this.dialogue.response_action.indexOf("jump2") < 0 && this.dialogue.response_action.indexOf("jump3") < 0 && this.dialogue.response_action.indexOf("jumplite") && this.dialogue.response_action.indexOf("jumplite2") < 0 && this.dialogue.response_action.indexOf("jumplite3") < 0 && this.dialogue.response_action.indexOf("menu") < 0) )
+					{
+						// If this is a mal-formed ending to a dialogue, make it well-formed.
+						exitDialogue();
+					}
+				}.bind(responseElem));
+				responseElem.appendChild(document.createTextNode(response.response_text));
+				sideElem.appendChild(responseElem);
+			}
+
+			function updateResponses(dialogue, questTextIndex)
+			{
+				delete interactButtonElem.action;
+
+				// if this dialogue line is just going to 'menu' action anyways, show the menu NOW so that the player doesn't even need to click OK.
+				if( dialogue.quest_text.length == questTextIndex+1 && dialogue.hasOwnProperty('quest_action') && dialogue.quest_action.indexOf('menu') >= 0 && !!dialogue.branch_parent && dialogue.branch_parent.responses.length > 0 && !!dialogue.branch_parent.quest_text && dialogue.branch_parent.quest_text.length > 0 )
+				{
+					var goodLineIndex = dialogue.branch_parent.quest_text.length-1;
+					updateResponses(dialogue.branch_parent, goodLineIndex);
+					return;
+				}
+
+				var shouldShowResponses = false;
+
+				// set the quest ineract icon
+				if( dialogue.quest_text.length > 1 && dialogue.quest_text.length-1 > questTextIndex )
+				{
+					interactIconElem.innerHTML = "<div style='font-size: 24px; display: inline; font-family: Arial; pointer-events: none;'>Next</div>";
+				}
+				else if( dialogue.hasOwnProperty('responses') && dialogue.responses.length > 0 )
+				{
+					shouldShowResponses = true;
+					var questsIconHTML = arcadeHud.generateIconHTML("dialogueicon.png", 64, 64, "aaTextColorTwoColor");
+					interactIconElem.innerHTML = questsIconHTML;
+				}
+				else if( dialogue.hasOwnProperty('quest_action') )
+				{
+					if( dialogue.quest_action.indexOf('exit') >= 0 || dialogue.quest_action.indexOf('success') >= 0 || dialogue.quest_action.indexOf('failure') >= 0)
+					{
+						interactButtonElem.action = dialogue.quest_action;
+						interactIconElem.innerHTML = "<div style='font-size: 24px; display: inline; font-family: Arial; pointer-events: none;'>Done</div>";
+					}
+					else if( dialogue.quest_action.indexOf('jump') >= 0 || dialogue.quest_action.indexOf('jump2') >= 0 || dialogue.quest_action.indexOf('jump3') >= 0 || dialogue.quest_action.indexOf('jumplite') >= 0 || dialogue.quest_action.indexOf('jumplite2') >= 0 || dialogue.quest_action.indexOf('jumplite3') >= 0 || dialogue.quest_action.indexOf('menu') >= 0 )
+					{
+						interactButtonElem.action = dialogue.quest_action;
+						interactIconElem.innerHTML = "<div style='font-size: 24px; display: inline; font-family: Arial; pointer-events: none;'>OK</div>";
+					}
+				}
+				else
+				{
+					interactIconElem.innerHTML = "<div style='font-size: 24px; display: inline; font-family: Arial; pointer-events: none;'>OK</div>";
+				}
+
+				if( !shouldShowResponses )
+					interactButtonElem.style.pointerEvents = 'all';
+				else					
+					interactButtonElem.style.pointerEvents = 'none';
+
+				questResponsesLeftElem.innerHTML = '';
+				questResponsesRightElem.innerHTML = '';
+
+				if( shouldShowResponses && dialogue.hasOwnProperty('responses') )
+				{
+					for( var i = 0; i < Math.round(dialogue.responses.length / 2); i++ )
+						addQuestResponse(questResponsesLeftElem, dialogue.responses[i]);
+
+					for( var i = Math.round(dialogue.responses.length / 2); i < dialogue.responses.length; i++ )
+						addQuestResponse(questResponsesRightElem, dialogue.responses[i]);
+				}
+			}
+
+			function showQuestDialogue(dialogue, questTextIndex_in)
+			{
+				var questTextIndex = (typeof questTextIndex_in === 'undefined') ? 0 : questTextIndex_in;
+
+				// add the quest text.
+				questDialogueElem.innerHTML = "";
+				questDialogueElem.appendChild(document.createTextNode(dialogue.quest_text[questTextIndex]));
+
+				var voiceForModel = getVoiceForModel();
+				//var "UK English Male", {pitch: 0.7, rate: givenRate, volume: givenVolume}
+
+				if( dialogue.quest_text[questTextIndex][0] != '[' || dialogue.quest_text[questTextIndex][dialogue.quest_text[questTextIndex].length-1] != ']' )
+				{
+					lastSpokenText = dialogue.quest_text[questTextIndex];
+					aaapi.cmd('ttsspeak', dialogue.quest_text[questTextIndex], voiceForModel.voice, voiceForModel.pitch, voiceForModel.rate, voiceForModel.volume);
+				}
+
+				updateResponses(dialogue, questTextIndex);
+
+				g_activeDialogue = dialogue;
+				g_activeQuestTextIndex = questTextIndex;
+			}
+
+			//var randomDialogue = dialogues[Math.floor(Math.random() * dialogues.length)];
+			var fullDialogue = parseRawDialogue(unparsedDialogue);
+			processDialogueTree(fullDialogue);
+
+			showQuestDialogue(fullDialogue, 0);
+
+			function showTTSConfigPanel()
+			{
+				//if( aaapi.cmdEx('getConVarValue', 'developer') == '1' )
+				if( !!modelFile && modelFile != '' )
+				{
+					var modelNameElem = document.querySelector("#modelName");
+					modelNameElem.innerHTML = '';
+					modelNameElem.appendChild(document.createTextNode(modelFile));
+				}
+				document.querySelector('#ttsConfig').style.display = 'none';
+				document.querySelector('#ttsConfigPanel').style.display = 'table';
+			}
+		</script>
+	</body>
+</html>

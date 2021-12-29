@@ -1,0 +1,281 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var paletteId = arcadeHud.getParameterByName("id");
+			var palette = window.localStorage.getItem('texturePalette' + paletteId);
+			if( !!palette )
+				palette = JSON.parse(palette);
+			else
+				console.log("Palette not found!!");
+
+			var texturePalettes = window.localStorage.getItem('texturePalettes');
+			if( !!texturePalettes )
+				texturePalettes = JSON.parse(texturePalettes);
+			else
+				texturePalettes = ['default'];
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "window.location='asset://ui/tabMenu.html?tab=paint';"
+			//window.location='asset://ui/libraryBrowser.html?category=items';
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Texture Palette Properties", "width: 600px;", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "advanced",
+						"title": "Advanced"
+					}
+				]
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="advanced">
+			<!--input type="button" class="aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Export List" /-->
+			<input type="button" id="deletePaletteButton" class="aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" onclick="deletePalette();" value="Delete Palette" />
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Title:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr class="helpNote" help="This image is used in various menus.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Thumbnail:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div><!--
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>-->
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var entry = palette;
+			var entryForm = document.querySelector("#entryForm");
+
+			function fileBrowse(fieldName)
+			{
+				var fieldElem = document.querySelector(".aaKeyValueTableValue > input[fieldname='" + fieldName + "'], .aaKeyValueTableValue > select[fieldname='" + fieldName + "']");
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					if(chosenFile !== "")
+					{
+						if( item.app !== "" )
+						{
+							var app = aaapi.cmdEx("getLibraryApp", item.app);
+							var x;
+							for( x in app.filepaths )
+							{
+								if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+								{
+									chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+									break;
+								}
+							}
+						}
+
+						this.value = chosenFile;
+						this.focus();
+						entryForm.querySelector("input[type='submit']").click();//submit();
+
+						/*
+						// update the item
+						var args = [myInput.field, chosenFile];
+						var success = aaapi.cmdEx("updateItem", item.info.id, args);
+						if( success )
+						{
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
+							{
+								if( myInput.field == "all" || args[i] === myInput.field )
+									item[args[i]] = args[i+1];
+							}
+
+							console.log("Item updated!");
+
+							//aaapi.cmd("autoInspect", this.itemId);
+						}
+						else
+							console.log("Item update rejected!");
+						*/
+					}
+				}.bind(fieldElem));
+			}
+
+			// PREPARE FORM
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				var focusedFieldName = focusedElem.getAttribute("fieldname");
+				var focusedFieldValue = focusedElem.value;
+				if( !focusedFieldName )
+					focusedElem = null;
+
+				// DO WORK
+				if( !!focusedElem )
+				{
+					//console.log("Entry form submitted with field " + focusedFieldName + " focused.");
+
+					// PUT THE NEW INFO INTO THE PALETTE OBJECT
+					// THEN SAVE THE PALETTE.
+
+					palette[focusedFieldName] = focusedFieldValue;
+					window.localStorage.setItem('texturePalette' + paletteId, JSON.stringify(palette));
+
+					focusedElem.style.webkitTransition = "initial";
+					focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+					focusedElem.offsetTop;
+					focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+					focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+					//item[focusedFieldName] = focusedFieldValue;
+				}
+
+				// done doing work
+				if( !!focusedElem )
+					focusedElem.blur();
+			}, true);
+
+			/*var mapList = document.querySelector("#mapList");
+			var option;
+			var maps = aaapi.cmdEx("getAllMaps");
+			for( var x in maps )
+			{
+				option = document.createElement("option");
+				option.value = x;
+				option.text = maps[x].title;
+				mapList.appendChild(option);
+			}*/
+
+			// PREPARE THE ITEM
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				/*if( fieldName === "title" )
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != item[fieldName] )
+							elem.value = (!!item[fieldName]) ? item[fieldName] : "";
+					}, true);
+				}*/
+
+				if( entry.hasOwnProperty(fieldName) )
+				{
+					dummyElem.value = entry[fieldName];
+				}
+			}
+
+			if( paletteId === "default" )
+			{
+				var elem = document.querySelector("#deletePaletteButton");
+				elem.classList.add("aaButtonDisabled");
+				elem.style.pointerEvents = 'none';
+				//elem.disabled = true;
+				//elem.readOnly = true;
+			}
+
+			function deletePalette()
+			{
+				if( paletteId == 'default' )
+					return;
+
+				window.localStorage.setItem('texturePalette' + paletteId, null);
+
+				var index = texturePalettes.indexOf(paletteId);
+				if( index >= 0 )
+				{
+					texturePalettes.splice(index, 1);
+					window.localStorage.setItem('texturePalettes', JSON.stringify(texturePalettes));
+				}
+
+				window.localStorage.setItem('activeTexturePalette', 'default');
+				eval(uiBack);
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,27 @@
+<html>
+<head>
+<title></title>
+</head>
+<body>
+	<h1>JSON Exported Data Tester</h1>
+	<h3>Paste your exported data below, then click parse to test its validity.</h3>
+	<textarea id="metadata" cols="200" rows="30"></textarea><br />
+	<input type="button" onclick="parseData();" value="Parse Data" />
+	<script>
+		var g_library;
+		function parseData()
+		{
+			try
+			{
+				g_library = JSON.parse(document.querySelector("#metadata").value);
+				console.log(g_library);
+				alert("Successfully parsed data. (Check your dev console for the results.)");
+			}
+			catch
+			{
+				alert("Failed to parse JSON.");
+			}
+		}
+	</script>
+</body>
+</html>

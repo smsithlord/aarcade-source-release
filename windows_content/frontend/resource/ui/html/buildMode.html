@@ -1,0 +1,2848 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="hud.css"></link>
+		<script src="hud.js"></script>
+		<script>
+			var g_hiddenItems = localStorage.getItem("hiddenItems");
+			if( !!g_hiddenItems )
+				g_hiddenItems = JSON.parse(g_hiddenItems);
+			else
+				g_hiddenItems = {};
+		</script>
+		
+		<script>
+			var g_favoriteSequenceNames = localStorage.getItem("favoriteSequenceNames");
+			if( !!g_favoriteSequenceNames )
+				g_favoriteSequenceNames = JSON.parse(g_favoriteSequenceNames);
+			else
+				g_favoriteSequenceNames = [];
+
+			var g_hiddenSequenceNames = localStorage.getItem("hiddenSequenceNames");
+			if( !!g_hiddenSequenceNames )
+				g_hiddenSequenceNames = JSON.parse(g_hiddenSequenceNames);
+			else
+				g_hiddenSequenceNames = [];
+
+
+			var assignToObjectBoxElem;
+
+			var originalItemId = arcadeHud.getParameterByName("itemId");
+			if( !!!originalItemId )
+				originalItemId = "";
+
+			var originalModelId = arcadeHud.getParameterByName("modelId");
+			if( !!!originalModelId )
+				originalModelId = "";
+
+			//var currentItemId = "";
+			var currentModelId = originalModelId;
+
+			var mode = arcadeHud.getParameterByName("mode");
+			var isDoingStuff = false;
+			var g_allowTransformUpdate = true;
+			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+			var libraryBrowserContext;
+			var category;
+			var titleElem;
+			var entryContainerElem;
+			var searchCategory;
+			var response;
+			var method;
+			var transformInfo;
+			var wl_transformContainer;
+
+			function saveTransformChangesCallback(bodyVal)
+			{
+				if( originalItemId != "" )
+				{
+					var body = bodyVal;
+					/*for( var i = 0; i < g_oldBodyGroupStates.length; i++ )
+					{
+						if( g_oldBodyGroupStates[i].value == 0 )
+							continue;
+
+						var mask = 1 << (i-2);
+						body |= mask;
+					}*/
+
+					/*var skin = document.querySelector("input[name='skin']:checked");
+					if( !!skin )
+						skin = skin.value;
+					else
+						skin = 0;*/
+
+					var oldTransform = localStorage.getItem("trans" + originalItemId);
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					//console.log("Old Transform: " + JSON.stringify(oldTransform));
+
+					oldTransform.modelId = currentModelId;
+					oldTransform.scale = scaleElem.value;
+					oldTransform.pitch = pitchElem.value;
+					oldTransform.yaw = yawElem.value;
+					oldTransform.roll = rollElem.value;
+					oldTransform.offX = offXElem.value;
+					oldTransform.offY = offYElem.value;
+					oldTransform.offZ = offZElem.value;
+					oldTransform.skin = skinElem.value;
+					//oldTransform.skin = skin;
+					oldTransform.body = body;
+					var anim = document.querySelector("input[name='sequence']:checked");
+					if( !!anim )
+						anim = anim.value;
+					else
+						anim = "";
+					oldTransform.anim = anim;
+					//console.log(anim);
+					//oldTransform.anim = document.querySelector("input[name='sequence']:checked").value;
+//console.log();
+//console.log(oldTransform.anim);
+
+					localStorage.setItem("trans" + originalItemId, JSON.stringify(oldTransform));
+				}
+				else if( originalModelId != "" )
+				{
+					var body = bodyVal;
+					/*for( var i = 0; i < g_oldBodyGroupStates.length; i++ )
+					{
+						if( g_oldBodyGroupStates[i].value == 0 )
+							continue;
+
+						var mask = 1 << (i-2);
+						body |= mask;
+					}*/
+
+					/*var skin = document.querySelector("input[name='skin']:checked");
+					if( !!skin )
+						skin = skin.value;
+					else
+						skin = 0;*/
+
+					var oldTransform = localStorage.getItem("trans" + originalModelId);
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					//console.log("Old Transform: " + JSON.stringify(oldTransform));
+
+					oldTransform.modelId = "";//currentModelId;
+					oldTransform.scale = scaleElem.value;
+					oldTransform.pitch = pitchElem.value;
+					oldTransform.yaw = yawElem.value;
+					oldTransform.roll = rollElem.value;
+					oldTransform.offX = offXElem.value;
+					oldTransform.offY = offYElem.value;
+					oldTransform.offZ = offZElem.value;
+					oldTransform.body = body;
+					//oldTransform.skin = skin;
+					oldTransform.skin = skinElem.value;
+					var anim = document.querySelector("input[name='sequence']:checked");
+					if( !!anim )
+						anim = anim.value;
+					else
+						anim = "";
+					oldTransform.anim = anim;
+					//console.log(anim);
+					//oldTransform.anim = document.querySelector("input[name='sequence']:checked").value;
+//console.log(oldTransform.anim);
+
+					localStorage.setItem("trans" + originalModelId, JSON.stringify(oldTransform));
+				}
+
+				return true;
+			}
+
+			var cmdListener = {
+				"displayMode": "browse",
+				"specialWheel": function(delta)
+				{
+					console.log("SPECIAL WHEEEEL IT " + delta);
+				}, 
+				"setRotationAxis": function(axis)
+				{
+					console.log("SET ROTATION AXISSSSS: " + axis);
+				},
+				"switchMode": function(mode)
+				{
+					assignToObjectBoxElem.style.display = "none";
+
+					var entryContainerElem = document.querySelector("#entryContainer");
+					var transformMenuContainerElem = document.querySelector("#transformMenuContainer");
+					var upperPanel = document.querySelector("#upperPanel");
+					var cabinetsContainer = document.querySelector("#cabinetsContainer");
+
+					if( mode === "browse" )
+					{
+						entryContainerElem.style.display = "block";
+						transformMenuContainerElem.style.display = "none";
+
+						if(category === "items")
+						{
+							upperPanel.style.display = "none";
+							upperPanel.style.pointerEvents = "none";
+							cabinetsContainer.style.display = "none";
+							cabinetCategory = "";
+							var oldElem = document.querySelector(".selectedCabCategory");
+							if( oldElem )
+								oldElem.classList.remove("selectedCabCategory");
+						}
+					}
+					else if( mode === "transform" )
+					{
+						entryContainerElem.style.display = "none";
+						transformMenuContainerElem.style.display = "block";
+
+						if(category === "items")
+						{
+							upperPanel.style.display = "block";
+							upperPanel.style.pointerEvents = "all";
+
+							var objectUnderCursor = aaapi.cmdEx("getObject");
+							if( !!objectUnderCursor && objectUnderCursor.model !== "" && objectUnderCursor.item !== objectUnderCursor.model)
+							{
+								assignToObjectBoxElem.objectId = objectUnderCursor.id;
+								assignToObjectBoxElem.style.display = "inline-block";
+							}
+						}
+						else
+						{
+							var selectedPlate = document.querySelector(".wlPlateSelected");
+							if( selectedPlate.getAttribute("name") === "sequenceTab" )
+								selectPlate(selectedPlate);
+						}
+					}
+				}
+			};
+//["game", "video", "music", "image"]
+			g_cabinetCategories = {
+				//"arcade_wall": ["game", "video", "music", "image"],
+				//"big_movie_wallmount": ["game", "video", "music", "image"],
+				"enclosed_flight_remap": ["game"],
+				"tamagatchi_cab": ["game", "video", "music"],
+				"3ds_xl": ["game"],
+				"Billboard_Display": ["video", "image"],
+				"cassette_tape": ["music"],
+				"jumbodeck": ["game"],
+				"shaft": ["game"],
+				"fatty": ["game"],
+				"chamber": ["game"],
+				"portal": ["video", "image"],
+				"clear": [],
+				"audioframe": ["game", "video", "image"],
+				"vrcade": ["game"],
+				"monolith": ["video"],
+				"moonkiosk": ["game", "video"],
+				"moonkioskwide": ["game", "video"],
+				"podium": ["game"],
+				"tripleforce": ["game", "video", "image"],
+				"slim": ["game"],
+				"starfighter": ["game"],
+				"hologram_square": ["image"],
+				"hologram_tall": ["image"],
+				"hologram": ["image"],
+				"blend_square": ["image"],
+				"blend_tall": ["image"],
+				"blend": ["image"],
+				"sprite_square": ["image"],
+				"sprite_tall": ["image"],
+				"sprite": ["image"],
+				"big_movie_wallmount_no_banner": ["video", "image"],
+				"boomkiosk": ["game"],
+				"boxcade": ["game"],
+				"brainiac": ["game"],
+				//"bubble_stand": ["game", "video", "music", "image"],
+				"buttonmasher": ["game"],
+				"cabsolo": ["game"],
+				"camcorder": ["video"],
+				"cart_genesis": ["game"],
+				"cart_genesis_table": ["game"],
+				"cart_n64": ["game"],
+				"cart_n64_table": ["game"],
+				"cart_snes": ["game"],
+				"cart_snes_table": ["game"],
+				"cd_headphones_wall": ["music"],
+				"cd_player_headphones": ["music"],
+				"cd_table": ["music"],
+				"cd_wall": ["music"],
+				"ceiling_pic_tall_l": ["image"],
+				"ceiling_pic_wide_l": ["image"],
+				"cocktail": ["game"],
+				"coffee_cabinet": ["game"],
+				"console_32x": ["game"],
+				"console_genesis": ["game"],
+				"console_kiosk_32x": ["game"],
+				"console_kiosk_genesis": ["game"],
+				"console_kiosk_n64": ["game"],
+				"console_kiosk_snes": ["game"],
+				"console_kiosk_steam": ["game"],
+				"console_n64": ["game"],
+				"console_snes": ["game"],
+				"console_steam": ["game"],
+				//"crystal_ball": ["game", "video", "music", "image"],
+				"curved_screen_large": ["video", "image"],
+				"dance": ["game"],
+				"double_car_racer": ["game"],
+				"double_phasergun_coop": ["game"],
+				"enclosed_flight": ["game"],
+				"extended_four_player_arcade": ["game"],
+				"flatscreen_tv": ["video"],
+				//"floor mounted terminal and marquee panel": ["game", "video", "music", "image"],
+				"four_player_addict": ["game"],
+				"four_player_arcade": ["game"],
+				//"fulldome_booth": ["game", "video", "music", "image"],
+				"future_speaker": ["music"],
+				"gameboy_table": ["game"],
+				"gameboy_wall": ["game"],
+				"icade": ["game"],
+				"imax": ["video", "image"],
+				//"immersion_sphere": ["game", "video", "music", "image"],
+				"lappy": ["game"],
+				"lunar": ["game"],
+				"mame_cabinet": ["game"],
+				"motoracer": ["game"],
+				"movie_display_wallmount": ["video"],
+				"movie_stand_standard": ["video"],
+				"Nintendo Red Tent": ["game"],
+				"normal_laptop": ["game"],
+				"pc_kiosk_standard": ["game"],
+				"pc_wallmount": ["game"],
+				"pc_wallmount_small": ["game"],
+				"phaser_booth": ["game"],
+				"phaser_gun_coop": ["game"],
+				"phaser_rifle_coop": ["game"],
+				"pic_tall_l": ["image"],
+				"pic_wide_l": ["image"],
+				"pinball_standard": ["game"],
+				"poster": ["image"],
+				"posterscreen": ["video", "image"],
+				"quarter_imax": ["video", "image"],
+				"racer_multiscreen": ["game"],
+				"single_car_racer": ["game"],
+				"sitdownvs": ["game"],
+				"sound_pillar": ["music"],
+				"space_harrier": ["game"],
+				//"spherical_screen": ["game", "video", "music", "image"],
+				//"spinning_cap": ["image"],
+				"standup_car_racer": ["game"],
+				"swordfish": ["video"],
+				"table_pad_t": ["game", "video", "music", "image"],
+				"table_pad_w": ["game", "video", "music", "image"],
+				"tabletop_console_32x": ["game"],
+				"tabletop_console_genesis": ["game"],
+				"tabletop_console_n64": ["game"],
+				"tabletop_console_snes": ["game"],
+				"tabletop_console_steam": ["game"],
+				"tabletop_tv": ["game", "video"],
+				"tall_rotator": ["image"],
+				"tamagotchi": ["game"],
+				"theater_facade": ["video"],
+				"trading_card": ["image"],
+				"trading_card_big": ["image"],
+				"trading_card_big_table": ["image"],
+				"trading_card_table": ["image"],
+				"triangle movie showcase": ["video"],
+				"tripple_standup_racer": ["game"],
+				"triscreen_steambox": ["game"],
+				"two_player_arcade": ["game"],
+				//"verm reception desk": ["game", "video", "music", "image"],
+				//"video_sphere": ["game", "video", "music", "image"],
+				//"wall_arcade": ["game", "video", "music", "image"],
+				"wall_pad_t": ["game", "video", "music", "image"],
+				"wall_pad_w": ["game", "video", "music", "image"],
+				"wallscreen": ["video"],
+				"williams_cabinet": ["game"],
+				"yars": ["game"],
+				//"wood_cabinet": ["game", "video", "music", "image"],
+				//"wood_cabinet_32x": ["game", "video", "music", "image"],
+				//"wood_cabinet_genesis": ["game", "video", "music", "image"],
+				//"wood_cabinet_n64": ["game", "video", "music", "image"],
+				//"wood_cabinet_snes": ["game", "video", "music", "image"],
+				//"wood_cabinet_steam": ["game", "video", "music", "image"],
+				"recordsleeve": ["music", "image"],
+				"recordplaque": ["music"],
+				"recordoutsleeve": ["music"],
+				"flatscreentvwall": ["game", "video"],
+				"dvdcase": ["game", "video"]
+			};
+		</script>
+
+		<style>
+
+
+			#cabinetsContainer
+			{
+				max-height: 850px;
+				overflow: auto;
+			}
+
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			/*
+			#pageContent
+			{
+				display: none;
+				margin: 0;
+				padding: 0;
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+			}
+			*/
+
+			.hiddenElem
+			{
+				display: none;
+			}
+
+			.hudSideContainer
+			{
+				position: fixed;
+				left: 0;
+				top: 50%;
+				-webkit-transform: translate(0, -50%);
+			}
+
+			.hudSideContainerRow
+			{
+				display: block;
+			}
+
+			.hudSideContainerButton
+			{
+				font-size: 40px;
+				background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+				border-radius: 0 10px 10px 0;
+				border: 2px solid #000;
+				border-left: 0;
+				padding-right: 5px;
+				padding-left: 5px;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline-block;
+				height: 50px;
+				/*width: 40px;*/
+				text-align: center;
+				white-space: nowrap;
+				width: 40px;
+				overflow: hidden;
+				cursor: pointer;
+				-webkit-transition: width 0.3s;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: none;
+				width: 1px;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: none;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: all;
+				width: 40px;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton:hover ~ .hudSideContainerButton
+			{
+				width: 40px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton ~ .hudSideContainerButton:hover
+			{
+				width: 200px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerButton:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+				width: 200px;
+			}
+
+			.hudSideContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+/*
+			.hudSideContainerRow .hudSideContainerButton img
+			{
+				display: inline;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton img
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow .hudSideContainerButton .buttonText
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton .buttonText
+			{
+				display: inline;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+			*/
+/*
+			.hudSideContainerButton + #metaSearchButton table
+			{
+				display: none;
+			}
+
+			.hudSideContainerButton:hover + #metaSearchButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton + #metaSearchButton:hover table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton buttonText
+			{
+				display: inline-block;
+			}
+*/
+			#hudSideScrapeContainer
+			{
+				display: none;
+				position: fixed;
+				bottom: 15%;
+				left: 0;
+				color: #fff;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				font-family: Arial;
+				text-align: center;
+
+				/*
+				border: 3px solid rgba(0, 0, 0, 1.0);
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				background-color: rgba(50, 50, 50, 0.95);
+				padding-bottom: 30px;
+				padding: 6px;
+				border: 20px solid pink;
+				*/
+			}
+
+			.hudSideScrapeContainerButton
+			{
+				display: table-cell;
+				pointer-events: auto;
+				vertical-align: middle;
+				font-size: 20px;
+				white-space: nowrap;
+				/*background-color: rgba(150, 150, 150, 0.5);*/
+				background-color: rgba(0, 0, 255, 0.9);
+				border-radius: 0 10px 10px 0 !important;
+				border: 2px solid #000;
+				border-left: 0;
+				text-align: center;
+				padding-left: 15px;
+				padding-right: 15px;
+				padding-top: 2px;
+				padding-bottom: 4px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				-webkit-box-shadow: 3px 5px 8px #000;
+			}
+
+			.hudSideScrapeContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+
+			.sequenceButtons
+			{
+				visibility: hidden;
+			}
+
+			.sequenceCard:hover .sequenceButtons
+			{
+				visibility: visible;
+			}
+
+			.sequenceButton
+			{
+				opacity: 0.7;
+			}
+
+			.sequenceButton:hover
+			{
+				opacity: 1.0;
+			}
+
+			.wlPlate
+			{
+				white-space: nowrap;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body style="background-color: transparent;" class="hiddenElem">
+
+
+		<div id="upperPanel" style="position: absolute; top: 80px; left: 0; right: 0; display: none; pointer-events: none;">
+			<div style="display: inline-block;" class="aaOnlyIfUniverseNotConnected">
+				<div id="assignToObjectBox" class="cabCategory" onclick="replaceObjectItem();" style="display: inline-block; display: none;">
+					<img src="itemicon.png" class="helpNote" help="Assign this item to the object under your crosshair instead." style="vertical-align: bottom;" /> Assign Item To Object Under Crosshair&nbsp;
+				</div>
+			</div>
+			<table style="width: 100%;">
+				<tr align="center">
+					<td>
+						<div class="cabCategory" catname="all" onclick="selectCategory(this);">
+							ALL
+						</div>
+					</td>
+					<td>
+						<div class="cabCategory" catname="game" onclick="selectCategory(this);">
+							GAME
+						</div>
+					</td>
+					<td>
+						<div class="cabCategory" catname="video" onclick="selectCategory(this);">
+							VIDEO
+						</div>
+					</td>
+					<td>
+						<div class="cabCategory" catname="music" onclick="selectCategory(this);">
+							MUSIC
+						</div>
+					</td>
+					<td>
+						<div class="cabCategory" catname="image" onclick="selectCategory(this);">
+							IMAGE
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="5">
+						<div id="cabinetsContainer" style="display: none;" class="aaScrollBars">
+
+				<!--
+							<img src="cabinets/two_player_arcade.png" class="modelThumb" />
+							<img src="cabinets/four_player_arcade.png" class="modelThumb" />
+							<img src="cabinets/big_movie_wallmount.png" class="modelThumb" />
+							<img src="cabinets/brainiac.png" class="modelThumb" />
+							<img src="cabinets/double_car_racer.png" class="modelThumb" />
+							<img src="cabinets/enclosed_flight.png" class="modelThumb" />
+							<img src="cabinets/single_car_racer.png" class="modelThumb" />
+											var entryImageContainer = document.createElement("div");
+											entryImageContainer.className = "entryImageContainer";
+											entryImageContainer.style.display = "none";
+
+											var imageName = entry.platforms[arcadeHud.platformId].file;
+											imageName = imageName.substring(imageName.lastIndexOf("\\") + 1);
+											imageName = imageName.substring(0, imageName.lastIndexOf("."));
+
+											var entryImage = document.createElement("img");
+											entryImage.addEventListener("load", function(e)
+											{
+												clearTimeout(this.parentNode.timeoutHandle);
+												this.style.display = "block";
+												entryContainerElem.appendChild(this.parentNode);
+											}.bind(entryImageContainer), true);
+
+											entryElem.timeoutHandle = setTimeout(function()
+											{
+												entryContainerElem.appendChild(this);
+											}.bind(entryElem), 1000);
+
+											entryImage.src = "cabinets/" + imageName + ".png";
+
+											entryImageContainer.appendChild(entryImage);
+											entryElem.appendChild(entryImageContainer);
+
+							{"dynamic":"1","info":{"id":"acec221c","owner":"local"},"keywords":"","platforms":{"-KJvcne3IKMZQTaG7lPo":{"file":"models\\cabinets\\two_player_arcade.mdl","id":"-KJvcne3IKMZQTaG7lPo"}},"title":"two_player_arcade"}-->
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<style>
+			/*
+			#entryContainer::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#entryContainer::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
+				border-radius: 10px;
+				background-color: #000;
+			}
+
+			#entryContainer::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px #000;
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			#entryContainer::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+			*/
+
+			.namePlate
+			{
+				display: inline-block;
+				padding: 8px;
+				border-top-left-radius: 10px;
+				border-bottom-left-radius: 10px;
+
+				border-style: solid;
+				border-width: 2px;
+				border-right-width: 1px;
+				border-left-width: 20px;
+
+				color: #ccc;
+				background-color: #000;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.7);
+				border-right: 1px solid rgba(250, 50, 50, 0.7);
+				border-left: 20px solid rgba(250, 50, 50, 0.7);
+				color: rgba(255, 255, 255, 0.5);
+				background-color: rgba(0, 0, 0, 0.99);
+				*/
+				margin-bottom: 4px;
+				margin-top: 4px;
+				letter-spacing: 0.1em;
+				font-style: italic;
+				opacity: 0.9;
+				-webkit-transition: border 0.5s ease-in-out, border-right 0.5s ease-in-out;
+			}
+
+			.selectedNamePlate
+			{
+				color: #fff;
+				background-color: #000;
+				-webkit-transition-delay: 0s, 0.5s;
+				opacity: 1.0;
+				border-left-width: 40px;
+				border-right-width: 80px;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.9);
+				border-left: 40px solid rgba(250, 50, 50, 0.9);
+				border-right: 80px solid rgba(250, 50, 50, 0.9);
+				*/
+			}
+
+			.entryImageContainer
+			{
+				padding: 20px;
+				display: block;
+				position: relative;
+				right: 0px;
+			}
+
+			.entryImageContainer
+			{
+				-webkit-transition: right 0.5s ease-in-out;
+				/*-webkit-transition-delay: 0.5s, 0.5s;*/
+			}
+
+			.selectedNamePlateParent .entryImageContainer
+			{
+				right: 20px;
+			}
+
+			#title
+			{
+				line-height: 74px;
+				font-family: Arial;
+				font-size: 50px;
+				padding-right: 10px;
+				font-weight: 900;
+				-webkit-text-stroke: 2px black;
+				text-shadow:
+					3px 3px 0 #000,
+					-1px -1px 0 #000,
+					1px -1px 0 #000,
+					-1px 1px 0 #000,
+					1px 1px 0 #000;
+				background: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.9) 75%, rgba(0,0,0,0.9) 100%);
+			}
+
+			#titleRule
+			{
+				position: fixed;
+				top: 74px;
+				right: 0;
+				height: 4px;
+				width: 50%;
+				/*background: -webkit-linear-gradient(left,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%);*/
+
+			}
+
+			.rotateArrow
+			{
+				font-weight: 900;
+				display: inline-block;
+				font-size: 24px;
+			}
+		</style>
+
+		<!--<div id="pageContent">-->
+			<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;"></div>
+			<div id="titleRule" class="aaThemeColorOneFadeBackground"></div>
+			<div id="entryContainer" class="aaThemeColorOneScrollBars" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+
+			<div id="transformMenuContainer" style="display: none;">
+				<div id="transformMenu">
+					<table>
+						<tr><td style="width: 290px;">
+							<div id="wl_transform" class="wlContainer aaThemeColorOneScrollBars" style="height: 270px;">
+								<div class="wlEntry">
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="resetTab" onclick="resetTransform(this);">
+										Reset
+									</div><br />
+									<div class="wlPlate wlPlateSelected aaThemeColorOneFadedBorderColor" name="rotateTab" onclick="selectPlate(this);">
+										Rotate
+									</div><br />
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="offsetTab" onclick="selectPlate(this);">
+										Offset
+									</div><br />
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="scaleTab" onclick="selectPlate(this);">
+										Scale
+									</div><br />
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="sequenceTab" onclick="selectPlate(this);">
+										Animation
+									</div><br />
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="bodyGroupTab" onclick="selectPlate(this);">
+										Body Groups
+									</div><br />
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="skinTab" onclick="selectPlate(this);">
+										Skin
+									</div><br />
+								</div>
+							</div>
+						</td><td valign="top">
+							<div class="optSliderPanel" id="rotationPanel">
+								<table>
+									<tr><td valign="middle" width="90" style="white-space: nowrap;">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, -90);">&#8630;</div><div class="optLabel" name="pitch_label" onclick="optResetvalue(this);">P</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, 90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="pitch" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="pitch_value" style="text-align: left; width: 100px;">0&deg;</div>
+										<!--<input class="optValue" name="pitch_value" style="text-align: left; width: 100px; background-color: transparent;" value="0" onclick="this.select();" />-->
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, -90);">&#8630;</div><div class="optLabel" name="yaw_label" onclick="optResetvalue(this);">Y</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, 90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="yaw" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="yaw_value" style="text-align: left; width: 100px;">0&deg;</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, -90);">&#8630;</div><div class="optLabel" name="roll_label" onclick="optResetvalue(this);">R</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, 90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="roll" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="roll_value" style="text-align: left; width: 100px;">0&deg;</div>
+									</td></tr>
+									<tr><td colspan="3" align="center">
+										<!--div class="aaThemeColorOneHighColor aaTextColorTwoColor aaTextSizeFontSize aaTitleText aaThemeColorTwoBorderColor" style="cursor: pointer;"><label style="cursor: pointer;"><input type="checkbox" /> Use Global Rotation</label></div-->
+		<div class="helpNotex" help="Persistent servers will remain LIVE even after you disconnect from them. If you want your server to disappear as soon as you leave it, set this to NO. You can delete your old persistent servers from the SERVERS tab." style="padding: 4px; white-space: nowrap;">
+			<div style="cursor: pointer; display: inline-block; padding: 10px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.96); margin: 3px;">
+				<div class="aaKeyValueTableValueTitle aaTextSizeFontSize" style="font-family: Arial; color: #fff; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">Auto Rotation</div>
+				<div id="useGlobalRotation" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+					<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+				</div>
+			</div>
+		</div>
+									</td></tr>
+								</table>
+							</div>
+							<div class="optSliderPanel" id="offsetPanel" style="display: none;">
+								<table>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offX_label" onclick="optResetvalue(this);">X</div>
+									</td><td>
+										<input type="range" name="offX" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="offX_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offY_label" onclick="optResetvalue(this);">Y</div>
+									</td><td>
+										<input type="range" name="offY" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="offY_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offZ_label" onclick="optResetvalue(this);">Z</div>
+									</td><td>
+										<input type="range" name="offZ" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="offZ_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+								</table>
+							</div>
+							<div class="optSliderPanel" id="scalePanel" style="display: none;">
+								<table>
+									<tr><td valign="middle">
+										<div class="optLabel" name="scale_label" onclick="optResetvalue(this);">&lrtri;</div>
+									</td><td>
+										<input type="range" name="scale" oninput="optSliderOnInput(this);" min="0.1" max="10" step="0.01" value="1.0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="scale_value" style="text-align: left; width: 100px;">1.0</div>
+									</td></tr>
+								</table>
+							</div>
+							<div id="sequencePanel" style="display: none;"></div>
+							<!--div id="bodyGroupPanel" style="display: none;"></div-->
+							<!--div class="optSliderPanel" id="bodyGroupPanelx">
+								<table style="width: 812px;">
+									<tr><td valign="middle" style="white-space: nowrap; width: 1px;">
+										<div class="optLabel" name="bodyX_label" onclick="optResetvalue(this);">Yadda</div>
+									</td><td>
+										<input type="range" name="bodyX" oninput="optSliderOnInput(this);" min="0" max="6" step="1" value="0" style="width: 100%;" />
+									</td><td style="width: 1px;">
+										<div class="optValue" name="pitchX_value" style="text-align: left; width: 100px;">0</div>
+									</td></tr>
+								</table>
+							</div-->
+							<!--div class="optSliderPanel" id="bodyGroupPanel"></div-->
+							<div class="optSliderPanel" id="bodyGroupPanel" style="display: none;">
+								<table style="width: 805px;">
+									<!--tr><td valign="middle" style="width: 1px; white-space: nowrap; text-align: right;">
+										<div class="optLabel" name="body0_label" onclick="optResetvalue(this);">body</div>
+									</td><td style="padding-right: 5px;">
+										<input type="range" name="body0" oninput="optSliderOnInput(this);" min="0" max="0" step="1" value="0" style="width: 100%;" />
+									</td><td style="width: 1px;">
+										<div class="optValue" name="body0_value" style="text-align: left; width: 100px;">0/0</div>
+									</td></tr-->
+								</table>
+							</div>
+							<!--div id="skinPanel" style="display: none;"></div-->
+							<div class="optSliderPanel" id="skinPanel" style="display: none;">
+								<table>
+									<tr><td valign="middle">
+										<div class="optLabel" name="skin_label" onclick="optResetvalue(this);">
+											<script>
+												document.write(arcadeHud.generateIconHTML("skinicon.png", 42, 42, "aaTextColorOneColor"));
+											</script>
+										</div>
+									</td><td>
+										<input type="range" name="skin" oninput="optSliderOnInput(this);" min="0" max="0" step="1" value="0" style="width: 600px;" />
+									</td><td>
+										<div class="optValue" name="skin_value" style="text-align: left; width: 100px;">0</div>
+									</td></tr>
+								</table>
+							</div>
+						</td></tr>
+					</table>
+				</div>
+			</div>
+		<!--</div>-->
+
+		<script>
+			wl_transformContainer = document.querySelector("#wl_transform");
+			
+			var scaleElem = document.querySelector("input[name='scale']");
+			var skinElem = document.querySelector("input[name='skin']");
+			var pitchElem = document.querySelector("input[name='pitch']");
+			var yawElem = document.querySelector("input[name='yaw']");
+			var rollElem = document.querySelector("input[name='roll']");
+			var offXElem = document.querySelector("input[name='offX']");
+			var offYElem = document.querySelector("input[name='offY']");
+			var offZElem = document.querySelector("input[name='offZ']");
+			//var animElem = document.querySelector("input[name='anim']:checked");
+
+			function parseNumber(num)
+			{
+				return Number(parseFloat(num).toFixed(2));
+			}
+
+			function initialHelper(inputName, value, valuePostfix)
+			{
+				if( inputName !== "anim" )
+				{
+					var inputElem = document.querySelector("input[name=" + inputName + "]");
+					var valueElem = document.querySelector("div[name=" + inputName + "_value]");
+
+					if( inputName == "skin" )
+					{
+						var skins = aaapi.cmdEx("getSpawningObjectModelSkins");
+						value = skins.current;
+						inputElem.max = skins.total - 1;
+						valuePostfix = "/" + (skins.total - 1);
+					}
+
+					inputElem.value = value;
+					valueElem.innerHTML = parseNumber(value) + valuePostfix;
+				}
+			}
+
+			function optResetvalue(thisElem, val)
+			{
+				var inputName = thisElem.getAttribute("name");
+				inputName = inputName.substring(0, inputName.length - 6);
+				var inputElem = document.querySelector("input[name=" + inputName + "]");
+				if( val === undefined )
+					inputElem.value = (inputName === "scale") ? 1 : 0;
+				else
+					inputElem.value = val;
+				inputElem.oninput();
+			}
+
+			function optSliderOnInput(thisElem)
+			{
+				var valueElem = document.querySelector("div[name=" + thisElem.name + "_value]");
+				var postfix = "";
+
+				if( thisElem.name === "pitch" || thisElem.name === "yaw" || thisElem.name === "roll" )
+				{
+					postfix = thisElem.value + "&deg;";
+
+					if( g_allowTransformUpdate )
+					{
+						var pitch = pitchElem;
+						var yaw = yawElem;
+						var roll = rollElem;
+						aaapi.cmd("adjustObjectRot", parseFloat(pitch.value), parseFloat(yaw.value), parseFloat(roll.value));
+					}
+				}
+				else if( thisElem.name === "offX" || thisElem.name === "offY" || thisElem.name === "offZ" )
+				{
+					postfix = thisElem.value + "in";
+
+					if( g_allowTransformUpdate )
+					{
+						var offX = offXElem;
+						var offY = offYElem;
+						var offZ = offZElem;
+						aaapi.cmd("adjustObjectOffset", parseFloat(offX.value), parseFloat(offY.value), parseFloat(offZ.value));
+					}
+				}
+				else if( thisElem.name === "scale" )
+				{
+					var goodScale = parseNumber(thisElem.value);
+					postfix = goodScale;
+
+					if( g_allowTransformUpdate )
+						aaapi.cmd("adjustObjectScale", parseFloat(goodScale));
+				}
+				else if( thisElem.name === "skin" )
+				{
+					var goodSkin = parseNumber(thisElem.value);
+					postfix = goodSkin + "/" + thisElem.max;
+
+					aaapi.cmd("setSpawningObjectModelSkin", parseInt(goodSkin));
+				}
+				else if( thisElem.name.indexOf('body') == 0 )
+				{
+					var goodBodyGroup = parseNumber(thisElem.value);
+					postfix = goodBodyGroup + "/" + thisElem.max;
+
+					g_oldBodyGroupStates[thisElem.bodyGroupIndex].value = goodBodyGroup;
+					aaapi.cmd("setSpawningObjectModelBodyGroupState", thisElem.bodyGroupName, g_oldBodyGroupStates[thisElem.bodyGroupIndex].value);
+
+					//aaapi.cmd("setSpawningObjectModelBodyGroups", 0);
+				}
+
+				valueElem.innerHTML = postfix;
+
+				oldScale = scaleElem.value;
+				oldSkin = skinElem.value;
+				oldPitch = pitchElem.value;
+				oldYaw = yawElem.value;
+				oldRoll = rollElem.value;
+				oldOffX = offXElem.value;
+				oldOffY = offYElem.value;
+				oldOffZ = offZElem.value;
+			}
+
+			function selectNone(container)
+			{
+				if( !!!container )
+					return;
+
+				// deselect everything
+				var selected = container.querySelector(".wlPlateSelected");
+				if( selected )
+				{
+					selected.classList.remove("wlPlateSelected");
+					return selected;
+				}
+
+				return;
+			}
+
+			function resetTransform()
+			{
+				g_allowTransformUpdate = false;
+				var pitchLabel = document.querySelector("div[name=pitch_label]");
+				optResetvalue(pitchLabel);
+
+				var yawLabel = document.querySelector("div[name=yaw_label]");
+				optResetvalue(yawLabel);
+
+				g_allowTransformUpdate = true;
+				var rollLabel = document.querySelector("div[name=roll_label]");
+				optResetvalue(rollLabel);
+
+				g_allowTransformUpdate = false;
+				var offXLabel = document.querySelector("div[name=offX_label]");
+				optResetvalue(offXLabel);
+
+				var offYLabel = document.querySelector("div[name=offY_label]");
+				optResetvalue(offYLabel);
+
+				g_allowTransformUpdate = true;
+				var offZLabel = document.querySelector("div[name=offZ_label]");
+				optResetvalue(offZLabel);
+
+				var scaleLabel = document.querySelector("div[name=scale_label]");
+				optResetvalue(scaleLabel);
+
+				var skinLabel = document.querySelector("div[name=skin_label]");
+				optResetvalue(skinLabel);
+			}
+
+			var g_smartFilterSequences = true;//(parseInt(localStorage.getItem("smartSequenceBadEndings")) != 0);
+			var g_sequenceNames = [];
+			var g_lastUsedSequenceIndex = -1;
+			var g_actuallyUsedSequenceCount = 0;
+			function addSomeSequences(startingIndex)
+			{
+				var used = 0;
+				if( startingIndex < g_sequenceNames.length )
+				{
+					var sequencePageLength = localStorage.getItem("librarysearchmax");
+					if( !!!sequencePageLength )
+						sequencePageLength = "40";
+					sequencePageLength = parseInt(sequencePageLength);
+
+					var sequenceForm = document.querySelector("#sequenceForm");
+					if( !!!sequenceForm )
+					{
+						sequenceForm = document.createElement("form");
+						sequenceForm.id = "sequenceForm";
+						sequenceForm.style.cssText = "margin: 0; padding: 0; max-height: 270px; overflow-y: auto; width: 500px; overflow-x: hidden; padding-right: 10px;";
+						sequenceForm.className = "aaThemeColorOneScrollBars";
+						sequencePanel.appendChild(sequenceForm);
+					}
+
+					var endsWithFilters = ["Spine", "Delta"];
+
+					for( var i = startingIndex; i < g_sequenceNames.length && used < sequencePageLength; i++ )
+					{
+						g_lastUsedSequenceIndex = i;
+
+						if( g_hiddenSequenceNames.indexOf(g_sequenceNames[i]) >= 0 )
+							continue;
+
+						if( g_smartFilterSequences )
+						{
+							var shouldContinue = false;
+							for( var j = 0; j < endsWithFilters.length; j++ )
+							{
+								var testName = g_sequenceNames[i];//.toLowerCase();
+								if( testName.indexOf(endsWithFilters[j]) == testName.length - endsWithFilters[j].length )
+								{
+									shouldContinue = true;
+									break;
+								}
+							}
+							if( shouldContinue )
+								continue;
+						}
+
+						used++;
+						g_actuallyUsedSequenceCount++;
+
+						var sequenceCard = document.createElement("label");
+						sequenceCard.sequenceName = g_sequenceNames[i];
+						sequenceCard.style.cssText = "border-style: solid; border-width: 1px; display: block; margin: 0; padding: 4px; background-color: #000; cursor: pointer;";
+						sequenceCard.className = "sequenceCard aaThemeColorOneHighColor aaTextColorTwoColor aaTextSizeFontSize aaTitleText aaThemeColorTwoBorderColor";
+
+						sequenceCard.addEventListener("change", function(e)
+						{
+							aaapi.cmd("setSpawningObjectModelSequence", this.sequenceName);
+						}.bind(sequenceCard), false);
+
+						var sequenceButton = document.createElement("input");
+						sequenceButton.type = "radio";
+						sequenceButton.name = "sequence";
+						sequenceButton.value = g_sequenceNames[i];
+						
+						if( g_sequenceNames[i] === g_oldAnim )
+							sequenceButton.checked = true;
+
+						sequenceCard.appendChild(sequenceButton);
+
+						var sequenceName = document.createElement("div");
+						sequenceName.style.cssText = "display: inline-block; padding-right: 8px;";
+						sequenceName.innerHTML = g_sequenceNames[i];
+						sequenceCard.appendChild(sequenceName);
+
+						var sequenceButtons = document.createElement('div');
+						sequenceButtons.style.cssText = "display: inline-block; float: right; white-space: nowrap;";
+						sequenceButtons.className = "sequenceButtons";
+						sequenceCard.appendChild(sequenceButtons);
+
+						var hideSequenceButton = document.createElement('div');
+						hideSequenceButton.innerHTML = arcadeHud.generateIconHTML("noeye.png", 24, 24, "aaThemeColorOneColor");
+
+						if( g_hiddenSequenceNames.indexOf(g_sequenceNames[i]) < 0)
+							hideSequenceButton.style.cssText = "display: inline-block;";
+						else
+							hideSequenceButton.style.cssText = "display: none;";
+						hideSequenceButton.card = sequenceCard;
+						hideSequenceButton.addEventListener('click', function(e)
+						{
+							e.stopImmediatePropagation();
+							e.preventDefault();
+
+							hideSequenceName(e.currentTarget.card);
+
+							return false;
+						});
+						sequenceButtons.appendChild(hideSequenceButton);
+
+						//if( g_favoriteSequenceNames.indexOf(sequenceNames[i]) < 0)
+						//{
+							var favSequenceButton = document.createElement('div');
+							favSequenceButton.innerHTML = arcadeHud.generateIconHTML("favoriteicon.png", 24, 24, "aaThemeColorOneColor");
+
+							if( g_favoriteSequenceNames.indexOf(g_sequenceNames[i]) < 0)
+								favSequenceButton.style.cssText = "display: inline-block;";
+							else
+								favSequenceButton.style.cssText = "display: none;";
+
+							favSequenceButton.className = 'sequenceButton favoriteSequenceButton';
+							favSequenceButton.card = sequenceCard;
+							favSequenceButton.addEventListener('click', function(e)
+							{
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								favoriteSequenceName(e.currentTarget.card);
+
+								return false;
+							});
+							sequenceButtons.appendChild(favSequenceButton);
+						//}
+						//else
+						//{
+							var unfavSequenceButton = document.createElement('div');
+							unfavSequenceButton.innerHTML = arcadeHud.generateIconHTML("unfavoriteicon.png", 24, 24, "aaThemeColorOneColor");
+
+							if( g_favoriteSequenceNames.indexOf(g_sequenceNames[i]) < 0)
+								unfavSequenceButton.style.cssText = "display: none;";
+							else
+								unfavSequenceButton.style.cssText = "display: inline-block;";
+
+							unfavSequenceButton.className = 'sequenceButton unfavoriteSequenceButton';
+							unfavSequenceButton.card = sequenceCard;
+							unfavSequenceButton.addEventListener('click', function(e)
+							{
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								unfavoriteSequenceName(e.currentTarget.card);
+
+								return false;
+							});
+							sequenceButtons.appendChild(unfavSequenceButton);
+						//}
+
+						sequenceForm.appendChild(sequenceCard);
+					}
+				}
+
+				var showMoreElem = document.querySelector("#showMoreSequences");
+				if( g_actuallyUsedSequenceCount == 0 || startingIndex >= g_sequenceNames.length || g_lastUsedSequenceIndex >= g_sequenceNames.length )
+				{
+					//g_lastUsedSequenceIndex = -1;
+
+					// Remove the "Load More..." button.
+					if( !!showMoreElem )
+						showMoreElem.parentNode.removeChild(showMoreElem);
+
+					if( g_actuallyUsedSequenceCount == 0 )
+					{
+						sequencePanel.innerHTML =  "<div style='font-family: Arial; font-weight: bold; font-size: 16px; padding: 10px; background-color: rgba(0, 0, 0, 0.96); margin: 6px; letter-spacing: 0.2em;'>This model has no animations.</div>";
+					}
+				}
+				else
+				{
+					if( !!!showMoreElem )
+					{
+						showMoreElem = document.createElement('div');
+						showMoreElem.className = "aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor";
+						showMoreElem.style.cssText = "padding: 6px;";
+						//showMoreElem.style.cssText = "font-family: Arial; border: 2px solid white; background-color: rgba(0, 0, 0, 0.95); font-size: 18px; border-radius: 16px; padding: 12px; text-align: center;";
+						showMoreElem.id = "showMoreSequences";
+						showMoreElem.innerHTML = "Show More...";
+						showMoreElem.addEventListener('click', function(e)
+						{
+							showMoreElem.parentNode.removeChild(showMoreElem);
+							addSomeSequences(g_lastUsedSequenceIndex+1);
+						});
+						sequenceForm.appendChild(showMoreElem);
+					}
+				}
+			}
+
+			function selectPlate(thisElem)
+			{
+				selectNone(wl_transformContainer);
+				thisElem.classList.add("wlPlateSelected");
+				
+				var panelName = thisElem.getAttribute("name");
+
+				document.querySelector("#rotationPanel").style.display = (panelName === "rotateTab") ? "block" : "none";
+				document.querySelector("#offsetPanel").style.display = (panelName === "offsetTab") ? "block" : "none";
+				document.querySelector("#scalePanel").style.display = (panelName === "scaleTab") ? "block" : "none";
+				document.querySelector("#sequencePanel").style.display = (panelName === "sequenceTab") ? "block" : "none";
+				document.querySelector("#bodyGroupPanel").style.display = (panelName === "bodyGroupTab") ? "block" : "none";
+				document.querySelector("#skinPanel").style.display = (panelName === "skinTab") ? "block" : "none";
+
+				var sequencePanel = document.querySelector("#sequencePanel");
+				var bodyGroupPanel = document.querySelector("#bodyGroupPanel");
+				var skinPanel = document.querySelector("#skinPanel");
+				var model = aaapi.cmdEx("getLibraryModel", currentModelId);
+				var modelFile = model.platforms[arcadeHud.platformId].file.toLowerCase();
+				var isPatron = (modelFile.indexOf("models/patrons/") === 0 || modelFile.indexOf("models\\patrons\\") === 0);
+
+				var isAutomatic = (isPatron || category !== "models");
+				if( !isPatron && (category === "models" || category === "items") && panelName === "bodyGroupTab" )
+				{
+					g_oldBodyGroupStates = aaapi.cmdEx("getSpawningObjectModelBodyGroupStates");
+					
+					var bodyGroupTable = bodyGroupPanel.querySelector('table');
+					bodyGroupTable.innerHTML = "";
+
+					var hadBodyGroups = false;
+
+					var bodyGroup, row, labelCel, label, sliderCel, slider, valCel, val;
+					for( var i = 0; i < g_oldBodyGroupStates.length; i++ )
+					{
+						bodyGroup = g_oldBodyGroupStates[i];
+						if( bodyGroup.count <= 1 )
+							continue;
+
+						row = document.createElement('tr');
+
+						labelCel = document.createElement('td');
+						row.appendChild(labelCel);
+						labelCel.vAlign = "middle";
+						labelCel.style.cssText = "width: 1px; white-space: nowrap; text-align: right;";
+
+						label = document.createElement('div');
+						labelCel.appendChild(label);
+						label.className = "optLabel";
+						label.setAttribute('name', "body" + i + "_label");
+						label.addEventListener('click', function(e){ optResetvalue(this); }.bind(label));
+						label.appendChild(document.createTextNode(bodyGroup.name));
+
+						sliderCel = document.createElement('td');
+						row.appendChild(sliderCel);
+						sliderCel.style.cssText = "padding-right: 5px; padding-left: 5px;";
+
+						slider = document.createElement('input');
+						sliderCel.appendChild(slider);
+						slider.bodyGroupName = bodyGroup.name;
+						slider.bodyGroupIndex = i;
+						slider.type = "range";
+						slider.setAttribute('name', "body" + i);
+						slider.addEventListener('input', function(e){ optSliderOnInput(this); }.bind(slider));
+						slider.min = 0;
+						slider.max = bodyGroup.count - 1;
+						slider.step = 1;
+						slider.value = bodyGroup.value;
+						slider.style.cssText = "width: 100%;";
+
+						valCel = document.createElement('td');
+						row.appendChild(valCel);
+						valCel.style.cssText = "width: 1px;";
+
+						val = document.createElement('div');
+						valCel.appendChild(val);
+						val.className = "optValue";
+						val.setAttribute('name', "body" + i + "_value");
+						val.style.cssText = "text-align: left; width: 100px;";
+						val.appendChild(document.createTextNode(bodyGroup.value + "/" + (bodyGroup.count - 1)));
+
+						bodyGroupTable.appendChild(row);
+
+						hadBodyGroups = true;
+					}
+
+					if( !hadBodyGroups )
+					{
+						bodyGroupTable.innerHTML = "<div style='font-family: Arial; font-weight: bold; font-size: 16px; padding: 10px; background-color: rgba(0, 0, 0, 0.96); margin: 6px;'>This model has no body groups.</div>";
+					}
+				}
+
+				if( !isPatron && (category === "models" || category === "items") && panelName === "skinTab" )
+				{
+					var inputElem = document.querySelector("input[name=skin]");
+					var valueElem = document.querySelector("div[name=skin_value]");
+					var skins = aaapi.cmdEx("getSpawningObjectModelSkins");
+					value = skins.current;
+					inputElem.max = skins.total - 1;
+					valuePostfix = "/" + (skins.total - 1);
+					inputElem.value = value;
+					valueElem.innerHTML = parseNumber(value) + valuePostfix;
+				}
+
+				if( !isPatron && category === "models" && panelName === "sequenceTab" )
+				{
+					var needsDefaultSequence = true;
+
+					if( aaapi.cmdEx("getSpawningObjectModelSequenceNames") === true )
+					{
+						g_oldAnim = aaapi.cmdEx("getSpawningObjectModelSequenceName");
+						sequencePanel.innerHTML = "";
+						g_lastUsedSequenceIndex = -1;
+						g_actuallyUsedSequenceCount = 0;
+						g_sequenceNames = [];
+
+						// fetch list async
+						//console.log(JSON.stringify(Object.keys(screenshot)));
+						//var snapRef = "asset://shots/" + screenshot.id + ".js";
+		//				console.log(snapRef);
+
+						var randStuff = "r" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
+						var snapScript = document.createElement("script");
+						snapScript.src = "asset://shots/model_info.js?r=" + randStuff;
+						snapScript.onload = function()
+						{
+							//console.log(aa_fetched_model_sequences.length);
+							g_sequenceNames = aa_fetched_model_sequences;//aaapi.cmdEx("getSpawningObjectModelSequenceNames");
+
+							g_sequenceNames.sort(function(a, b)
+							{
+								var ia, ib;
+								ia = g_favoriteSequenceNames.indexOf(a);
+								ib = g_favoriteSequenceNames.indexOf(b);
+								if( ia >= 0 && ib < 0)
+									return -1;
+
+								if( ib >= 0 && ia < 0)
+									return 1;
+
+								if(a < b)
+									return -1;
+
+								if(a > b)
+									return 1;
+
+								return 0;
+							});
+
+
+							if( g_sequenceNames.indexOf("inactiveidle") >= 0 || g_sequenceNames.indexOf("activated") >= 0 || g_sequenceNames.indexOf("activeidle") >= 0 || g_sequenceNames.indexOf("deactivated") >= 0 )
+								isAutomatic = true;
+							else
+							{
+								sequencePanel.innerHTML = "";
+								addSomeSequences(g_lastUsedSequenceIndex+1);
+							}
+						};
+						document.getElementsByTagName("head")[0].appendChild(snapScript);
+					}
+				}
+
+				if( isAutomatic )
+				{
+					sequencePanel.innerHTML = "<div style='font-family: Arial; font-weight: bold; font-size: 16px; padding: 10px; background-color: rgba(0, 0, 0, 0.96); margin: 6px;'>This model's animation is automatic.</div>";
+				}
+			}
+
+			function selectNoneM(container)
+			{
+				// deselect everything
+				var selected = container.querySelector(".selectedNamePlate");
+				if( !!selected )
+				{
+					selected.classList.remove("selectedNamePlate");//Name = "namePlate";
+					selected.parentNode.classList.remove("selectedNamePlateParent");
+					return selected;
+				}
+
+				return;
+			}
+
+			///*
+			var oldScale = "1.0";
+			var oldSkin = "0";
+			var oldPitch = "0";
+			var oldYaw = "0";
+			var oldRoll = "0";
+			var oldOffX = "0";
+			var oldOffY = "0";
+			var oldOffZ = "0";
+			var oldAnim = "";
+			var g_oldAnim = aaapi.cmdEx("getSpawningObjectModelSequenceName");
+			var g_oldBodyGroupStates;
+			//var g_oldBodyGroups = aaapi.cmdEx("getSpawningObjectModelBodyGroups");
+			//console.log(g_oldBodyGroups + ": " + JSON.stringify(g_oldBodyGroupStates));
+			//console.log(g_oldBodyGroups);
+			//var g_oldSkin = aaapi.cmdEx("getSpawningObjectModelSkin");
+
+			//*/
+			//var oldScale, oldPitch, oldYaw, oldRoll, oldOffX, oldOffY, oldOffZ;
+			function loadOldTransform(originalId)
+			{
+				/*
+				oldScale = document.querySelector("input[name='scale']").value;
+				oldPitch = document.querySelector("input[name='pitch']").value;
+				oldYaw = document.querySelector("input[name='yaw']").value;
+				oldRoll = document.querySelector("input[name='roll']").value;
+				oldOffX = document.querySelector("input[name='offX']").value;
+				oldOffY = document.querySelector("input[name='offY']").value;
+				oldOffZ = document.querySelector("input[name='offZ']").value;
+				*/
+
+				var scale, pitch, yaw, roll, offX, offY, offZ;//, anim, body, skin;
+				var oldTransform = localStorage.getItem("trans" + originalId);
+				if( !!oldTransform )
+				{
+					oldTransform = JSON.parse(oldTransform);
+
+					scale = oldTransform.scale;
+					if( typeof scale === 'undefined' )
+						scale = "1.0";
+
+					pitch = oldTransform.pitch;
+					if( typeof pitch === 'undefined' )
+						pitch = "0";
+
+					yaw = oldTransform.yaw;
+					if( typeof yaw === 'undefined' )
+						yaw = "0";
+					
+					roll = oldTransform.roll;
+					if( typeof roll === 'undefined' )
+						roll = "0";
+					
+					offX = oldTransform.offX;
+					if( typeof offX === 'undefined' )
+						offX = "0";
+					
+					offY = oldTransform.offY;
+					if( typeof offY === 'undefined' )
+						offY = "0";
+					
+					offZ = oldTransform.offZ;
+					if( typeof offZ === 'undefined' )
+						offZ = "0";
+						
+					skin = oldTransform.skin;
+					if( typeof skin === 'undefined' )
+						skin = "0";
+				
+					/*anim = oldTransform.anim;
+					if( typeof anim === 'undefined' )
+						anim = "";
+					
+					body = oldTransform.body;
+					if( typeof body === 'undefined' )
+						body = "0";*/
+				}
+				else
+				{
+					scale = oldScale;
+					pitch = oldPitch;
+					yaw = oldYaw;
+					roll = oldRoll;
+					offX = oldOffX;
+					offY = oldOffY;
+					offZ = oldOffZ;
+					skin = oldSkin;
+					//anim = oldAnim;
+					//body = oldBody;
+				}
+
+				scaleElem.value = scale;
+				skinElem.value = skin;
+				pitchElem.value = pitch;
+				yawElem.value = yaw;
+				rollElem.value = roll;
+				offXElem.value = offX;
+				offYElem.value = offY;
+				offZElem.value = offZ;
+
+				//var animElems = 
+				//g_oldAnim = anim;
+				//console.log(g_oldAnim);
+				//animElem.value = anim;
+
+
+				if( g_allowTransformUpdate )
+				{
+					aaapi.cmd("adjustObjectOffset", parseFloat(offX), parseFloat(offY), parseFloat(offZ));
+					aaapi.cmd("adjustObjectRot", parseFloat(pitch), parseFloat(yaw), parseFloat(roll));
+					aaapi.cmd("adjustObjectScale", parseFloat(scale));
+					aaapi.cmd("adjustObjectScale", parseFloat(scale));	// FIX ME
+					//aaapi.cmd("setSpawningObjectModelSequence", animElem);
+				}
+			}
+
+			function selectNext()
+			{
+				var next;
+				var old = selectNoneM(entryContainerElem);
+				if( !!old )
+				{
+					if( !!old.parentNode.timerHandle )
+						clearTimeout(old.parentNode.timerHandle);
+
+					next = old.parentNode.nextSibling;
+				}
+
+				if( !!!next )
+				{
+					next = entryContainerElem.firstChild;//childNodes[0];
+					entryContainerElem.scrollTop = 0;
+				}
+
+				if( !!next )
+				{
+					//next.querySelector(".namePlate").className += " selectedNamePlate";
+					next.querySelector(".namePlate").classList.add("selectedNamePlate");
+					next.querySelector(".namePlate").parentNode.classList.add("selectedNamePlateParent");
+					if( (old && next === old.parentNode.nextSibling) || !!!old )
+						updateScroll();
+
+					if( category === "objects" )
+						aaapi.cmd("objectHover", next.entry.id);
+
+					// load this entry in 1 second, after its animation is finished.
+					// (this allows you to skip past entries you don't want to load)
+					next.timerHandle = setTimeout(function()
+					{
+						//console.log("category is " + category + " and mode is " + mode);
+						if( category === "items" ) //mode === "spawn" && 
+						{
+							//currentItemId = this.entry.info.id;
+							currentModelId = this.entry.info.id;
+							loadOldTransform(this.entry.info.id);
+							aaapi.cmd("cabinetSelected", this.entry.info.id);
+						}
+						else if( category !== "objects" )
+						{
+							currentModelId = this.entry.info.id;
+							loadOldTransform(this.entry.info.id);
+							aaapi.cmd("modelSelected", this.entry.info.id);
+
+							if( arcadeHud.npcs.hasOwnProperty(currentModelId) )
+							{
+								aaapi.cmd("statAction", "aa_npcs_spawned", 1);
+								aaapi.cmd("statAction", "aa_npcs_used", 1, currentModelId);
+							}
+							else if( arcadeHud.defaultModels.indexOf(currentModelId) >= 0 )
+							{
+								aaapi.cmd("statAction", "aa_props_spawned", 1);
+								aaapi.cmd("statAction", "aa_props_used", 1, currentModelId);
+							}
+							else
+								aaapi.cmd("statAction", "aa_props_spawned", 1);
+							
+						}
+						//else if( category === "objects" )
+							//aaapi.cmd("objectSelected", this.entry.id);
+						
+							//console.log("xxx tea bag disabled");
+					}.bind(next), 1000);
+				}
+			}
+
+			function selectPrev()
+			{
+				var prev;
+				var old = selectNoneM(entryContainerElem);
+				if( !!old )
+				{
+					if( !!old.parentNode.timerHandle )
+						clearTimeout(old.parentNode.timerHandle);
+
+					prev = old.parentNode.previousSibling;
+				}
+
+				if( !!!prev )
+				{
+					prev = entryContainerElem.lastChild;
+					entryContainerElem.scrollTop = entryContainerElem.scrollHeight;
+				}
+
+				if( !!prev )
+				{
+					prev.querySelector(".namePlate").classList.add("selectedNamePlate");
+					prev.querySelector(".namePlate").parentNode.classList.add("selectedNamePlateParent");
+
+					if( (old && prev === old.parentNode.previousSibling) || !!!old )
+						updateScroll();
+
+					if( category === "objects" )
+						aaapi.cmd("objectHover", prev.entry.id);
+
+					// load this entry in 1 second, after its animation is finished.
+					// (this allows you to skip past entries you don't want to load)
+					prev.timerHandle = setTimeout(function()
+					{
+						if( category === "items" ) //mode === "spawn" && 
+						{
+							loadOldTransform(this.entry.info.id);
+							aaapi.cmd("cabinetSelected", this.entry.info.id);
+						}
+						//else if( category === "objects" )
+							//aaapi.cmd("objectSelected", this.entry.id);
+						else if( category !== "objects" )
+						{
+							loadOldTransform(this.entry.info.id);
+							aaapi.cmd("modelSelected", this.entry.info.id);
+						}
+							//console.log("xxx tea bag disabled");
+					}.bind(prev), 1000);
+				}
+			}
+
+			function updateScroll()
+			{
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+				{
+					var offset = selected.parentNode.offsetTop - entryContainerElem.scrollTop;
+					var elemOffset = selected.parentNode.offsetHeight;
+					var containerHeight = entryContainerElem.offsetHeight;	//window.innerHeight
+					if(offset > (containerHeight / 3.0) * 2.0)
+					{
+						if( entryContainerElem.scrollTop + elemOffset <= entryContainerElem.scrollHeight )
+							entryContainerElem.scrollTop += elemOffset;
+						else
+							entryContainerElem.scrollTop = entryContainerElem.scrollHeight;
+					}
+					else if(offset < (containerHeight / 3.0) * 1.0)
+					{
+						if( entryContainerElem.scrollTop - elemOffset >= 0 )
+							entryContainerElem.scrollTop -= elemOffset;
+						else
+							entryContainerElem.scrollTop = 0;
+					}
+				}
+			}
+
+			function randoSelect()
+			{
+				return;
+				// deselect everything
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+					selected.classList.remove("selectedNamePlate");
+
+				// select a rando one
+				var potentials = document.querySelectorAll(".namePlate");
+				//console.log(potentials.length);
+				var randoIndex = Math.floor(Math.random() * 10) + 0;
+				potentials[randoIndex].classList.add("selectedNamePlate");
+			}
+
+			function doStuff()
+			{
+				if( isDoingStuff )
+					return;
+
+				isDoingStuff = true;
+
+				var hiddenElems = document.querySelectorAll(".hiddenElem");
+				for( var i = 0; i < hiddenElems.length; i++ )
+					hiddenElems[i].classList.remove("hiddenElem");
+					//hiddenElems[i].style.display = "block";
+
+				libraryBrowserContext = aaapi.cmdEx("getLibraryBrowserContext");
+				category = libraryBrowserContext.category;
+				titleElem = document.querySelector("#title");
+
+				if( mode === "select" )
+				{
+					titleElem.innerHTML = "NEARBY OBJECTS";
+					category = "objects";
+				}
+				else if( category === "items" )
+					titleElem.innerHTML = "CABINETS";
+				else// if( category === "models" )
+					titleElem.innerHTML = "PROPS";
+
+				if( mode === "move")
+				{
+					titleElem.innerHTML = (category === "items") ? "MOVE SHORTCUT" : "MOVE OBJECT";
+					if( category === "models" )
+						document.querySelector("#entryContainer").style.display = "none";
+				}
+
+				document.addEventListener("keypress", function(e)
+				{
+					console.log(e);
+				});
+
+				/*
+				namePlateElem.style.opacity = "1.0";
+						namePlateElem.style.border = "2px solid rgb(255, 255, 255)";
+						namePlateElem.style.borderLeft = "20px solid rgb(255, 255, 255)";
+						namePlateElem.style.borderRight = "80px solid rgb(255, 255, 255)";
+				*/
+
+				entryContainerElem = document.querySelector("#entryContainer");
+
+				if( category !== "objects" )
+				{
+					if( libraryBrowserContext.category === "items" )
+					{
+						if( true )//!arcadeHud.isGamepadInput
+						{
+							method = "find";
+							searchCategory = "models";
+							//console.log("HERE SEARCH AT IS: " + searchCategory);
+							response = aaapi.cmdEx("findFirstLibraryEntry", searchCategory, "title", "", "dynamic", "1");
+						}
+					}
+					else if( mode !== "move" && libraryBrowserContext.filter === "" )
+					{
+						//console.log("yar " + category);
+						searchCategory = category;//libraryBrowserContext.category;
+						//console.log(searchCategory);
+						var searchText = libraryBrowserContext.search;
+						if( searchText != "" )
+						{
+							method = "find";
+							response = aaapi.cmdEx("findFirstLibraryEntry", searchCategory, "title", searchText);
+						}
+						else
+						{
+							method = "get";
+							//response = aaapi.cmdEx("getFirstLibraryEntry", searchCategory);
+						}
+					}
+					else if( mode !== "move" )
+					{
+						//searchCategory = libraryBrowserContext.category;
+						var searchText = libraryBrowserContext.search;
+						var filterText = libraryBrowserContext.filter;
+						method = "find";
+						// FIXME: (maybe) This always assumes that the filter field of the item is "type".
+						response = aaapi.cmdEx("findFirstLibraryEntry", category, "title", searchText, "type", filterText);
+					}
+				}
+				else
+				{
+					// get the nearest models, because they are usually the ones that are unclick-able.
+					searchCategory = "models";
+					method = "get";
+					response = aaapi.cmdEx("getNearestObjectToPlayerLook", 300);
+				}
+
+				if( !!response && response.success && (mode !== "move" || category === "items") )
+				{
+					var queryId = response.queryId;
+					var entry = response.entry;
+					var entryElem;
+					var prettyName;
+
+					var entries = [];
+
+					var count = 0;
+					var max = 999;	// FIXME: arbitraty limit!!!!  Also, should get these async, not all at once.
+					while( response.success && count < max )
+					{
+						if( (category !== "models" || entry.dynamic !== "1") && (entry.dynamic == "1" || !!!entry.info || !!!g_hiddenItems[entry.info.id]) )
+							entries.push(entry);
+
+						if( method === "get" )
+						{
+							if( category === "objects" )
+								response = aaapi.cmdEx("getNextNearestObjectToPlayerLook", 300);
+							else
+							{
+								response = aaapi.cmdEx("getNextLibraryEntry", queryId, searchCategory);
+								//response = aaapi.cmdEx("getNextLibraryEntry", queryId, category);
+							}
+						}
+						else
+						{
+							// catetory = objects is *always* method = get, so we don't have to handle it here.
+							response = aaapi.cmdEx("findNextLibraryEntry", queryId, searchCategory);
+						}
+
+						entry = response.entry;
+						count++;
+
+						//console.log(response.success + ", " + count + ", " + max);
+						//entry = aaapi.cmdEx("findNextLibraryModel");
+					}
+//console.log(JSON.stringify(entries));
+					if( category === "items" )
+					{
+						entries.sort(function(a, b)
+						{
+							var lettersA = a.title.substring(a.title.lastIndexOf("\\") + 1).toLowerCase();
+							var lettersB = b.title.substring(b.title.lastIndexOf("\\") + 1).toLowerCase();
+
+							if( lettersA < lettersB )
+								return -1;
+							else if( lettersA > lettersB )
+								return 1;
+							else
+								return 0;
+						});
+					}
+					else if( category !== "objects" )
+					{
+						entries.sort(function(a, b)
+						{
+							/*
+							var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+							var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+
+							if( letterA < letterB )
+								return -1;
+							else if( letterA > letterB )
+								return 1;
+							else
+								return 0;
+							*/
+
+							var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+							var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+
+							if( lettersA < lettersB )
+								return -1;
+							else if( lettersA > lettersB )
+								return 1;
+							else
+								return 0;
+						});
+					}
+
+					var i;
+					var max = entries.length;
+					for( i = 0; i < max; i++ )
+					{
+						entry = entries[i];
+
+						if( entry.title === "node" || entry.title === "missing" || entry.title === "Teleporter" )
+							continue;
+
+						if( category === "items" )
+						{
+							addModelCard(entry);
+							//continue;
+						}
+
+						//console.log(JSON.stringify(entry));
+						entryElem = document.createElement("div");
+						//entryElem.style.display = "none";
+						entryElem.entry = entry;
+
+						if( category === "objects" || category === "items")
+							prettyName = entry.title;
+						else
+						{
+							prettyName = entry.title;
+							if( prettyName === "" )
+								prettyName = entry.platforms[sourcePlatformId].file;
+
+							prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+							prettyName = prettyName.substring(prettyName.lastIndexOf("/") + 1);
+							if( prettyName.indexOf(".mdl") === prettyName.length - 4 || prettyName.indexOf(".MDL") === prettyName.length - 4)
+								prettyName = prettyName.substring(0, prettyName.length - 4);
+						}
+
+						prettyName = prettyName.replace(/_/g, " ");
+						prettyName = prettyName.toUpperCase();
+
+						namePlateElem = document.createElement("div");
+						namePlateElem.className = "namePlate aaThemeColorOneHighBorderColor";
+						namePlateElem.innerHTML = prettyName;
+
+						if( category === "items" )
+						{
+							var entryImageContainer = document.createElement("div");
+							entryImageContainer.className = "entryImageContainer";
+							entryImageContainer.style.display = "none";
+
+							var imageName = entry.platforms[arcadeHud.platformId].file;
+							imageName = imageName.substring(imageName.lastIndexOf("\\") + 1);
+							imageName = imageName.substring(0, imageName.lastIndexOf("."));
+
+							var entryImage = document.createElement("img");
+							entryImage.addEventListener("load", function(e)
+							{
+								clearTimeout(this.parentNode.timeoutHandle);
+								this.style.display = "block";
+								entryContainerElem.appendChild(this.parentNode);
+							}.bind(entryImageContainer), true);
+
+							entryElem.timeoutHandle = setTimeout(function()
+							{
+								entryContainerElem.appendChild(this);
+								//console.log(this.entry.platforms[arcadeHud.platformId].file);
+							}.bind(entryElem), 1000);
+
+							entryImage.src = "cabinets/" + imageName + ".png";
+
+							entryImageContainer.appendChild(entryImage);
+							entryElem.appendChild(entryImageContainer);
+						}
+						else
+						{
+							var imageSrc = "";
+							if( !!entry.screen && entry.screen !== "" )
+							{
+								if( entry.screen.indexOf(":") === 1 )
+								{
+									imageSrc = "asset://local/" + entry.screen;
+									imageSrc = imageSrc.replace(/\\/g, "/");
+									imageSrc = imageSrc;
+								}
+								else if( entry.screen.toLowerCase().indexOf("http://") === 0 || entry.screen.toLowerCase().indexOf("https://") === 0 || entry.screen.toLowerCase().indexOf("www.") === 0 )
+									imageSrc = entry.screen;
+							}
+
+							if( !!entry && !!entry.platforms && imageSrc === "" )
+							{
+								var modelName = entry.platforms[arcadeHud.platformId].file;
+								var found = modelName.lastIndexOf("\\");
+								if( found >= 0 )
+									modelName = modelName.substring(found+1);
+								else
+								{
+									found = modelName.lastIndexOf("/");
+									if( found >= 0 )
+										modelName = modelName.substring(found+1);
+								}
+
+								if( found >= 0 )
+								{
+									found = modelName.lastIndexOf(".");
+									if( found >= 0 )
+									{
+										modelName = modelName.substring(0, found);
+										imageSrc = "props/" + modelName + ".png";
+									}
+								}
+							}
+
+							if( imageSrc !== "" )
+							{
+								var entryImageContainer = document.createElement("div");
+								entryImageContainer.className = "entryImageContainer";
+								entryImageContainer.style.display = "none";
+/*
+								var imageName = entry.platforms[arcadeHud.platformId].file;
+								imageName = imageName.substring(imageName.lastIndexOf("\\") + 1);
+								imageName = imageName.substring(0, imageName.lastIndexOf("."));
+*/
+								var entryImage = document.createElement("img");
+								entryImage.style.maxHeight = "300px";
+								entryImage.addEventListener("load", function(e)
+								{
+									clearTimeout(this.parentNode.timeoutHandle);
+									this.style.display = "block";
+									entryContainerElem.appendChild(this.parentNode);
+								}.bind(entryImageContainer), true);
+
+								entryElem.timeoutHandle = setTimeout(function()
+								{
+									entryContainerElem.appendChild(this);
+									//console.log(this.entry.platforms[arcadeHud.platformId].file);
+								}.bind(entryElem), 1000);
+
+								//entryImage.src = "props/" + imageName + ".png";
+								entryImage.src = imageSrc;
+
+								entryImageContainer.appendChild(entryImage);
+								entryElem.appendChild(entryImageContainer);
+							}
+						}
+
+						entryElem.appendChild(namePlateElem);
+						if( category !== "items" )
+							entryContainerElem.appendChild(entryElem);
+
+						//console.log(JSON.stringify(entry));
+						//entry = aaapi.cmdEx("findNextLibraryModel");
+					}
+				}
+
+				transformInfo = aaapi.cmdEx("getTransformInfo");
+				if( transformInfo.success && !transformInfo.pseudo )
+				{
+					var offset = transformInfo.offset;
+					var rotation = transformInfo.rotation;
+					var scale = transformInfo.scale;
+					var skin = transformInfo.skin;
+					var anim = transformInfo.anim;
+
+					initialHelper("pitch", rotation.p, "&deg;");
+					initialHelper("yaw", rotation.y, "&deg;");
+					initialHelper("roll", rotation.r, "&deg;");
+
+					initialHelper("offX", offset.x, "in");
+					initialHelper("offY", offset.y, "in");
+					initialHelper("offZ", offset.z, "in");
+
+					initialHelper("scale", scale, "");
+					initialHelper("skin", skin, "");
+					initialHelper("anim", anim, "");
+					//initialHelper("body", body, "");
+				}
+				else
+				{
+					var entryId = originalItemId;
+					if( !!!entryId || entryId == "" )
+						entryId = originalModelId;
+
+					loadOldTransform(entryId);
+				}
+
+				//wl_transformContainer = document.querySelector("#wl_transform");
+			}
+
+			var cabinetsContainer = document.querySelector("#cabinetsContainer");
+			function addModelCard(entry)
+			{
+				var imageName = entry.platforms[arcadeHud.platformId].file;
+				imageName = imageName.substring(imageName.lastIndexOf("\\") + 1);
+				imageName = imageName.substring(0, imageName.lastIndexOf("."));
+
+				var entryImage = document.createElement("img");
+				entryImage.className = "modelThumb";
+				entryImage.entry = entry;
+
+				var cats = g_cabinetCategories[imageName];
+				if( !!cats )
+				{
+					for( var i = 0; i < cats.length; i++ )
+						entryImage.classList.add("cat" + cats[i]);
+				}
+
+				/*
+				entryImage.addEventListener("load", function(e)
+				{
+					clearTimeout(this.parentNode.timeoutHandle);
+					this.style.display = "block";
+					cabinetContainerElem.appendChild(this.parentNode);
+				}.bind(entryImageContainer), true);
+
+				entryElem.timeoutHandle = setTimeout(function()
+				{
+					cabinetContainerElem.appendChild(this);
+				}.bind(entryElem), 1000);
+*/
+				entryImage.src = "cabinets/" + imageName + ".png";
+				entryImage.addEventListener("click", function(e)
+				{
+					currentModelId = this.entry.info.id;
+					loadOldTransform(this.entry.info.id);
+					aaapi.cmd("cabinetSelected", this.entry.info.id);
+				}.bind(entryImage), false);
+
+				//entryImageContainer.appendChild(entryImage);
+				//entryElem.appendChild(entryImageContainer);
+				cabinetsContainer.appendChild(entryImage)
+
+			}
+
+			//if( mode === "select" )
+				//setTimeout(doStuff, 500);
+			//else
+			//if( mode !== "select" )
+
+
+				//if( category === "objects" )
+					//loadOldTransform(currentModelId);
+
+				doStuff();
+
+			//entryContainerElem.addEventListener("mousewheel", function(e)
+			document.addEventListener("mousewheel", function(e)
+			{
+				//if( !isDoingStuff )
+				//	doStuff();
+
+				if( entryContainerElem.style.display !== "none" )
+				{
+					var direction = (e.wheelDelta > 0) ? -1 : 1;
+
+					if( cmdListener.displayMode === "browse" )
+					{
+						if( direction > 0 )
+							selectNext();
+						else
+							selectPrev();
+					}
+					else
+					{
+						console.log("unhandled scroll for transform!!");
+					}
+
+					//entryContainerElem.scrollTop += 100 * direction;
+
+					e.preventDefault();
+					return false;
+				}
+			}, false);
+
+/*
+			setInterval(function()
+			{
+				randoSelect();
+			}, 2000);
+*/
+
+			var cabinetCategory = "";
+			function selectCategory(elem)
+			{
+				var catname = elem.getAttribute("catname");
+				if( cabinetCategory === catname )
+				{
+					var transformMenuContainerElem = document.querySelector("#transformMenuContainer");
+					var upperPanel = document.querySelector("#upperPanel");
+					var cabinetsContainer = document.querySelector("#cabinetsContainer");
+					cabinetsContainer.style.display = "none";
+
+					var oldElem = document.querySelector(".selectedCabCategory");
+					if( oldElem )
+						oldElem.classList.remove("selectedCabCategory");
+
+					transformMenuContainerElem.style.display = "block";
+					cabinetCategory = "";
+				}
+				else
+				{
+					var oldElem = document.querySelector(".selectedCabCategory");
+					if( oldElem )
+						oldElem.classList.remove("selectedCabCategory");
+					
+					elem.classList.add("selectedCabCategory");
+					document.querySelector("#cabinetsContainer").style.display = "block";
+
+					var transformMenuContainerElem = document.querySelector("#transformMenuContainer");
+					transformMenuContainerElem.style.display = "none";
+					cabinetCategory = catname;
+
+					var cab;
+					var cabs = document.querySelectorAll(".modelThumb");
+					for( var i = 0; i < cabs.length; i++ )
+					{
+						cab = cabs[i];
+
+						if( cabinetCategory === "all" || cab.classList.contains("cat" + cabinetCategory) )
+							cab.style.display = "inline-block";
+						else
+							cab.style.display = "none";
+					}
+				}
+			}
+
+			assignToObjectBoxElem = document.querySelector("#assignToObjectBox");
+			function replaceObjectItem()
+			{
+				//console.log(assignToObjectBoxElem.objectId);
+				aaapi.cmd("assignObjectItem", assignToObjectBoxElem.objectId, originalItemId);
+				//aaapi.cmd("deactivateInputMode");
+			}
+
+			function favoriteSequenceName(card)
+			{
+				var sequenceName = card.sequenceName;
+				g_favoriteSequenceNames.push(sequenceName);
+
+				localStorage.setItem("favoriteSequenceNames", JSON.stringify(g_favoriteSequenceNames));
+
+				var favElem = card.querySelector(".favoriteSequenceButton");
+				favElem.style.display = 'none';
+
+				var unfavElem = card.querySelector(".unfavoriteSequenceButton");
+				unfavElem.style.display = 'inline-block';
+
+				card.classList.remove('aaThemeColorTwoBorderColor');
+				card.classList.add('aaThemeColorOneBorderColor');
+
+				//var selectedPlate = document.querySelector(".wlPlateSelected");
+				//if( selectedPlate.getAttribute("name") === "sequenceTab" )
+				//	selectPlate(selectedPlate);
+			}
+
+			function unfavoriteSequenceName(card)
+			{
+				var sequenceName = card.sequenceName;
+				var index = g_favoriteSequenceNames.indexOf(sequenceName);
+				if( index >= 0 )
+					g_favoriteSequenceNames.splice(index, 1);
+
+				localStorage.setItem("favoriteSequenceNames", JSON.stringify(g_favoriteSequenceNames));
+
+				var favElem = card.querySelector(".favoriteSequenceButton");
+				favElem.style.display = 'inline-block';
+
+				var unfavElem = card.querySelector(".unfavoriteSequenceButton");
+				unfavElem.style.display = 'none';
+
+				card.classList.remove('aaThemeColorOneBorderColor');
+				card.classList.add('aaThemeColorTwoBorderColor');
+
+				//var selectedPlate = document.querySelector(".wlPlateSelected");
+				//if( selectedPlate.getAttribute("name") === "sequenceTab" )
+				//	selectPlate(selectedPlate);
+			}
+
+			function hideSequenceName(card)
+			{
+				var sequenceName = card.sequenceName;
+				g_hiddenSequenceNames.push(sequenceName);
+
+				localStorage.setItem("hiddenSequenceNames", JSON.stringify(g_hiddenSequenceNames));
+
+				card.style.display = 'none';
+			}
+
+			function doToggleButton(toggleButton, isInitial)
+			{
+				var row = toggleButton.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+			var useGlobalRotationElem = document.querySelector("#useGlobalRotation");
+
+			useGlobalRotationElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "Auto Rotation", "1": "Global Rotation"},
+				"value": aaapi.cmdEx("getConVarValue", "use_global_rotation"),
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.cmdEx("getConVarValue", "aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					this.value = val;
+					//aaapi.cmd("consoleCommand", "aamp_public " + this.value);
+				}
+			};
+
+			useGlobalRotationElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+
+				var toggleButtonMarker = this.querySelector("div");
+				var val = (toggleButtonMarker.classList.contains("toggleSwitchOn")) ? "1" : "0";
+				useGlobalRotationElem.inputOption.value = val;
+				aaapi.cmd("consoleCommand", "use_global_rotation " + val);
+			}.bind(useGlobalRotationElem), true);
+
+			if( useGlobalRotationElem.inputOption.value.toString() === "1" )
+			{
+				doToggleButton(useGlobalRotationElem, true);
+			}
+		</script>
+		<!--
+		<select id="modelContainer" size=20 style="font-size: 20px; font-weight: 900; position: fixed; top: 0; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; background-color: transparent;"></select>
+		<script>
+			//var model = aaapi.cmdEx("getFirstLibraryModel");
+			//console.log(JSON.stringify(model));
+
+			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+
+			var modelContainerElem = document.querySelector("#modelContainer");
+			var model = aaapi.cmdEx("findFirstLibraryModel", "", 1);
+			var modelElem;
+			var prettyName;
+			while( model )
+			{
+				modelElem = document.createElement("option");
+				modelElem.value = model.info.id;
+
+				prettyName = model.platforms[sourcePlatformId].file;
+				prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+				prettyName = prettyName.substring(0, prettyName.length - 4);
+				prettyName = prettyName.replace(/_/g, " ");
+				prettyName = prettyName.toUpperCase();
+
+				modelElem.text = prettyName;
+				modelContainerElem.appendChild(modelElem);
+
+				console.log(JSON.stringify(model));
+				model = aaapi.cmdEx("findNextLibraryModel");
+			}
+		</script>
+		-->
+
+		<style>
+			#transformMenuContainer
+			{
+				position: absolute;
+				left: 44%;
+				bottom: 100px;
+			}
+
+			#transformMenu
+			{
+				position: relative;
+				left: -50%;
+				/*background-color: rgb(255, 0, 0);*/
+			}
+
+			.wlContainer
+			{
+				font-size: 20px;
+				font-weight: 900;
+				margin: 0;
+				text-align: right;
+				border: 0;
+				color: #fff;
+				overflow-y: scroll;
+				font-family: Arial;
+			}
+/*
+			.wlContainer::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.wlContainer::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
+				border-radius: 10px;
+				background-color: #000;
+			}
+
+			.wlContainer::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px #000;
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			.wlContainer::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+*/
+			.wlPlate
+			{
+				color: rgba(255, 255, 255, 0.5);
+				display: inline-block;
+				padding: 8px;
+				border-top-left-radius: 10px;
+				border-bottom-left-radius: 10px;
+				border-style: solid;
+				border-width: 2px;
+				border-right-width: 1px;
+				border-left-width: 20px;
+				margin-bottom: 4px;
+				margin-top: 4px;
+				letter-spacing: 0.1em;
+				font-style: italic;
+				opacity: 0.8;
+				text-transform: uppercase;
+				-webkit-transition: border 0.5s ease-in-out, border-right 0.5s ease-in-out;
+				background-color: rgba(0, 0, 0, 0.99);
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.7);
+				border-left: 20px solid rgba(250, 50, 50, 0.7);
+				border-right: 1px solid rgba(250, 50, 50, 0.7);
+				*/
+			}
+
+			.wlPlate:hover
+			{
+				color: #fff;
+			}
+
+			.wlPlateSelected
+			{
+				color: #fff;
+				-webkit-transition-delay: 0s, 0.5s;
+				opacity: 1.0;
+				border-style: solid;
+				border-width: 2px;
+				border-left-width: 40px;
+				border-right-width: 80px;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.9);
+				border-left: 40px solid rgba(250, 50, 50, 0.9);
+				border-right: 80px solid rgba(250, 50, 50, 0.9);
+				*/
+			}
+
+			.optLabel, .optValue
+			{
+				display: inline-block;
+				font-size: 40px;
+				font-weight: 900;
+				margin: 0;
+				text-align: right;
+				border: 0;
+				color: #fff;
+				font-family: Arial;
+
+				/*line-height: 74px;
+				font-family: Arial;
+				font-size: 50px;*/
+				/*padding-right: 10px;*/
+				-webkit-text-stroke: 2px black;
+				text-shadow:
+					3px 3px 0 #000,
+					-1px -1px 0 #000,
+					1px -1px 0 #000,
+					-1px 1px 0 #000,
+					1px 1px 0 #000;
+			}
+
+			.optSliderPanel
+			{
+				display: inline-block;
+				width: 100%;
+				border-radius: 15px;
+				background-color: rgba(0, 0, 0, 0.7);
+				padding: 8px;
+				font-size: 20px;
+				font-weight: 900;
+				margin: 0;
+				text-align: left;
+				border: 2px solid #000;
+				color: #fff;
+				font-family: Arial;
+				letter-spacing: 0.1em;
+			}
+		</style>
+
+		<style>
+		input[type=range]
+		{
+    		-webkit-appearance: none;
+    		background-color: #fff;
+    		border-radius: 10px;
+    		border: 2px solid black;
+    		height: 14px;
+			margin-top: 7px;
+		}
+
+		input[type=range]::-webkit-slider-runnable-track
+		{
+			border: 0;
+			background-color: transparent;
+		}
+
+		input[type=range]::-webkit-slider-thumb
+		{
+			-webkit-appearance: none;
+			width: 30px;
+			height: 30px;
+		    border: 2px solid #000;
+		    border-radius: 50%;
+		    background-color: #fff;
+		}
+
+		input[type=range]:focus::-webkit-slider-thumb
+		{
+			background-color: rgb(250, 50, 50);
+		}
+
+		input[type=range]:focus
+		{
+		    outline: none;
+		}
+
+		input[type=range]:focus::-webkit-slider-runnable-track
+		{
+
+		}
+
+		.cabCategory
+		{
+			border-width: 2px;
+			border-style: solid;
+			border-color: transparent;
+			font-size: 27px;
+			font-family: Arial;
+			font-weight: bold;
+			padding: 4px;
+		}
+
+		.cabCategory:hover
+		{
+			border-color: #fff;
+			background-color: rgba(0, 0, 0, 0.7);
+		}
+
+		.selectedCabCategory
+		{
+			border-color: #000;
+			background-color: rgba(0, 0, 0, 0.95) !important;
+		}
+
+		.modelThumb
+		{
+			max-height: 100px;
+			border: 2px solid transparent;
+			display: none;
+		}
+
+		.modelThumb:hover
+		{
+			border-color: #fff;
+			/*background-color: rgba(0, 0, 0, 0.7);*/
+		}
+
+		#cabinetsContainer
+		{
+			border: 2px solid #000;
+			background-color: rgba(0, 0, 0, 0.7);
+		}
+		</style>
+<!--
+		<link rel="stylesheet" type="text/css" href="rangeslider.css">
+		<script src="jquery-2.1.3.min.js"></script>
+		<script src="rangeslider.min.js"></script>
+		<script>
+		    // Initialize a new plugin instance for all
+		    // e.g. $('input[type="range"]') elements.
+		    $('input[type="range"]').rangeslider({
+				// Feature detection the default is `true`.
+				// Set this to `false` if you want to use
+				// the polyfill also in Browsers which support
+				// the native <input type="range"> element.
+				polyfill: true,
+
+				// Default CSS classes
+				rangeClass: 'rangeslider',
+				disabledClass: 'rangeslider--disabled',
+				horizontalClass: 'rangeslider--horizontal',
+				verticalClass: 'rangeslider--vertical',
+				fillClass: 'rangeslider__fill',
+				handleClass: 'rangeslider__handle',
+
+				// Callback function
+				onInit: function() {},
+
+				// Callback function
+				onSlide: function(position, value) {},
+
+				// Callback function
+				onSlideEnd: function(position, value) {}
+		    });
+
+			// Destroy all plugin instances created from the
+			// e.g. $('input[type="range"]') elements.
+			$('input[type="range"]').rangeslider('destroy');
+
+			// Update all rangeslider instances for all
+			// e.g. $('input[type="range"]') elements.
+			// Usefull if you changed some attributes e.g. `min` or `max` etc.
+			$('input[type="range"]').rangeslider('update', true);
+		</script>
+	-->
+
+
+	</body>
+</html>

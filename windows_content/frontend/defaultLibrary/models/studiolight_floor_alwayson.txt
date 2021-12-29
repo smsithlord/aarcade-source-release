@@ -1,0 +1,22 @@
+"item"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"7d249c15"
+		}
+		"title"		"Spotlight Always On"
+		"platforms"
+		{
+			"-KJvcne3IKMZQTaG7lPo"
+			{
+				"id"		"-KJvcne3IKMZQTaG7lPo"
+				"file"		"models\props\sithlord\studiolight_floor_alwayson.mdl"
+				"workshopid"		"497651243"
+			}
+		}
+	}
+}

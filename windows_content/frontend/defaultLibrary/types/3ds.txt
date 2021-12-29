@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-ohTuY-KyNQSWY1-SKs8"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"3ds"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

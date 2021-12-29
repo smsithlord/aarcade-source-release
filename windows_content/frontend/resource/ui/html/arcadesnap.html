@@ -1,0 +1,377 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+
+		<script>
+			var g_usedShotId;
+
+			var panoId = arcadeHud.getParameterByName("panoId");
+			var givenScreenshotId = arcadeHud.getParameterByName("id");
+			var mainId = arcadeHud.getParameterByName("mainId");
+			if( !!!mainId )
+				mainId = givenScreenshotId;
+
+			console.log("Pano ID: " + panoId + ", Main ID: " + mainId + ", Screenshot ID: " + givenScreenshotId);
+
+			var g_panoIds = ["front", "back", "right", "left", "bottom", "top"];
+			var g_nextPanoIndex;
+
+			var shotListener = {
+				"shotTaken": function()
+				{
+					window.location='arcadesnap.html?isPanoShot=1&panoId=' + g_panoIds[g_nextPanoIndex] + '&id=' + g_usedShotId + '&mainId=' + mainId;
+				}
+			};
+		</script>
+
+	</head>
+	<body>
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		<textarea id="codeHolder" style="opacity: 0; pointer-events: none;"></textarea>
+
+		<script>
+			var isPanoShot = arcadeHud.getParameterByName("isPanoShot");
+
+			var worldInfo = aaapi.cmdEx('getWorldInfo');
+			var instance = worldInfo.instance;
+			var map = worldInfo.map;
+
+			// if panoId = "none", then we have no snap data to process.
+
+			var g_snapdata;
+
+			var g_screenshotDetectedinterval;
+			function getFreshScreenshot()
+			{
+				var currentScreenshots = aaapi.cmdEx("getAllMapScreenshots", "id" + worldInfo.map.info.id);
+
+				var goodCurrentScreenshots = [];
+				var currentScreenshot;
+				var currentScreenshotKeys = Object.keys(currentScreenshots);
+				for( var i = 0; i < currentScreenshotKeys.length; i++ )
+				{
+					currentScreenshot = currentScreenshots[currentScreenshotKeys[i]];
+
+					if( currentScreenshot.instance.id == "id" + worldInfo.instance.id )
+						goodCurrentScreenshots.push(currentScreenshot);
+				}
+
+				// most recent screenshots on top
+				goodCurrentScreenshots.sort(function(a, b)
+				{
+					var aCreated = parseInt(a.created);
+					var bCreated = parseInt(b.created);
+					if( aCreated > bCreated )
+						return -1;
+					else if( aCreated < bCreated )
+						return 1;
+					else
+						return 0;
+				});
+
+				var freshCurrentScreenshot = goodCurrentScreenshots[0];
+				return freshCurrentScreenshot;
+			}
+
+			function minX(a, b)
+			{
+				if( a.x > b.x )
+					return 1;
+				else if( a.x < b.x )
+					return -1;
+				else
+					return 0;
+			}
+
+			function minY(a, b)
+			{
+				if( a.y > b.y )
+					return 1;
+				else if( a.y < b.y )
+					return -1;
+				else
+					return 0;
+			}
+
+			function maxX(a, b)
+			{
+				if( a.x < b.x )
+					return 1;
+				else if( a.x > b.x )
+					return -1;
+				else
+					return 0;
+			}
+
+			function maxY(a, b)
+			{
+				if( a.y < b.y )
+					return 1;
+				else if( a.y > b.y )
+					return -1;
+				else
+					return 0;
+			}
+
+			function BBoxListener()
+			{
+				this.testX = 0;
+				this.testY = 0;
+				this.count = 0;
+				this.max = 0;
+				this.objectIds;
+				this.points = [];
+				this.markers = {};
+				this.bboxes = {};
+				this.library = {
+					"items": {},
+					"models": {},
+					"types": {}
+				};
+			}
+
+			BBoxListener.prototype.onBBoxesObtained = function()
+			{
+				var bbox;
+				var objectId;
+				var object;
+				for( var i = 0; i < arguments.length; i += 5 )
+				{
+					objectId = arguments[i];
+					this.bboxes[objectId] = {
+						"min": {},
+						"max": {}
+					};
+					bbox = this.bboxes[objectId];
+					bbox["min"].x = parseInt(arguments[i+1]);
+					bbox["min"].y = parseInt(arguments[i+2]);
+					bbox["max"].x = parseInt(arguments[i+3]);
+					bbox["max"].y = parseInt(arguments[i+4]);
+
+					object = aaapi.cmdEx("getObject", objectId);
+					bbox.object = object;
+
+					// now add required library entries
+					if( !!!this.library.items[object.item] )
+					{
+						var item = aaapi.cmdEx("getLibraryItem", object.item);
+
+						// mute any local files.
+						for( var x in item )
+						{
+							if( typeof item[x] === "string" && item[x].length > 1 && item[x][1] == ":" )
+							{
+								var found = item[x].lastIndexOf("/");
+								if( found < 0 )
+									found = item[x].lastIndexOf("\\");
+								if( found < 0 )
+									item[x] = "";
+								else
+									item[x] = item[x].substring(found+1);
+							}
+						}
+
+						// add the item's type in, if needed.
+						if( !!!this.library.types[item.type] )
+							this.library.types[item.type] = aaapi.cmdEx("getLibraryType", item.type);
+
+						this.library.items[object.item] = item;
+					}
+
+					if( !!!this.library.models[object.model] )
+					{
+						var model = aaapi.cmdEx("getLibraryModel", object.model);
+
+						// mute any local files.
+						for( var x in model )
+						{
+							if( typeof model[x] === "string" && model[x].length > 1 && model[x][1] == ":" )
+							{
+								var found = model[x].lastIndexOf("/");
+								if( found < 0 )
+									found = model[x].lastIndexOf("\\");
+								if( found < 0 )
+									model[x] = "";
+								else
+									model[x] = model[x].substring(found+1);
+							}
+						}
+
+						this.library.models[object.model] = model;
+					}
+				}
+
+				g_snapdata = {"markers": this.bboxes, "library": this.library};
+
+				var codeText = "var g_snapdata = " + JSON.stringify(g_snapdata) + ";";
+				codeText = codeText.replace(/[^\x00-\x7F]/g,"");	// remove non-english characters
+				if( !!!mainId )
+				{
+					document.querySelector("#codeHolder").value = codeText;
+					document.querySelector("#codeHolder").focus();
+					document.querySelector("#codeHolder").select();
+					showMediaScreenshot(g_snapdata);
+				}
+				else
+				{
+					//aaapi.cmd("interactiveScreenshotReady", mainId, codeText);
+					// Give codeText as an array of 1000-character-long strings.
+					// (because there's a hard limit at 1024 when passing strings through Awesomium)
+
+					var codeTextArray = [];
+					while( codeText.length > 0 )
+					{
+						codeTextArray.push(codeText.substring(0, 1000));
+						codeText = codeText.substring(1000);
+					}
+
+					aaapi.cmd("interactiveScreenshotReady", givenScreenshotId, codeTextArray);
+
+					if( !isPanoShot )
+						window.location='arcadesnapready.html?id=' + mainId;
+					else
+					{
+						var panoIndex = (panoId === "none") ? -1 : g_panoIds.indexOf(panoId);
+
+						//if( panoId === "top" )
+						//{
+						//	console.log("We are now done taking screenshots!");
+						//	window.location = "panosnapready.html?id=" + mainId;
+						//}
+						g_nextPanoIndex = panoIndex + 1;
+
+						// reorient
+						switch(g_nextPanoIndex)
+						{
+							case 0:
+								aaapi.cmd("consoleCommand", "prep_pano; setang 0 0 0;");
+								break;
+							case 1:
+								aaapi.cmd("consoleCommand", "setang 0 180 0;");
+								break;
+							case 2:
+								aaapi.cmd("consoleCommand", "setang 0 90 0;");
+								break;
+							case 3:
+								aaapi.cmd("consoleCommand", "setang 0 -90 0;");
+								break;
+							case 4:
+								aaapi.cmd("consoleCommand", "setang 90 180 0;");
+								break;
+							case 5:
+								aaapi.cmd("consoleCommand", "setang -90 180 0;");
+								break;
+						}
+
+						if( g_nextPanoIndex >= g_panoIds.length )
+						{
+							//console.log("Finished taking screenshots.");
+							aaapi.cmd("consoleCommand", "finish_pano; setang 0 0 0; unpause;");
+							window.location = "panosnapready.html?id=" + mainId;
+						}
+						else
+						{
+							aaapi.cmd("consoleCommand", "unpause;");
+
+							// wait a moment then take a new screenshot
+							setTimeout(function()
+							{
+								g_usedShotId = mainId + "\\" + g_panoIds[g_nextPanoIndex];
+								aaapi.cmd("takeScreenshot", true, g_usedShotId, true);
+								aaapi.cmd("consoleCommand", "setpause;");
+							}, 30);
+						}
+					}
+				}
+			};
+
+			BBoxListener.prototype.onBBoxObtained = function(minX, minY, maxX, maxY)
+			{
+				var object = aaapi.cmdEx("getObject", this.objectIds[this.count]);
+				var marker = {
+					"bounds": {"min": {"x": minX, "y": minY}, "max": {"x": maxX, "y": maxY}},
+					"object": object
+				};
+
+				this.markers[this.objectIds[this.count]] = marker;
+
+				// now add required library entries
+				if( !!!this.library.items[object.item] )
+					this.library.items[object.item] = aaapi.cmdEx("getLibraryItem", object.item);
+
+				if( !!!this.library.models[object.model] )
+					this.library.models[object.model] = aaapi.cmdEx("getLibraryModel", object.model);
+
+				this.count++;
+
+				if( this.count < this.max )
+					aaapi.cmd("get2DBBox", allObjectIds[this.count]);
+			}
+
+			var allObjectIds = [];
+			var bboxListener = new BBoxListener();
+			aaapi.cmd("getValid2DBBoxes");
+		</script>
+
+
+		<style>
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+		//"window.location='asset://ui/import.html';", "window.location='asset://ui/welcome.html';"
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Create Screenshot", "", true, true, "", "");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div id="fetchingStuff" style="display: block; font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize helpNote" help="AArcade is taking 6 interactive screenshots that will be used to create a 360 interactive screenshot.">	
+			<br />
+			<center>
+				<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+				<br />
+				PLEASE WAIT
+			</center>
+			<br />
+		</div>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+	</body>
+</html>

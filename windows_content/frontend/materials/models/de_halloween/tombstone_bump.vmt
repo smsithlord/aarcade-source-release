@@ -1,0 +1,6 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\de_halloween/tombstone_bump"
+	"$bumpmap" "models\de_halloween/tombstone_bump"
+	"$model" "1"
+}

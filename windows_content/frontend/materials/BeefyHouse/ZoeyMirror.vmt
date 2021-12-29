@@ -1,0 +1,7 @@
+LightmappedGeneric
+{
+	"$basetexture"  "beefyhouse/zoeymirror"
+	"$surfaceprop"  "metal" // May want to change this to glass, but I don't know if doing so would break anything (hence why there's beefyhouse/zoeymirrorglass)
+	"$envmap" "env_cubemap"
+	"$envmapmask"  "beefyhouse/zoeymirror_env" // Doesn't exist, did not reference in zoeymirrorglass but we might want to replace or remove eventually.
+}

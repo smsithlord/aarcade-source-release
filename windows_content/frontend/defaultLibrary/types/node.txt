@@ -1,0 +1,16 @@
+"type"
+{
+	"generation"		"3"
+	"local"
+	{
+		"info"
+		{
+			"owner"		"local"
+			"id"		"-pJrKFH55-eqy2jH-Xal"
+		}
+		"titleformat"		"/.+$/i"
+		"title"		"node"
+		"priority"		"1"
+		"fileformat"		"/.+$/i"
+	}
+}

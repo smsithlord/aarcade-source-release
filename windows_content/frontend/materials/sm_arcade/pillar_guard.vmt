@@ -1,0 +1,6 @@
+"LightmappedGeneric"
+{
+	"$baseTexture" "sm_arcade/pillar_guard"
+	"$translucent" "1"
+	"$alphatest" "1"
+}

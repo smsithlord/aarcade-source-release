@@ -1,0 +1,937 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+			//var objectInfo = aaapi.cmdEx('getObject', arcadeHud.getParameterByName("objectId"));
+			var questId =  arcadeHud.getParameterByName("questId");
+			var quest = (!!questId) ? aaapi.cmdEx('getQuest', questId) : null;
+			if( !!!questId )
+				questId = '';
+
+			var successQuestEventId;
+			var successQuestEvent;
+			var beginQuestEventId;
+			var beginQuestEvent;
+			var collectQuestEventId;
+			var collectQuestEvent;
+			var successQuestClueId;
+			var successQuestClue;
+
+			var objectId = arcadeHud.getParameterByName("objectId");
+			if( !!!objectId && !!quest && quest.collectibleObjects.length > 0)
+			{
+				objectId = quest.collectibleObjects[0];
+
+				successQuestEventId = quest.successQuestEventId;
+				successQuestEvent = aaapi.cmdEx('getQuestEvent', successQuestEventId);
+
+				beginQuestEventId = quest.beginQuestEventId;
+				beginQuestEvent = aaapi.cmdEx('getQuestEvent', beginQuestEventId);
+
+				collectQuestEventId = quest.collectQuestEventId;
+				collectQuestEvent = aaapi.cmdEx('getQuestEvent', collectQuestEventId);
+
+				successQuestClueId = successQuestEvent.questClueId;
+				successQuestClue = aaapi.cmdEx('getQuestClue', successQuestClueId);
+			}
+
+			var objectInfo = (!!objectId && objectId != "") ? aaapi.cmdEx('getObject', objectId) : null;
+			var modelInfo = (!!objectInfo) ? aaapi.cmdEx('getLibraryModel', objectInfo.model) : null;
+
+			if( !!!modelInfo )
+				console.log("ERROR: No object / model provided for EZ quest!");
+		</script>
+		<style>
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+				cursor: pointer;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( (!!!uiBack || uiBack == '') && !!!arcadeHud.getParameterByName("questId") )
+				uiBack = "window.location='questBuilderObject.html' + window.location.search;";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Coin Collect Quest", "", true, true, uiBack, "aaapi.cmd('deactivateInputMode');");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+			if( !!!tabId )
+				tabId = "dialogue";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "dialogue",
+						"title": "Dialogue"
+					},
+					{
+						"id": "quest",
+						"title": "Quest"
+					},
+					{
+						"id": "interaction",
+						"title": "Interaction"
+					},
+					{
+						"id": "presets",
+						"title": "Presets"
+					}
+				],
+				"activeTabId": tabId
+			});
+			document.write(windowTabsHeaderHTML);
+
+			/*
+			function gotoPage(page, tab)
+			{
+				window.location='asset://ui/' + page + '?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=" + tab + "';");
+			}*/
+		</script>
+
+			<div tabid="dialogue" class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor">
+				<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+					<tr class="helpNote" help="The text to show the player after they've found all the coins. (Resizable)">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Dialogue:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<textarea style="width: 100%;" rows="3" id="dialogueText">Good job! You found all the coins!</textarea>
+							<!--input type="text" class="aaTextSizeFontSize" value="" placeholder="Good job! You collected all the coins!" id="successText" /-->
+						</td>
+					</tr>
+					<tr class="helpNote" help="The sound that plays when the user collects a coin.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Style:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="clueType" class="aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground aaTextSizeFontSize">
+								<option value="award">Award</option>
+								<option value="alert">Alert</option>
+								<option value="comic">Comic</option>
+							</select>
+						</td>
+					</tr>
+				</table>
+			</div>
+			<div tabid="quest" class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor">
+				<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+					<tr class="helpNote" help="The title the quest will appear as in the Quests Tab.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Title:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<input type="text" class="aaTextSizeFontSize" value="" placeholder="Collect Coins" id="title" />
+						</td>
+					</tr>
+					<tr class="helpNote" help="The text that explains to the player what to do.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Objective:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<input type="text" class="aaTextSizeFontSize" value="" placeholder="Find all the coins in this world!" id="objectiveText" />
+						</td>
+					</tr>
+					<tr class="helpNote" help="When should the object exist in the world?">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Quest Visibility:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="visibility" class="aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground aaTextSizeFontSize">
+								<option value="default">Visible</option>
+								<option value="never">Hidden</option>
+								<!--option value="untilSuccess">Until Success</option>
+								<option value="afterSuccess">After Success</option-->
+							</select>
+						</td>
+					</tr>
+				</table>
+			</div>
+			<div tabid="interaction" class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor">
+				<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+					<tr class="helpNote" help="How the player interacts with the coins.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Interact Method:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="interact" class="aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground aaTextSizeFontSize">
+								<option value="touchOnce">Touch Once</option>
+								<option value="useOnce">Use Once</option>
+							</select>
+						</td>
+					</tr>
+					<tr class="helpNote" help="When should the coins exist in the world?">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Object Presence:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="presence" class="aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground aaTextSizeFontSize">
+								<option value="untilCollected">Until Collected</option>
+								<option value="always">Always</option>
+							</select>
+						</td>
+					</tr>
+					<tr class="helpNote" help="The sound that plays when the user collects a coin.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Sound:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="collectSound" class="aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground aaTextSizeFontSize">
+								<option value="aaquests/coincollect.mp3">Coin Ding</option>
+								<option value="">No Sound</option>
+							</select>
+						</td>
+					</tr>
+					<tr class="helpNote" help="Make the coin objects spin while the quest is active.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Spin:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<div class="aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">No</div>
+							<div id="spinCoins" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+								<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+			<div tabid="presets" class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor">
+				<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+					<tr class="helpNote" help="Activate a preset to auto-fill the form.">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Presets:
+						</td>
+						<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+							<select id="presetsBox" class="aaTitleTextSizeFontSize" style="width: 100%;">
+								<option value="default">None</option>
+							</select>
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+							<div id="savePresetButton" class="aaButton aaButtonDisabled aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" help="Save your settings into this active preset." style="pointer-events: none; min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="savePreset();">
+								<script>
+									document.write(arcadeHud.generateIconHTML("saveicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+							<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" help="Create a NEW preset & save your settings into it." style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="createNewPresetPrompt();">
+								<script>
+									document.write(arcadeHud.generateIconHTML("plusicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+							<div id="deletePresetButton" class="aaButton aaButtonDisabled aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" help="Delete the active preset & permanently remove it from the list." style="pointer-events: none; min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="deletePreset();">
+								<script>
+									document.write(arcadeHud.generateIconHTML("minusicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+		<!--center>
+			<br /-->
+
+			<!-- View Instructions
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="View Instructions" onclick="window.location='asset://ui/importLegacyContentWizard.html';" help="Learn more about importing Early Access content." />
+			-->
+
+
+			<!-- Quit -->
+			<!--input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Close Redux Now" onclick="aaapi.cmd('quit');" help="Closes AArcade so you can re-launch in Legacy Mode." /-->
+
+		<!--/center-->
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+			<!-- OK -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Create Quest" onclick="createQuest(false);" help="Create & start the quest you have defined." id="createQuestButton" />
+
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" style="display: none;" value="Update Quest" onclick="createQuest(true);" help="Update this quest & restart the quest system." id="updateQuestButton" />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="display: none;" value="Delete Quest" onclick="deleteQuest();" help="Permanently delete this quest & restart the quest system. You must reload the map after doing this to reverse any effects the quest already made." id="deleteQuestButton" />
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var modelFile = modelInfo.platforms[arcadeHud.platformId].file;
+			var questTitleElem = document.querySelector("#title");
+			var questObjectiveElem = document.querySelector("#objectiveText");
+			var questDialogueElem = document.querySelector("#dialogueText");
+			var questSpinCoinsElem = document.querySelector("#spinCoins");
+			var spinElem = document.querySelector("#spinCoins");
+
+			var questCollectSoundElem = document.querySelector("#collectSound");
+			var questClueTypeElem = document.querySelector("#clueType");
+			var questInteractElem = document.querySelector("#interact");
+			var questPresenceElem = document.querySelector("#presence");
+			var questVisibilityElem = document.querySelector("#visibility");
+			var createQuestButtonElem = document.querySelector('#createQuestButton');
+			var updateQuestButtonElem = document.querySelector('#updateQuestButton');
+			var deleteQuestButtonElem = document.querySelector('#deleteQuestButton');
+			var presetsBoxElem = document.querySelector('#presetsBox');
+			var savePresetButtonElem = document.querySelector('#savePresetButton');
+			var deletePresetButtonElem = document.querySelector('#deletePresetButton');
+
+			var userPresets = localStorage.getItem('coinCollectQZQuestPresets');
+			if( !!userPresets )
+				userPresets = JSON.parse(userPresets);
+			else
+				userPresets = {};
+
+			var option;
+			for( var x in userPresets )
+			{
+				option = document.createElement('option');
+				option.value = x;
+				option.text = x;
+				presetsBoxElem.appendChild(option);
+			}
+
+			presetsBoxElem.addEventListener('change', function(e)
+			{
+				if( presetsBoxElem.value == 'default' )
+				{
+					savePresetButtonElem.classList.add('aaButtonDisabled');
+					savePresetButtonElem.style.pointerEvents = 'none';
+					deletePresetButtonElem.classList.add('aaButtonDisabled');
+					deletePresetButtonElem.style.pointerEvents = 'none';
+					return;
+				}
+
+				savePresetButtonElem.classList.remove('aaButtonDisabled');
+				savePresetButtonElem.style.pointerEvents = 'all';
+				deletePresetButtonElem.classList.remove('aaButtonDisabled');
+				deletePresetButtonElem.style.pointerEvents = 'all';
+
+				var userPreset = userPresets[presetsBoxElem.value];
+				for( var x in userPreset )
+				{
+					if( x == 'collectiblesSpin' )
+					{
+						var oldValue = spinElem.inputOption.value;
+						spinElem.inputOption.value = (userPreset[x]) ? '1' : '0';
+
+						if( oldValue != spinElem.inputOption.value )
+							doToggleButton(spinElem, true);
+
+						continue;
+					}
+
+					var elem = document.querySelector('#' + x);
+					if( !!!elem )
+						continue;
+
+					elem.value = userPreset[x];
+				}
+			});
+
+			if( !!quest )
+			{
+				createQuestButtonElem.style.display = 'none';
+				updateQuestButtonElem.style.display = 'block';
+				deleteQuestButtonElem.style.display = 'block';
+			}
+
+			function createQuest(isUpdate)
+			{
+				var questTitle = questTitleElem.value;
+				if( questTitle.trim() == "" )
+					questTitle = questTitleElem.getAttribute('placeholder');
+
+				// replace all double quotes with single quotes.
+				questTitle = questTitle.replace(/"/g, "'");
+
+				var questObjectiveText = questObjectiveElem.value;
+				if( questObjectiveText.trim() == "" )
+					questObjectiveText = questObjectiveElem.getAttribute('placeholder');
+
+				// replace all double quotes with single quotes.
+				questObjectiveText = questObjectiveText.replace(/"/g, "'");
+
+				var questDialogueText = questDialogueElem.value.trim();
+
+				// strip off all trailing whitespace on each line.
+				questDialogueText = questDialogueText.replace(/\s+$/gm, "");
+
+				// replace all double quotes with single quotes.
+				questDialogueText = questDialogueText.replace(/"/g, "'");
+
+				if( questDialogueText == "" )
+					questDialogueText = questDialogueElem.getAttribute('placeholder');
+
+				var questSpinCoins = questSpinCoinsElem.inputOption.value;
+				var questCollectSound = questCollectSoundElem.value;
+				var questClueType = questClueTypeElem.value;
+				var questInteract = questInteractElem.value;
+				var questPresence = questPresenceElem.value;
+				var questVisibility = questVisibilityElem.value;
+
+				var payload = [questTitle, questObjectiveText, questDialogueText, questSpinCoins, questCollectSound, modelFile, questClueType, questInteract, questPresence, questVisibility, 'active', ''];
+
+
+				// coinCollect params: [title, objectiveText, successText, questSpinCoins, questCollectSound, modelFile, type, interact, persence]
+				aaapi.cmd('createQuestEZ', 'coinCollect', payload, questId);
+				aaapi.cmd('deactivateInputMode');
+			}
+
+			// setup drop-down list stuff			
+			/*
+			selectBox = document.createElement("select");
+			selectBox.className = "aaTextSizeFontSize";
+			selectBox.inputOption = option;
+
+			selectBox.addEventListener("change", function(e)
+			{
+				var selectedIndex = this.selectedIndex;
+				var selectedOption = this.options[selectedIndex];
+
+				var option = this.inputOption;
+				option.setValue.call(option, selectedOption.value);
+
+				this.style.webkitTransition = "initial";
+				this.classList.add("aaThemeColorOneBackgroundColor");
+				this.offsetTop;
+				this.style.webkitTransition = "background-color 0.5s ease-in-out";
+				this.classList.remove("aaThemeColorOneBackgroundColor");
+			}.bind(selectBox), true);
+
+			if( !!option.valueTitles.placeholder )
+			{
+				selectBoxOption = document.createElement("option");
+				selectBoxOption.text = option.valueTitles.placeholder;
+				selectBoxOption.value = "";
+				selectBoxOption.selected = true;
+				selectBoxOption.disabled = true;
+				selectBox.appendChild(selectBoxOption);
+			}
+
+			for( var value in option.valueTitles )
+			{
+				if( value === "placeholder" )
+					continue;
+
+				selectBoxOption = document.createElement("option");
+				selectBoxOption.text = option.valueTitles[value];
+				selectBoxOption.value = value;
+
+				if( value == option.value )
+					selectBoxOption.selected = true;
+
+				selectBox.appendChild(selectBoxOption);
+			}
+
+			// compose
+			optionValueCell.appendChild(selectBox);
+*/
+			// setup toggle button stuff
+			var spinCoinsElem = document.querySelector("#spinCoins");
+			spinCoinsElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "No", "1": "Yes"},
+				"value": '1',
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.cmdEx("getConVarValue", "aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					this.value = val;
+					//aaapi.cmd("consoleCommand", "aamp_public " + this.value);
+				}
+			};
+
+			spinCoinsElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+			}.bind(spinCoinsElem), true);
+
+			// setup our initial values if we are given a quest to edit.
+			if( !!quest )
+			{
+				questTitleElem.value = quest.name;
+				questObjectiveElem.value = quest.objective;
+				questDialogueElem.value = successQuestClue.dialogue;
+
+				if(successQuestClue.type == 1)
+					questClueTypeElem.value = 'comic';
+				else if(successQuestClue.type == 2)
+					questClueTypeElem.value = 'award';
+				else
+					questClueTypeElem.value = 'alert';
+
+				questCollectSoundElem.value = quest.collectionSound;
+
+				if( quest.collectiblesSpin )
+					spinElem.inputOption.value = '1';
+				else
+					spinElem.inputOption.value = '0';
+
+				if( quest.collectMethod == 1 )//touch
+					questInteractElem.value = 'touchOnce';
+				else if( quest.collectMethod == 0 )//use
+					questInteractElem.value = 'useOnce';
+
+				if( !!collectQuestEvent && collectQuestEvent.objectsToHide.length > 0)
+					questPresenceElem.value = 'untilCollected';
+				else
+					questPresenceElem.value = 'always';
+
+				if( !!successQuestEvent && successQuestEvent.questsToHide.length > 0)
+					questVisibilityElem.value = 'untilSuccess';
+				else if( !!successQuestEvent && successQuestEvent.questsToUnhide.length > 0)
+					questVisibilityElem.value = 'afterSuccess';
+				else if( !!beginQuestEvent && beginQuestEvent.questsToUnhide.length <= 0)
+					questVisibilityElem.value = 'never';
+				else
+					questVisibilityElem.value = 'default';
+			}
+
+			if( spinElem.inputOption.value.toString() === "1" )
+				doToggleButton(spinElem, true);
+
+			function doToggleButton(toggleButton, isInitial)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				//var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+			// https://stackoverflow.com/questions/6637341/use-tab-to-indent-in-textarea
+			var textareas = document.getElementsByTagName('textarea');
+			var count = textareas.length;
+			for(var i=0;i<count;i++)
+			{
+				textareas[i].onkeydown = function(e)
+				{
+					if(e.keyCode==9 || e.which==9)
+					{
+						e.preventDefault();
+						var s = this.selectionStart;
+						var char = '\u2192';
+						this.value = this.value.substring(0,this.selectionStart) + char + this.value.substring(this.selectionEnd);
+						this.selectionEnd = s+1; 
+					}
+				}
+				//textareas[i].value = textareas[i].value.replace(/\t/g, '\u2192');
+			}
+
+			function noActionHandler()
+			{
+				//console.log('no action');
+			}
+
+			function savePreset()
+			{
+				confirmedCreateNewPreset(presetsBoxElem.value);
+			}
+
+			function deletePreset()
+			{
+				var value = presetsBoxElem.value;
+				delete userPresets[value];
+				localStorage.setItem('coinCollectQZQuestPresets', JSON.stringify(userPresets));
+
+				var badIndex = presetsBoxElem.selectedIndex;
+				presetsBoxElem.value = 'default';
+				presetsBoxElem.remove(badIndex);
+
+				savePresetButtonElem.classList.add('aaButtonDisabled');
+				savePresetButtonElem.style.pointerEvents = 'none';
+				deletePresetButtonElem.classList.add('aaButtonDisabled');
+				deletePresetButtonElem.style.pointerEvents = 'none';
+			}
+
+			function confirmedCreateNewPreset(name)
+			{
+				if( name == 'default' )
+					name = 'default2';
+
+				var presetEntry = {
+					"title": questTitleElem.value,
+					"objectiveText": questObjectiveElem.value,
+					"dialogueText": questDialogueElem.value,
+					"clueType": questClueTypeElem.value,
+					"collectiblesSpin": (spinElem.inputOption.value != '0'),
+					"collectSound": questCollectSoundElem.value,
+					"interact": questInteractElem.value,
+					"presence": questPresenceElem.value,
+					"visibility": questVisibilityElem.value
+				};
+
+				userPresets[name] = presetEntry;
+				localStorage.setItem('coinCollectQZQuestPresets', JSON.stringify(userPresets));
+
+				// check if we already exist...
+				var option;
+				for( var i = 0; i < presetsBoxElem.options.length; i++ )
+				{
+					if( presetsBoxElem.options[i].value == name )
+					{
+						option = presetsBoxElem.options[i];
+						break;
+					}
+				}
+
+				if( !!!option )
+				{
+					option = document.createElement('option');
+					option.value = name;
+					option.text = name;
+					presetsBoxElem.appendChild(option);
+				}
+
+				presetsBoxElem.value = option.value;
+
+				savePresetButtonElem.classList.remove('aaButtonDisabled');
+				savePresetButtonElem.style.pointerEvents = 'all';
+				deletePresetButtonElem.classList.remove('aaButtonDisabled');
+				deletePresetButtonElem.style.pointerEvents = 'all';
+			}
+
+			function createNewPresetPrompt()
+			{
+				//createSaveModalPrompt(showDiscard, "Name your ", "Do you want to save this arcade and <u><b>ALL</b></u> the items & models used in it to your personal library?<br /><br />Note that this will overwrite existing entries in your libary.<br /><br /><label><input type='radio' name='savewhat' value='all' checked /> Save ALL Entries & Instance</label><br /><label><input type='radio' name='savewhat' value='onlynew' /> New Entries Only & Instance</label><br /><br />" + volatileCountText, "yesSave();", "noSave();");
+				createModalPrompt("Create New Preset", "New Preset Name", "noActionHandler();");
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				modalHTML += text + "<br />";
+				modalHTML += "<input id='nodeNameInput' placeholder='Unnamed Preset' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="submit" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedCreateNewPreset(this.value);
+					}
+				}.bind(nodeNameInput), true);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				/*
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+				*/
+
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			function deleteQuest()
+			{
+				aaapi.cmd('deleteQuestEZ', questId);
+				aaapi.cmd('deactivateInputMode');
+			}
+		</script>
+
+	</body>
+</html>

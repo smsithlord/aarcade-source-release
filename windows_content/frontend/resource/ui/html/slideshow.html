@@ -1,0 +1,187 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+		</script>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			body
+			{
+				background-color: #000;
+				color: #fff;
+			}
+
+			.container
+			{
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				opacity: 0;
+				background-size: contain;
+				background-position: center center;
+				background-repeat: no-repeat;
+				-webkit-transition: all 3s ease-in-out;
+			}
+		</style>
+	</head>
+	<body>
+		<script>
+			// used to convert wild URLs into proper URLs.
+			var testerImageElem = document.createElement('img');
+			testerImageElem.addEventListener('load', onTesterImageLoaded);
+			testerImageElem.addEventListener('error', onTesterImageError);
+
+			var response;
+			function fetchImages(response, folder)
+			{
+				if( !!!response )
+					response = aaapi.cmdEx('getDirectoryListing', folder, 0, 500);
+				//else
+				//{
+//amount start dir files
+				//}
+			//	console.log(Object.keys(response));
+
+				var rawExtensions = 'jpg png jpeg gif';
+				var extensions = rawExtensions.split(' ');
+
+				var fileEntries = [];
+				var fileEntry;
+				var lowercaseName;
+				var isValid;
+				for( var i = 0; i < response.files.length; i++ )
+				{
+					fileEntry = response.files[i];
+
+					isValid = false;
+					lowercaseName = fileEntry.name.toLowerCase();
+					for( var j = 0; j < extensions.length; j++ )
+					{
+						if( lowercaseName.lastIndexOf('.' + extensions[j]) == lowercaseName.length - (extensions[j].length+1) )
+						{
+							isValid = true;
+							break;
+						}
+					}
+
+					if( !isValid )
+						continue;
+
+					fileEntries.push(fileEntry);
+				}
+
+				return fileEntries;
+			}
+
+			//var path = "C:\\Users\\Owner\\Pictures\\gifs";
+			//var path = "X:\\Video Capture\\Forza Horizon 4";
+
+			var itemId = arcadeHud.getParameterByName('item');
+			var itemField = arcadeHud.getParameterByName('field');
+			var item = aaapi.cmdEx('getLibraryItem', itemId);
+
+			//var path = arcadeHud.getParameterByName('f', item.file);
+			//var thing = document.createElement('div');
+			//thing.style.cssText = "position: absolute; top: 0; left: 0; background-color: navy;";
+			//document.body.appendChild(thing);
+
+			// NOTES: The item.file is not properly encoded, so it MUST be the last param on the URL.
+			var foundIt = item[itemField].indexOf("?f=");
+			if( foundIt < 0 )
+				foundIt = item[itemField].indexOf("&f=");
+
+			var path = (foundIt >= 0) ? item[itemField].substring(foundIt + 3) : arcadeHud.getParameterByName('f', item[itemField]);	// note that getparambyname is not enough here cuz of # in the improperly encoded file attribute.
+
+			var shuffle = arcadeHud.getParameterByName('s', item[itemField]);
+			//var path = "X:\\Video Capture\\Desktop";
+			//var path = "C:\\Users\\Owner\\Pictures";
+			var fileEntries = fetchImages(response, path);
+
+			function shuffleArray(a)
+			{
+			    var j, x, i;
+			    for (i = a.length - 1; i > 0; i--)
+			    {
+			        j = Math.floor(Math.random() * (i + 1));
+			        x = a[i];
+			        a[i] = a[j];
+			        a[j] = x;
+			    }
+			    return a;
+			}
+
+			if( shuffle != 0 )
+				shuffle = shuffleArray(fileEntries);
+
+			var usedFileIndex = 0;
+
+			function spawnImage()
+			{
+				if( usedFileIndex >= fileEntries.length )
+					usedFileIndex = 0;
+
+				var fileEntry = fileEntries[usedFileIndex];
+				if( !fileEntry )
+					return;
+
+				//testerImageElem.fileEntry = fileEntry;
+				testerImageElem.src = "asset://local/" + path + "\\" + fileEntry.name;
+
+				usedFileIndex++;
+			}
+
+			spawnImage();
+
+			function onTesterImageError(e)
+			{
+				spawnImage();
+			}
+
+			function onTesterImageLoaded(e)
+			{
+				var entryContainer = document.createElement('div');
+				var oldImageElem = document.querySelector('.container');
+				if( !!oldImageElem )
+				{
+					oldImageElem.style.opacity = '0';
+					setTimeout(function()
+					{
+						//oldImageElem.style.opacity = '0';
+						//setTimeout(function()
+						//{
+						//	oldImageElem.parentNode.removeChild(oldImageElem);
+						//}, 3000);
+						oldImageElem.parentNode.removeChild(oldImageElem);
+					}, 3000);
+				}
+
+				entryContainer.className = 'container';
+				entryContainer.style.backgroundImage = 'url("' + testerImageElem.src + '")';
+				document.body.appendChild(entryContainer);
+				entryContainer.offsetWidth;
+				entryContainer.style.opacity = '1';
+
+				setTimeout(spawnImage, 6000);
+			}
+			//setInterval(spawnImage, 4000);
+
+			/*var fileEntry;
+			var entryContainer;
+			for( var i = 0; i < fileEntries.length; i++ )
+			{
+				fileEntry = fileEntries[i];
+
+				entryContainer = document.createElement('div');
+				entryContainer.className = 'entryContainer';
+				testerImageElem.src = "asset://local/" + path + "\\" + fileEntry.name;
+				entryContainer.style.backgroundImage = 'url("' + testerImageElem.src + '")';
+				container.appendChild(entryContainer);
+			}*/
+				
+		</script>
+	</body>
+</html>

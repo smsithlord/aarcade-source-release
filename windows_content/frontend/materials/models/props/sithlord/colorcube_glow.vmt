@@ -1,0 +1,41 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\props\sithlord/colorcube_glow"
+	"$model" "1"
+	"$additive" "1"
+	"$translucent" "1"
+	"$color2" "[1.0 1.0 1.0]"
+	"$offset" "0"
+	"$nocull" "1"
+	"$blendTintColorOverBase" "1"
+
+	"Proxies"
+	{
+		"EntityRandom"
+		{
+			"scale" "20"
+			"resultVar" "$offset"
+		}
+
+		"Sine"
+		{
+			"sineperiod" "4"
+			"timeoffset" "$offset"
+			"resultVar" "$color2[0]"
+		}
+
+		"Sine"
+		{
+			"sineperiod" "8"
+			"timeoffset" "$offset"
+			"resultVar" "$color2[1]"
+		}
+
+		"Sine"
+		{
+			"sineperiod" "12"
+			"timeoffset" "$offset"
+			"resultVar" "$color2[2]"
+		}
+	}
+}

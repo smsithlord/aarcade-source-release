@@ -1,0 +1,23 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/tga.js"></script>
+		<script>
+			var tga = new TGA();
+		</script>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<h1>HELLO WORLD X</h1>
+		<input type="button" onclick="doIt();" value="yadda" />
+		<script>
+			function doIt() {
+				console.log('kill it');
+				//setTimeout(function() {
+					aaapi.cmd('consoleCommand', 'inspect_object_stop');
+				//}, 1000);
+				aaapi.cmd('deactivateInputMode');
+			}
+		</script>
+	</body>
+</html>

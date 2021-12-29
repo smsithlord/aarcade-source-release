@@ -1,0 +1,39 @@
+UnlitGeneric
+{
+	$basetexture "sm_arcade/digit"
+	$frame "10"
+	
+	"$additive" 1
+	"$selfillum" 1
+
+	"$potentialframe" 0
+	"$blankframe" 10
+	"$fullcount" 0
+	"$zerocount" 0
+
+	"Proxies"
+	{
+		"AANumberStat"
+		{
+			"type" "server_visits"
+			"digit" "0"
+			"resultVar" "$potentialframe"
+		}
+
+		"AANumberStat"
+		{
+			"type" "server_visits"
+			"digit" "-1"
+			"resultVar" "$fullcount"
+		}
+
+		"LessOrEqual"
+		{
+			"lessEqualVar" "$blankframe"
+			"greaterVar" "$potentialframe"
+			"srcVar1" "$fullcount"
+			"srcVar2" "$zerocount"
+			"resultVar" "$frame"
+		}
+	}
+}
